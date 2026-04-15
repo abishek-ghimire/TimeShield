@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Productivity Clock</title>
+    <title>Floating Clock + Ad Blocker</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="popup-container">
         <header class="popup-header">
-            <h1>Productivity Clock</h1>
+            <h1>Floating Clock + Ad Blocker</h1>
             <div class="current-time" id="currentTime">00:00:00</div>
         </header>
         
@@ -27,6 +27,29 @@
                     <span class="icon">⚙️</span>
                     Settings
                 </button>
+            </section>
+            
+            <!-- Ad Blocker Section (NEW) -->
+            <section class="adblock-section">
+                <h2>🚫 Ad Blocker</h2>
+                <div class="ad-stats">
+                    <div class="ad-stat">
+                        <span class="ad-stat-value" id="adsBlocked">0</span>
+                        <span class="ad-stat-label">Ads Blocked</span>
+                    </div>
+                    <div class="ad-stat">
+                        <span class="ad-stat-value" id="bandwidthSaved">0 MB</span>
+                        <span class="ad-stat-label">Bandwidth Saved</span>
+                    </div>
+                    <div class="ad-stat">
+                        <span class="ad-stat-value" id="timeSaved">0 min</span>
+                        <span class="ad-stat-label">Time Saved</span>
+                    </div>
+                </div>
+                <div class="ad-controls">
+                    <button id="blockElement" class="btn btn-ad">🎯 Block Element</button>
+                    <button id="updateFilters" class="btn btn-ad">🔄 Update Filters</button>
+                </div>
             </section>
             
             <section class="timer-section">

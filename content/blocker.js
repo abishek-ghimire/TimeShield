@@ -37,6 +37,10 @@ class ContentBlocker {
                 
             case 'toggleClock':
                 this.toggleFloatingClock();
+                // Send response back to background
+                if (sendResponse) {
+                    sendResponse({ success: true });
+                }
                 break;
                 
             case 'playSound':
@@ -202,7 +206,10 @@ class ContentBlocker {
     }
     
     injectFloatingClock() {
+        console.log('ContentBlocker: injectFloatingClock called');
+        
         if (document.getElementById('floatingClockFrame')) {
+            console.log('ContentBlocker: Clock iframe already exists');
             return;
         }
         
@@ -221,27 +228,41 @@ class ContentBlocker {
         `;
         
         document.body.appendChild(iframe);
+        console.log('ContentBlocker: Clock iframe injected');
+        
+        // Set initial visibility based on stored state
+        this.restoreClockVisibility();
     }
     
     async restoreClockVisibility() {
         const result = await chrome.storage.local.get(['clockVisible']);
         const isVisible = result.clockVisible || false;
         
+        console.log('ContentBlocker: Restoring clock visibility:', isVisible);
+        
         const iframe = document.getElementById('floatingClockFrame');
         if (iframe) {
             iframe.style.display = isVisible ? 'block' : 'none';
+            console.log('ContentBlocker: Set iframe display to:', iframe.style.display);
         }
     }
     
     toggleFloatingClock() {
+        console.log('ContentBlocker: toggleFloatingClock called');
+        
         const iframe = document.getElementById('floatingClockFrame');
         if (iframe) {
-            if (iframe.style.display === 'none') {
-                iframe.style.display = 'block';
-            } else {
-                iframe.style.display = 'none';
-            }
+            // Toggle visibility
+            const isVisible = iframe.style.display !== 'none';
+            iframe.style.display = isVisible ? 'none' : 'block';
+            
+            console.log('ContentBlocker: Toggled clock from', isVisible, 'to', !isVisible);
+            
+            // Update storage
+            chrome.storage.local.set({ clockVisible: !isVisible });
         } else {
+            console.log('ContentBlocker: No iframe found, injecting new clock');
+            // Inject clock if it doesn't exist
             this.injectFloatingClock();
         }
     }

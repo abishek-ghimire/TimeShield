@@ -1,3 +1,8 @@
+// Import ad-blocking modules
+import { AdBlockEngine } from './adblock-core.js';
+import { FilterListManager } from './filter-lists.js';
+import { RuleCompiler } from './adblock-rules.js';
+
 class BackgroundService {
     constructor() {
         this.timerState = {
@@ -14,6 +19,16 @@ class BackgroundService {
             blockedSites: []
         };
         
+        // NEW: Ad blocker state
+        this.adsBlocked = 0;
+        this.bandwidthSaved = 0;
+        this.timeSaved = 0;
+        
+        // Initialize components
+        this.filterManager = new FilterListManager();
+        this.ruleCompiler = new RuleCompiler();
+        this.adBlocker = new AdBlockEngine(this);
+        
         this.init();
     }
     
@@ -22,6 +37,91 @@ class BackgroundService {
         this.setupAlarmHandlers();
         this.initializeStorage();
         this.restoreState();
+        this.initializeAdBlocking(); // NEW
+    }
+    
+    // NEW: Initialize Ad Blocking
+    async initializeAdBlocking() {
+        try {
+            // Load and compile filter lists
+            const filters = await this.filterManager.loadAllLists();
+            const rules = await this.ruleCompiler.compile(filters);
+            
+            // Apply DNR rules
+            await this.adBlocker.applyRules(rules);
+            
+            console.log(`✅ Ad blocker initialized with ${rules.length} rules`);
+            
+            // Setup rule tracking
+            this.setupRuleTracking();
+        } catch (error) {
+            console.error('Failed to initialize ad blocker:', error);
+        }
+    }
+    
+    // NEW: Setup rule tracking for stats
+    setupRuleTracking() {
+        // Track blocked requests for statistics
+        if (chrome.declarativeNetRequest.onRuleMatchedDebug) {
+            chrome.declarativeNetRequest.onRuleMatchedDebug.addListener((info) => {
+                this.trackBlockedRequest(info);
+            });
+        }
+    }
+    
+    // NEW: Track blocked requests
+    trackBlockedRequest(info) {
+        this.adsBlocked++;
+        
+        // Estimate bandwidth saved (average ad size: 300KB)
+        const avgAdSize = 300 * 1024; // 300KB in bytes
+        this.bandwidthSaved += avgAdSize;
+        
+        // Estimate time saved (average ad load time: 0.5 seconds)
+        this.timeSaved += 0.5;
+        
+        // Save stats periodically
+        if (this.adsBlocked % 10 === 0) {
+            this.saveAdStats();
+        }
+        
+        // Update badge
+        this.updateAdBlockBadge();
+    }
+    
+    // NEW: Save ad blocking statistics
+    async saveAdStats() {
+        const stats = {
+            adsBlocked: this.adsBlocked,
+            bandwidthSaved: this.bandwidthSaved,
+            timeSaved: this.timeSaved,
+            lastUpdated: Date.now()
+        };
+        
+        await chrome.storage.local.set({ adBlockStats: stats });
+    }
+    
+    // NEW: Update badge with ad block count
+    updateAdBlockBadge() {
+        const count = this.adsBlocked > 999 ? '999+' : this.adsBlocked.toString();
+        chrome.action.setBadgeText({ text: count });
+        chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+    }
+    
+    // NEW: Format bytes for display
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // NEW: Format time for display
+    formatTime(seconds) {
+        if (seconds < 60) return `${Math.round(seconds)} sec`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+        return `${(seconds / 3600).toFixed(1)} hours`;
     }
     
     async restoreState() {
@@ -44,6 +144,15 @@ class BackgroundService {
                 chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
             }
         }
+        
+        // NEW: Restore ad blocker stats
+        const adBlockResult = await chrome.storage.local.get(['adBlockStats']);
+        if (adBlockResult.adBlockStats) {
+            this.adsBlocked = adBlockResult.adBlockStats.adsBlocked || 0;
+            this.bandwidthSaved = adBlockResult.adBlockStats.bandwidthSaved || 0;
+            this.timeSaved = adBlockResult.adBlockStats.timeSaved || 0;
+            this.updateAdBlockBadge();
+        }
     }
     
     setupMessageHandlers() {
@@ -57,6 +166,9 @@ class BackgroundService {
         chrome.alarms.onAlarm.addListener((alarm) => {
             this.handleAlarm(alarm);
         });
+        
+        // NEW: Daily filter update alarm
+        chrome.alarms.create('updateFilters', { periodInMinutes: 1440 }); // Every 24 hours
     }
     
     async handleAlarm(alarm) {
@@ -70,8 +182,28 @@ class BackgroundService {
                 break;
                 
             case 'breakReminder':
-                await this.sendBreakReminder();
+                this.sendBreakReminder();
                 break;
+                
+            // NEW: Handle filter update alarm
+            case 'updateFilters':
+                await this.updateFilters();
+                break;
+                
+            default:
+                console.log('Unknown alarm:', alarm.name);
+        }
+    }
+    
+    // NEW: Update filter lists
+    async updateFilters() {
+        console.log('Updating filter lists...');
+        try {
+            await this.filterManager.updateAllLists();
+            await this.initializeAdBlocking();
+            console.log('✅ Filter lists updated successfully');
+        } catch (error) {
+            console.error('❌ Failed to update filter lists:', error);
         }
     }
     
@@ -133,6 +265,33 @@ class BackgroundService {
             case 'checkTimeLimit':
                 await this.checkTimeLimit(message.site);
                 sendResponse({ allowed: await this.isTimeLimitAllowed(message.site), remaining: await this.getTimeLimitRemaining(message.site) });
+                break;
+                
+            // NEW: Ad blocker message handlers
+            case 'getAdStats':
+                sendResponse({
+                    adsBlocked: this.adsBlocked,
+                    bandwidthSaved: this.formatBytes(this.bandwidthSaved),
+                    timeSaved: this.formatTime(this.timeSaved)
+                });
+                break;
+                
+            case 'blockElement':
+                await this.adBlocker.addCustomRule({
+                    filter: message.selector,
+                    resourceTypes: ['script', 'image', 'stylesheet']
+                });
+                sendResponse({ success: true });
+                break;
+                
+            case 'updateFilters':
+                await this.updateFilters();
+                sendResponse({ success: true });
+                break;
+                
+            case 'settingsUpdated':
+                await this.initializeAdBlocking();
+                sendResponse({ success: true });
                 break;
                 
             default:

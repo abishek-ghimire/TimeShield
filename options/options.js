@@ -17,14 +17,17 @@ class OptionsManager {
     async loadData() {
         const result = await chrome.storage.local.get([
             'settings', 'blockedSites', 'whitelist', 'todayStats', 'analyticsData',
-            'scheduledBlocking', 'timeLimits'
+            'scheduledBlocking', 'timeLimits', 'filterLists', 'customFilters', 'adBlockStats'
         ]);
         
-        this.settings = result.settings || StorageManager.getDefaultSettings();
-        this.blockedSites = result.blockedSites || StorageManager.getDefaultBlockedSites();
+        this.settings = result.settings || this.getDefaultSettings();
+        this.blockedSites = result.blockedSites || this.getDefaultBlockedSites();
         this.whitelist = result.whitelist || [];
         this.scheduledBlocking = result.scheduledBlocking || this.getDefaultScheduledBlocking();
         this.timeLimits = result.timeLimits || [];
+        this.filterLists = result.filterLists || this.getDefaultFilterLists();
+        this.customFilters = result.customFilters || [];
+        this.adBlockStats = result.adBlockStats || { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
     }
     
     setupEventListeners() {
@@ -35,6 +38,7 @@ class OptionsManager {
         this.setupAnalytics();
         this.setupThemeListener();
         this.setupFooterInteractions();
+        this.setupAdBlockListeners(); // NEW
         this.setupEnhancedInteractions();
     }
     
@@ -191,6 +195,15 @@ class OptionsManager {
             });
         });
         
+        // Auto-save on change for immediate feedback
+        document.querySelectorAll('input, select').forEach(element => {
+            if (element.type !== 'checkbox' && element.id !== 'saveSettings' && element.id !== 'resetToDefaults') {
+                element.addEventListener('change', () => {
+                    this.saveSettings();
+                });
+            }
+        });
+        
         document.getElementById('saveSettings').addEventListener('click', () => this.saveSettings());
         document.getElementById('resetToDefaults').addEventListener('click', () => this.resetToDefaults());
     }
@@ -263,8 +276,51 @@ class OptionsManager {
         this.updateSiteLists();
         this.populateScheduledBlocking();
         this.populateTimeLimits();
+        this.populateAdBlockSettings(); // NEW
         this.updateRangeDisplays();
         this.applyTheme();
+    }
+    
+    // NEW: Populate Ad Blocker Settings
+    populateAdBlockSettings() {
+        // Populate filter lists
+        Object.entries(this.filterLists).forEach(([key, list]) => {
+            const checkbox = document.getElementById(key);
+            if (checkbox) {
+                checkbox.checked = list.enabled;
+            }
+        });
+        
+        // Populate custom filters
+        const customFiltersTextarea = document.getElementById('customFilters');
+        if (customFiltersTextarea) {
+            customFiltersTextarea.value = this.customFilters
+                .map(f => f.filter || f)
+                .join('\n');
+        }
+        
+        // Populate whitelist
+        const whitelistTextarea = document.getElementById('whitelist');
+        if (whitelistTextarea) {
+            whitelistTextarea.value = this.whitelist.join('\n');
+        }
+        
+        // Set blocking level
+        const blockingLevelSelect = document.getElementById('blockingLevel');
+        if (blockingLevelSelect) {
+            blockingLevelSelect.value = this.settings.blockingLevel || 'medium';
+        }
+        
+        // Show last update time
+        chrome.storage.local.get('lastFilterUpdate', (data) => {
+            if (data.lastFilterUpdate) {
+                const date = new Date(data.lastFilterUpdate);
+                const lastUpdateElement = document.getElementById('lastUpdate');
+                if (lastUpdateElement) {
+                    lastUpdateElement.textContent = `Last updated: ${date.toLocaleString()}`;
+                }
+            }
+        });
     }
     
     applyTheme() {
@@ -272,12 +328,21 @@ class OptionsManager {
         const body = document.body;
         
         // Remove existing theme classes
-        body.classList.remove('dark-theme', 'light-theme', 'blue-theme');
+        body.classList.remove('dark-theme', 'light-theme', 'blue-theme', 'gradient-theme', 'neon-theme');
         
         // Apply new theme class
         if (theme !== 'default') {
             body.classList.add(`${theme}-theme`);
         }
+        
+        // Apply theme to tab contents
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('dark-theme', 'light-theme', 'blue-theme', 'gradient-theme', 'neon-theme');
+            if (theme !== 'default') {
+                content.classList.add(`${theme}-theme`);
+            }
+        });
     }
     
     populateScheduledBlocking() {
@@ -443,39 +508,150 @@ class OptionsManager {
         });
         
         this.settings = { ...this.settings, ...newSettings };
-        await StorageManager.saveSettings(this.settings);
+        
+        // NEW: Save ad blocker specific settings
+        await this.saveAdBlockSettings();
+        
+        await chrome.storage.local.set({ settings: this.settings });
         
         this.showNotification('Settings saved successfully!', 'success');
     }
     
+    // NEW: Save Ad Blocker Settings
+    async saveAdBlockSettings() {
+        // Save filter lists
+        Object.entries(this.filterLists).forEach(([key, list]) => {
+            const checkbox = document.getElementById(key);
+            if (checkbox) {
+                this.filterLists[key].enabled = checkbox.checked;
+            }
+        });
+        
+        // Save custom filters
+        const customFiltersTextarea = document.getElementById('customFilters');
+        if (customFiltersTextarea) {
+            const customFiltersText = customFiltersTextarea.value;
+            this.customFilters = customFiltersText
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => ({ 
+                    filter: line.trim(), 
+                    type: line.includes('##') ? 'cosmetic' : 'network' 
+                }));
+        }
+        
+        // Save whitelist
+        const whitelistTextarea = document.getElementById('whitelist');
+        if (whitelistTextarea) {
+            this.whitelist = whitelistTextarea.value
+                .split('\n')
+                .map(s => s.trim())
+                .filter(s => s);
+        }
+        
+        // Save all ad blocker settings
+        await chrome.storage.local.set({
+            filterLists: this.filterLists,
+            customFilters: this.customFilters,
+            whitelist: this.whitelist
+        });
+        
+        // Notify background script to update filters
+        try {
+            await chrome.runtime.sendMessage({ action: 'settingsUpdated' });
+        } catch (error) {
+            console.error('Failed to notify background script:', error);
+        }
+    }
+    
     async resetToDefaults() {
         if (confirm('Are you sure you want to reset all settings to defaults?')) {
-            this.settings = StorageManager.getDefaultSettings();
-            await StorageManager.saveSettings(this.settings);
+            this.settings = this.getDefaultSettings();
+            await chrome.storage.local.set({ settings: this.settings });
             this.populateForm();
             this.showNotification('Settings reset to defaults', 'success');
         }
     }
     
+    getDefaultBlockedSites() {
+        return [
+            'facebook.com',
+            'twitter.com',
+            'instagram.com',
+            'youtube.com',
+            'tiktok.com',
+            'reddit.com'
+        ];
+    }
+    
+    getDefaultScheduledBlocking() {
+        return {
+            enabled: false,
+            startTime: '09:00',
+            endTime: '17:00',
+            days: [1, 2, 3, 4, 5] // Monday to Friday
+        };
+    }
+    
+    getDefaultSettings() {
+        return {
+            theme: 'default',
+            clockStyle: 'digital',
+            timeFormat: '12',
+            clockSize: 'medium',
+            clockOpacity: 90,
+            clockPosition: 'top-right',
+            autoStartClock: false,
+            syncAcrossDevices: false,
+            showProductivityTips: true,
+            dataRetentionDays: 90,
+            focusModeDuration: 25,
+            breakDuration: 5,
+            longBreakDuration: 15,
+            soundEnabled: true,
+            notificationEnabled: true,
+            animationSpeed: 'normal'
+        };
+    }
+    
     async loadAnalytics() {
-        const report = await AnalyticsManager.getAnalyticsReport(30);
-        const summary = report.summary;
+        const result = await chrome.storage.local.get(['analyticsData', 'todayStats']);
+        const analyticsData = result.analyticsData || {};
+        const todayStats = result.todayStats || {};
+        
+        // Calculate summary from available data
+        const summary = {
+            totalFocusTime: todayStats.totalFocusTime || 0,
+            totalSessions: todayStats.sessionsCompleted || 0,
+            totalTasksCompleted: todayStats.tasksCompleted || 0,
+            averageProductivityScore: todayStats.productivityScore || 0
+        };
         
         document.getElementById('totalFocusTime').textContent = 
-            TimeManager.formatDuration(summary.totalFocusTime);
+            this.formatDuration(summary.totalFocusTime);
         document.getElementById('totalSessions').textContent = summary.totalSessions;
         document.getElementById('totalTasks').textContent = summary.totalTasksCompleted;
         document.getElementById('productivityScore').textContent = summary.averageProductivityScore;
     }
     
+    formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${minutes}m`;
+    }
+    
     async exportData() {
-        const data = await StorageManager.exportData();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const result = await chrome.storage.local.get([
+            'settings', 'blockedSites', 'whitelist', 'todayStats', 'analyticsData',
+            'scheduledBlocking', 'timeLimits'
+        ]);
+        
+        const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `productivity-clock-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `floating-clock-backup-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         
         URL.revokeObjectURL(url);
@@ -495,16 +671,13 @@ class OptionsManager {
             const text = await file.text();
             const importData = JSON.parse(text);
             
-            const result = await StorageManager.importData(importData);
+            // Import all data to storage
+            await chrome.storage.local.set(importData);
             
-            if (result.success) {
-                await this.loadData();
-                this.populateForm();
-                this.loadAnalytics();
-                this.showNotification('Data imported successfully', 'success');
-            } else {
-                this.showNotification(result.message, 'error');
-            }
+            await this.loadData();
+            this.populateForm();
+            this.loadAnalytics();
+            this.showNotification('Data imported successfully', 'success');
         } catch (error) {
             this.showNotification('Failed to import data: ' + error.message, 'error');
         }
@@ -513,13 +686,14 @@ class OptionsManager {
     }
     
     async exportAnalytics() {
-        const data = await AnalyticsManager.exportAnalytics('json');
+        const result = await chrome.storage.local.get(['analyticsData']);
+        const data = JSON.stringify(result.analyticsData || {}, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `productivity-analytics-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `analytics-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         
         URL.revokeObjectURL(url);
@@ -537,7 +711,7 @@ class OptionsManager {
     async resetSettings() {
         if (confirm('Are you sure you want to reset all settings to defaults?')) {
             await chrome.storage.local.remove(['settings']);
-            this.settings = StorageManager.getDefaultSettings();
+            this.settings = this.getDefaultSettings();
             this.populateForm();
             this.showNotification('Settings reset to defaults', 'success');
         }
@@ -699,6 +873,56 @@ async saveScheduledBlocking() {
     };
     
     await chrome.storage.local.set({ scheduledBlocking: this.scheduledBlocking });
+    }
+    
+    // NEW: Ad Blocker Methods
+    setupAdBlockListeners() {
+        document.getElementById('resetStats').addEventListener('click', () => this.resetAdStats());
+        document.getElementById('manualUpdate').addEventListener('click', () => this.manualFilterUpdate());
+    }
+    
+    resetAdStats() {
+        if (confirm('Are you sure you want to reset all ad blocking statistics?')) {
+            this.adBlockStats = { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
+            chrome.storage.local.set({ adBlockStats: this.adBlockStats });
+            this.showNotification('Statistics reset successfully!', 'success');
+        }
+    }
+    
+    async manualFilterUpdate() {
+        const btn = document.getElementById('manualUpdate');
+        const originalText = btn.textContent;
+        btn.textContent = 'Updating...';
+        btn.disabled = true;
+        
+        try {
+            await chrome.runtime.sendMessage({ action: 'updateFilters' });
+            btn.textContent = '✅ Updated!';
+            this.showNotification('Filter lists updated successfully!', 'success');
+            
+            // Update last update time
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = `Last updated: ${now.toLocaleString()}`;
+            chrome.storage.local.set({ lastFilterUpdate: now.toISOString() });
+        } catch (error) {
+            btn.textContent = '❌ Error';
+            this.showNotification('Failed to update filters', 'error');
+        }
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }, 2000);
+    }
+    
+    getDefaultFilterLists() {
+        return {
+            easyList: { name: 'EasyList (Ads)', enabled: true, category: 'ads' },
+            easyPrivacy: { name: 'EasyPrivacy (Trackers)', enabled: true, category: 'tracking' },
+            uBlockAnnoyances: { name: 'uBlock Annoyances', enabled: true, category: 'annoyances' },
+            fanboysAnnoyances: { name: 'Fanboy\'s Annoyances', enabled: false, category: 'annoyances' },
+            malwareDomains: { name: 'Malware Domains', enabled: true, category: 'security' }
+        };
     }
     
     showNotification(message, type = 'success') {
