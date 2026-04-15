@@ -366,6 +366,18 @@ class ContentBlocker {
         this.checkScheduledBlocking();
         this.checkTimeLimit();
     }
+    
+    // NEW: Play sound method
+    playSound(soundName) {
+        try {
+            const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${soundName}.mp3`));
+            audio.play().catch(error => {
+                console.log('Sound play failed:', error);
+            });
+        } catch (error) {
+            console.log('Sound creation failed:', error);
+        }
+    }
 }
 
 if (typeof window !== 'undefined' && window.location.protocol !== 'chrome-extension:') {

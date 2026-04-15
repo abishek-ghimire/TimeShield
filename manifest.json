@@ -46,7 +46,7 @@
       "content/element-picker.css",
       "assets/sounds/*",
       "assets/fonts/*",
-      "assets/icons/logo.svg"
+      "assets/icons/icon.png"
     ],
     "matches": ["<all_urls>"]
   }],
