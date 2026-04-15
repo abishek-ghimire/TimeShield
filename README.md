@@ -1,247 +1,260 @@
-# Floating Productivity Clock Chrome Extension
+# 🛡️ TimeShield: The Ultimate Productivity Command Center
 
-A comprehensive Chrome extension featuring a floating, customizable clock designed to maximize productivity through time management, focus sessions, and distraction blocking.
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Version](https://img.shields.io/badge/Version-2.1.0-green.svg)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Repo Views](https://visitor-badge.laobi.icu/badge?page_id=abishekgh-6.AdBlocker-FloatingClock-Extension)](https://github.com/abishekgh-6/AdBlocker-FloatingClock-Extension)
+[![Downloads](https://img.shields.io/github/downloads/abishekgh-6/AdBlocker-FloatingClock-Extension/total.svg?style=flat&label=Downloads)](https://github.com/abishekgh-6/AdBlocker-FloatingClock-Extension/releases)
 
-## Features
+**TimeShield** is a productivity extension for Chrome/Brave that combines high-performance ad blocking with a focused deep-work toolkit. It turns your browser into a dedicated workspace with a floating clock overlay, intelligent site blocking, and detailed usage analytics.
 
-### 🕐 Floating Clock Interface
-- **Always-on-top floating widget** that stays visible across all tabs
-- **Draggable positioning** - move the clock anywhere on screen
-- **Resizable interface** - adjustable from compact to expanded dashboard
-- **Customizable appearance**:
-  - Multiple clock faces (digital, analog, minimalist)
-  - Color themes (dark mode, light mode, custom palettes)
-  - Opacity control (10-100%)
-  - Font selection and size adjustment
-- **Nepal time display** (NPT - UTC+5:45) with automatic timezone accuracy
-
-### ⏱️ Timer & Stopwatch
-- **Pomodoro Timer**:
-  - Preset intervals (25/5, 50/10, 90/20 minutes)
-  - Custom time settings
-  - Auto-start breaks
-  - Session counter tracking
-- **Custom Timer**:
-  - Set any duration (seconds to hours)
-  - Multiple simultaneous timers with labels
-  - Repeat/loop functionality
-- **Stopwatch**:
-  - Lap time recording
-  - Split time tracking
-  - Export lap times
-- **Sound Notifications**:
-  - Multiple alarm sounds
-  - Volume control
-  - Visual flash notifications
-
-### 🎯 Focus Mode (Deep Work Sessions)
-- **Website Blocking**:
-  - Pre-session site blocklist creation
-  - Quick-add common distractions
-  - Custom URL blocking
-  - Whitelist for necessary sites
-  - Block enforcement with motivational redirect page
-- **Focus Session Management**:
-  - Name and categorize focus sessions
-  - Set session duration with goals
-  - Track focus streaks
-  - Break reminders with suggestions
-- **Distraction Analytics**:
-  - Track blocked access attempts
-  - Identify most distracting sites
-  - Show distraction patterns by time of day
-
-### ✅ Integrated To-Do List
-- **Task Management**:
-  - Create tasks with descriptions and priorities
-  - Assign tasks to specific focus sessions
-  - Set task duration estimates
-  - Subtask support for complex projects
-- **Time Tracking**:
-  - Link tasks to timers
-  - Auto-start timer when task begins
-  - Track actual vs. estimated time
-  - Daily/weekly task completion statistics
-- **Smart Features**:
-  - Recurring tasks
-  - Task templates
-  - Quick-add with keyboard shortcuts
-
-### 📊 Productivity Analytics & Insights
-- **Time Tracking Dashboard**:
-  - Daily/weekly/monthly productivity reports
-  - Focused hours heatmap calendar
-  - Category-based time breakdown
-  - Productive vs. distracted time ratio
-- **Streaks & Achievements**:
-  - Focus session streaks
-  - Longest focused period
-  - Tasks completed milestones
-  - Gamification badges
-- **Data Visualization**:
-  - Charts showing productivity trends
-  - Best performing hours/days
-  - Progress toward weekly goals
-
-## Installation
-
-### From Source
-1. Clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension directory
-5. The extension will appear in your Chrome toolbar
-
-### From Chrome Web Store
-*(Coming soon - will be published to the Chrome Web Store)*
-
-## Usage
-
-### Getting Started
-1. **Click the extension icon** in your Chrome toolbar to open the popup
-2. **Toggle the floating clock** using the "Toggle Clock" button
-3. **Start your first focus session** by clicking "Focus Mode"
-4. **Add tasks** to track your work
-5. **Monitor your progress** in the analytics dashboard
-
-### Focus Mode
-1. **Set your focus duration** (default: 25 minutes)
-2. **Configure blocked sites** in the settings
-3. **Start focus mode** - distracting sites will be blocked
-4. **Work without distractions** until the session ends
-5. **Take breaks** when prompted to maintain productivity
-
-### Time Management
-1. **Use the Pomodoro timer** for structured work sessions
-2. **Track time on tasks** to improve estimates
-3. **Use the stopwatch** for unplanned work
-4. **Review analytics** to identify productivity patterns
-
-## Configuration
-
-### Settings
-Access settings by:
-- Right-clicking the extension icon → "Options"
-- Clicking the settings icon in the popup
-- Navigating to `chrome://extensions/` → Details → Options
-
-### Key Settings
-- **Clock Settings**: Style, size, position, opacity
-- **Focus Mode**: Duration, break intervals, blocked sites
-- **Notifications**: Sound, desktop alerts, break reminders
-- **Analytics**: Data retention, tracking preferences
-- **Themes**: Color schemes, appearance options
-
-## Technical Details
-
-### Architecture
-- **Manifest V3** compliance for future-proof Chrome extension
-- **Background service worker** for timer continuity
-- **Content scripts** for website blocking
-- **Local storage** for settings and data persistence
-- **Declarative Net Request API** for efficient site blocking
-
-### File Structure
-```
-chrome-productivity-clock/
-├── manifest.json              # Extension manifest
-├── popup/                     # Extension popup
-│   ├── popup.html
-│   ├── popup.js
-│   └── popup.css
-├── background/                 # Background service worker
-│   └── service-worker.js
-├── content/                   # Content scripts
-│   └── blocker.js
-├── floating/                  # Floating clock widget
-│   ├── clock.html
-│   ├── clock.js
-│   ├── clock.css
-│   ├── stopwatch.html
-│   ├── stopwatch.js
-│   └── focus-block.html
-├── options/                   # Settings page
-│   ├── options.html
-│   └── options.js
-├── utils/                     # Utility modules
-│   ├── storage.js
-│   ├── time.js
-│   └── analytics.js
-├── rules/                     # Site blocking rules
-│   └── focus-rules.json
-└── assets/                    # Static assets
-    ├── icons/
-    ├── sounds/
-    └── fonts/
-```
-
-### Permissions
-- `storage` - Save settings and data
-- `alarms` - Timer functionality
-- `notifications` - Desktop alerts
-- `tabs` - Current tab information
-- `declarativeNetRequest` - Website blocking
-- `activeTab` - Current tab access
-
-## Privacy & Data
-
-### Data Storage
-- **All data stored locally** by default
-- **No tracking or analytics** without explicit consent
-- **Export/backup functionality** for data portability
-- **Clear data option** for privacy
-
-### Security
-- **Minimal permissions** requested
-- **No external API calls** without user action
-- **Content Security Policy** compliant
-- **Manifest V3** security standards
-
-## Development
-
-### Building from Source
-1. Clone the repository
-2. Install dependencies (if any)
-3. Load as unpacked extension in Chrome
-4. Make changes to source files
-5. Reload extension in Chrome to test
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## Troubleshooting
-
-### Common Issues
-- **Extension not loading**: Check manifest.json syntax
-- **Floating clock not showing**: Ensure content script permissions
-- **Site blocking not working**: Check declarativeNetRequest permissions
-- **Timer not persisting**: Verify background service worker is running
-
-### Support
-- **Documentation**: Check this README and inline comments
-- **Issues**: Report bugs via GitHub Issues
-- **Features**: Request enhancements via GitHub Discussions
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Changelog
-
-### v1.0.0 (Current)
-- Initial release
-- Core functionality implemented
-- Focus mode with site blocking
-- Floating clock widget
-- Timer and stopwatch
-- Task management
-- Analytics dashboard
-- Comprehensive settings
+> 🔽 **Release builds**: Download the latest packaged extension (`TimeShield-*.zip`) from the GitHub **Releases** page and load it into Chrome/Brave via **Load unpacked**.
 
 ---
 
-**Transform your Chrome into a productivity command center and reclaim your focus!** 🚀
+## ✨ Key Pillar Features
+
+### 🕒 Floating Clock Overlay
+*   **Always-Visible:** A sleek, draggable clock that stays on top of any website.
+*   **Dynamic Resizing:** Pin it as a minimalist pill or expand it into a full productivity dashboard.
+*   **Refined Design:** High-quality glassmorphism, blur effects, and subtle animations.
+*   **Minimize Logic:** Collapse the clock into the title bar to save space while keeping it accessible.
+
+### 🎯 Deep Focus Protocol
+*   **Total Immersion:** Temporarily block distracting domains during high-intensity work sessions.
+*   **Immediate Redirection:** Distracting sites are instantly swapped for a mindful "Focus in Progress" screen.
+*   **Accurate Countdowns:** Real-time remaining time updates right on the block screen and the floating clock.
+*   **Auto-Acknowledge Popups:** When your session ends, a beautiful summary popup appears and auto-closes after 5 seconds to keep your transition smooth.
+
+### 🩹 Surgical Ad-Shielding
+*   **Ad-Shield:** High-efficiency blocking of ads, trackers, and intrusive scripts using the Declarative Net Request API.
+*   **Surgical Content Preservation:** Intelligent detection that blocks ads while strictly whitelisting user posts, captions, and comments.
+*   **Element Picker:** Right-click and hide any annoying element on a page permanently.
+*   **False-Positive Prevention:** Whitelists `role="article"` and content-heavy text blocks to ensure social media feeds remain intact.
+
+### 📋 Task List
+*   **Integrated Tasks:** Track your daily objectives directly in the extension popup.
+*   **Focus-Linked:** Associate tasks with focus sessions to see what you completed during deep work.
+
+### 📊 Screen Time & Usage Analytics
+*   **Per-Site Breakdown:** See how much total time and how many opens each site gets.
+*   **Day / Week / Month Ranges:** Toggle between Today, last 7 days, and last 30 days to understand your habits.
+*   **24-Hour Bar Graphs:** Click any site to reveal a beautiful 24h bar graph (x-axis = hour, y-axis = time spent).
+*   **Inline Detail:** Usage graphs expand directly under each site row for a clean dashboard feel.
+
+### ⏱️ Schedules & Time Limits
+*   **Scheduled Blocking:** Automatically block distracting sites during your chosen hours and days.
+*   **Per-Site Daily Limits:** Cap time on specific sites (e.g., 30 minutes/day on YouTube).
+*   **Global Distraction Pool:** Put multiple time-waster sites behind one shared time budget.
+*   **Whitelist:** Keep important sites unblocked even when other rules are active.
+
+---
+
+## 🚀 Quick Start Guide
+
+### Installation from Source
+1.  **Clone** this repository to your local machine.
+2.  Open Chrome and go to `chrome://extensions/`.
+3.  Switch on **Developer Mode** (top-right toggle).
+4.  Click **Load unpacked** and select the extension folder.
+5.  **Pin** TimeShield to your toolbar for the best experience!
+
+### Installation from GitHub Releases
+1.  Go to the **Releases** tab of `abishekgh-6/FloatingClockExtension` on GitHub.
+2.  Download the latest `TimeShield-*.zip` file.
+3.  Extract the zip (optional, for inspection) or load it directly via **Load unpacked** pointing at the extracted folder.
+
+### Using Focus Mode
+1.  Open the TimeShield popup.
+2.  Add websites you want to block in the **Settings**.
+3.  Click **"Focus Mode"** and enter your desired duration.
+4.  Start your focus session; distracting sites will be automatically blocked for the duration.
+
+---
+
+## 🛠️ Technical Stack & Architecture
+
+TimeShield is built on a modern Chrome extension stack:
+
+*   **Logic:** Modern asynchronous JavaScript with Service Worker (Manifest V3).
+*   **Blocking Engine:** `declarativeNetRequest` for native-speed ad and site filtering.
+*   **Storage:** `chrome.storage.local` for high-speed state persistence and consistency across reboots.
+*   **UI/UX:** Vanilla CSS with a focus on Glassmorphism, CSS Variables for theming, and smooth transitions.
+
+```text
+FloatingClockExtension/
+├── background/          # Persistent Background Service Worker
+├── content/             # DOM-injected Blocker & UI Widgets
+├── floating/            # The Floating Clock & Focus Screens
+├── popup/               # The Primary Control Panel
+├── options/             # Advanced Analytics & Personalization
+└── rules/               # Static DNR Filtering Sets
+```
+
+---
+
+## 🖼️ Screenshots
+Below are reference screenshots for the main views in TimeShield.
+
+### Options Dashboard
+
+<details>
+<summary><strong>General Settings</strong> – View image</summary>
+
+![Options – General](assets/screenshots/options-general.png)
+
+_File: assets/screenshots/options-general.png_
+
+</details>
+
+<details>
+<summary><strong>Clock Settings</strong> – View image</summary>
+
+![Options – Clock](assets/screenshots/options-clock.png)
+
+_File: assets/screenshots/options-clock.png_
+
+</details>
+
+<details>
+<summary><strong>Focus Mode Settings</strong> – View image</summary>
+
+![Options – Focus Mode](assets/screenshots/options-focus.png)
+
+_File: assets/screenshots/options-focus.png_
+
+</details>
+
+<details>
+<summary><strong>Schedules & Time Limits</strong> – View image</summary>
+
+![Options – Schedules & Limits](assets/screenshots/optins-schedules-limits.png)
+
+_File: assets/screenshots/optins-schedules-limits.png_
+
+</details>
+
+<details>
+<summary><strong>Ad Blocker Settings</strong> – View image</summary>
+
+![Options – Ad Blocker](assets/screenshots/options-adblock.png)
+
+_File: assets/screenshots/options-adblock.png_
+
+</details>
+
+<details>
+<summary><strong>Screen Time Overview</strong> – View image</summary>
+
+![Options – Screen Time](assets/screenshots/options-screentime.png)
+
+_File: assets/screenshots/options-screentime.png_
+
+</details>
+
+<details>
+<summary><strong>Tasks</strong> – View image</summary>
+
+![Options – Tasks](assets/screenshots/options-tasks.png)
+
+_File: assets/screenshots/options-tasks.png_
+
+</details>
+
+<details>
+<summary><strong>Data Management</strong> – View image</summary>
+
+![Options – Data](assets/screenshots/options-data.png)
+
+_File: assets/screenshots/options-data.png_
+
+</details>
+
+---
+
+### Popup & Floating Clock
+
+<details>
+<summary><strong>Control Center Popup</strong> – View image</summary>
+
+![Popup – Control Center](assets/screenshots/control-panel.png)
+
+_File: assets/screenshots/control-panel.png_
+
+</details>
+
+<details>
+<summary><strong>Floating Clock Overlay</strong> – View image</summary>
+
+![Floating Clock Overlay](assets/screenshots/floating-clock.png)
+
+_File: assets/screenshots/floating-clock.png_
+
+</details>
+
+---
+
+### Focus & Limits Screens
+
+<details>
+<summary><strong>Focus Block Screen</strong> – View image</summary>
+
+![Focus Block Screen](assets/screenshots/focus-block.png)
+
+_File: assets/screenshots/focus-block.png_
+
+</details>
+
+<details>
+<summary><strong>Time Limit Screen</strong> – View image</summary>
+
+![Time Limit Screen](assets/screenshots/limit-block.png)
+
+_File: assets/screenshots/limit-block.png_
+
+</details>
+
+<details>
+<summary><strong>Timer / Focus Complete</strong> – View image</summary>
+
+![Timer / Focus Complete](assets/screenshots/timer-complete.png)
+
+_File: assets/screenshots/timer-complete.png_
+
+</details>
+
+---
+
+## 🎨 Themes
+
+TimeShield includes multiple visual themes (Dark, Light, Aurora Gradient, Neon Focus, Solar Ember, Forest Deep Work) so you can match the clock and options UI to your style.
+
+- Open the **Options** page and go to the **General / Appearance** section.
+- Use the **Theme** dropdown to switch between themes.
+- The floating clock, popup, and options page update instantly to reflect your chosen theme.
+
+---
+
+## 📈 Privacy First
+TimeShield is private by design. **None of your browsing data, site usage, or task lists ever leave your computer.** All analytics are processed locally and stored within your Chrome profile's isolated storage.
+
+---
+
+## 🤝 Contributing
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+Distributed under the Apache License 2.0. See `LICENSE` for full terms.
+
+---
+
+**Designed and engineered for sustained, distraction-free deep work.**
