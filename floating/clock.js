@@ -1,454 +1,241 @@
-class FloatingClock {
-    constructor() {
-        this.isDragging = false;
-        this.currentX = 20;
-        this.currentY = 20;
-        this.initialX = 0;
-        this.initialY = 0;
-        this.xOffset = 0;
-        this.yOffset = 0;
-        
-        this.isExpanded = false;
-        this.isMinimized = false;
-        this.timerInterval = null;
-        this.timerSeconds = 0;
-        this.isTimerRunning = false;
-        
-        this.focusModeActive = false;
-        
-        this.init();
-    }
-    
-    init() {
-        this.setupElements();
-        this.setupEventListeners();
-        this.loadSettings();
-        this.startClock();
-        this.loadQuickTasks();
-    }
-    
-    setupElements() {
-        this.clock = document.getElementById('floatingClock');
-        this.dragHandle = document.querySelector('.clock-drag-handle');
-        this.timeDisplay = document.getElementById('timeDisplay');
-        this.dateDisplay = document.getElementById('dateDisplay');
-        this.timezoneDisplay = document.getElementById('timezoneDisplay');
-        
-        this.minimizeBtn = document.getElementById('minimizeClock');
-        this.expandBtn = document.getElementById('expandClock');
-        this.closeBtn = document.getElementById('closeClock');
-        
-        this.clockContent = document.querySelector('.clock-content');
-        this.clockExpanded = document.getElementById('clockExpanded');
-        this.clockMinimized = document.getElementById('clockMinimized');
-        
-        this.floatingTimerMinutes = document.getElementById('floatingTimerMinutes');
-        this.floatingTimerSeconds = document.getElementById('floatingTimerSeconds');
-        this.floatingStartTimer = document.getElementById('floatingStartTimer');
-        this.floatingTimerDisplay = document.getElementById('floatingTimerDisplay');
-        
-        this.pomodoro25 = document.getElementById('pomodoro25');
-        this.pomodoro50 = document.getElementById('pomodoro50');
-        this.pomodoro90 = document.getElementById('pomodoro90');
-        
-        this.floatingFocusMode = document.getElementById('floatingFocusMode');
-        this.focusStatus = document.getElementById('focusStatus');
-        
-        this.quickTaskList = document.getElementById('quickTaskList');
-        this.addQuickTask = document.getElementById('addQuickTask');
-        
-        this.minimizedTime = document.getElementById('minimizedTime');
-    }
-    
-    setupEventListeners() {
-        this.dragHandle.addEventListener('mousedown', (e) => this.dragStart(e));
-        document.addEventListener('mousemove', (e) => this.drag(e));
-        document.addEventListener('mouseup', () => this.dragEnd());
-        
-        this.minimizeBtn.addEventListener('click', () => this.minimize());
-        this.expandBtn.addEventListener('click', () => this.toggleExpand());
-        this.closeBtn.addEventListener('click', () => this.close());
-        
-        this.floatingStartTimer.addEventListener('click', () => this.toggleTimer());
-        this.floatingTimerMinutes.addEventListener('input', () => this.updateTimerDisplay());
-        this.floatingTimerSeconds.addEventListener('input', () => this.updateTimerDisplay());
-        
-        this.pomodoro25.addEventListener('click', () => this.startPomodoro(25));
-        this.pomodoro50.addEventListener('click', () => this.startPomodoro(50));
-        this.pomodoro90.addEventListener('click', () => this.startPomodoro(90));
-        
-        this.floatingFocusMode.addEventListener('click', () => this.toggleFocusMode());
-        this.addQuickTask.addEventListener('click', () => this.addQuickTask());
-        
-        this.quickTaskList.addEventListener('change', (e) => {
-            if (e.target.type === 'checkbox') {
-                this.saveQuickTasks();
-            }
-        });
-        
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            this.handleMessage(message, sender, sendResponse);
-        });
-    }
-    
-    dragStart(e) {
-        this.initialX = e.clientX - this.xOffset;
-        this.initialY = e.clientY - this.yOffset;
-        
-        if (e.target === this.dragHandle) {
-            this.isDragging = true;
-        }
-    }
-    
-    drag(e) {
-        if (this.isDragging) {
-            e.preventDefault();
-            this.currentX = e.clientX - this.initialX;
-            this.currentY = e.clientY - this.initialY;
-            
-            this.xOffset = this.currentX;
-            this.yOffset = this.currentY;
-            
-            this.setTranslate(this.currentX, this.currentY);
-        }
-    }
-    
-    dragEnd() {
-        this.initialX = this.currentX;
-        this.initialY = this.currentY;
-        this.isDragging = false;
-        
-        this.savePosition();
-    }
-    
-    setTranslate(xPos, yPos) {
-        this.clock.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-    }
-    
-    minimize() {
-        this.isMinimized = true;
-        this.clock.classList.add('minimized');
-        this.clockContent.style.display = 'none';
-        this.clockMinimized.style.display = 'block';
-    }
-    
-    toggleExpand() {
-        this.isExpanded = !this.isExpanded;
-        
-        if (this.isExpanded) {
-            this.clockExpanded.style.display = 'block';
-            this.expandBtn.textContent = '−';
-            this.expandBtn.title = 'Collapse';
-        } else {
-            this.clockExpanded.style.display = 'none';
-            this.expandBtn.textContent = '□';
-            this.expandBtn.title = 'Expand';
-        }
-    }
-    
-    close() {
-        this.clock.style.display = 'none';
-        chrome.runtime.sendMessage({
-            action: 'clockClosed'
-        });
-    }
-    
-    startClock() {
-        const updateTime = () => {
-            const now = new Date();
-            let timeString = '';
-            
-            if (this.settings.nepalTime) {
-                // Nepal Time (UTC+5:45)
-                const nepalTime = new Date(now.getTime() + (5.75 * 60 * 60 * 1000));
-                timeString = this.formatTime(nepalTime);
-            } else {
-                timeString = this.formatTime(now);
-            }
-            
-            this.timeDisplay.textContent = timeString;
-            
-            // Update date
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = now.toLocaleDateString('en-US', options);
-            this.dateDisplay.textContent = dateString;
-            
-            // Update timezone
-            if (this.settings.nepalTime) {
-                this.timezoneDisplay.textContent = 'NPT (UTC+5:45)';
-            } else {
-                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const offset = now.getTimezoneOffset();
-                const offsetHours = Math.floor(Math.abs(offset) / 60);
-                const offsetMinutes = Math.abs(offset) % 60;
-                const offsetString = `UTC${offset >= 0 ? '-' : '+'}${offsetHours}:${offsetMinutes.toString().padStart(2, '0')}`;
-                this.timezoneDisplay.textContent = `${timezone} (${offsetString})`;
-            }
-        };
-        
-        updateTime();
-        setInterval(updateTime, 1000);
-    }
-    
-    formatTime(date) {
-        let hours = date.getHours();
-        let minutes = date.getMinutes();
-        let seconds = date.getSeconds();
-        let ampm = '';
-        
-        // Handle 12/24 hour format
-        if (this.settings.timeFormat === '12') {
-            ampm = hours >= 12 ? ' PM' : ' AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12; // 0 should be 12
-        }
-        
-        // Format with leading zeros
-        hours = hours.toString().padStart(2, '0');
-        minutes = minutes.toString().padStart(2, '0');
-        seconds = seconds.toString().padStart(2, '0');
-        
-        let timeString = `${hours}:${minutes}`;
-        
-        // Add seconds if enabled
-        if (this.settings.showSeconds) {
-            timeString += `:${seconds}`;
-        }
-        
-        // Add AM/PM for 12-hour format
-        timeString += ampm;
-        
-        return timeString;
-    }
-    
-    updateTimerDisplay() {
-        const minutes = parseInt(this.floatingTimerMinutes.value) || 0;
-        const seconds = parseInt(this.floatingTimerSeconds.value) || 0;
-        this.floatingTimerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    
-    toggleTimer() {
-        if (this.isTimerRunning) {
-            this.stopTimer();
-        } else {
-            this.startTimer();
-        }
-    }
-    
-    startTimer() {
-        const minutes = parseInt(this.floatingTimerMinutes.value) || 25;
-        const seconds = parseInt(this.floatingTimerSeconds.value) || 0;
-        this.timerSeconds = minutes * 60 + seconds;
-        
-        this.isTimerRunning = true;
-        this.floatingStartTimer.textContent = 'Stop';
-        this.floatingStartTimer.style.background = '#dc3545';
-        
-        this.timerInterval = setInterval(() => {
-            this.timerSeconds--;
-            if (this.timerSeconds <= 0) {
-                this.stopTimer();
-                this.timerComplete();
-            } else {
-                const mins = Math.floor(this.timerSeconds / 60);
-                const secs = this.timerSeconds % 60;
-                this.floatingTimerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            }
-        }, 1000);
-        
-        chrome.runtime.sendMessage({
-            action: 'startTimer',
-            duration: this.timerSeconds
-        });
-    }
-    
-    stopTimer() {
-        this.isTimerRunning = false;
-        clearInterval(this.timerInterval);
-        this.floatingStartTimer.textContent = 'Start';
-        this.floatingStartTimer.style.background = '#28a745';
-        
-        chrome.runtime.sendMessage({
-            action: 'stopTimer'
-        });
-    }
-    
-    timerComplete() {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: '../assets/icons/icon48.png',
-            title: 'Timer Complete!',
-            message: 'Your timer has finished. Time for a break!'
-        });
-        
-        this.floatingTimerDisplay.textContent = '00:00';
-        chrome.runtime.sendMessage({
-            action: 'timerComplete'
-        });
-    }
-    
-    startPomodoro(minutes) {
-        this.floatingTimerMinutes.value = minutes;
-        this.floatingTimerSeconds.value = 0;
-        this.updateTimerDisplay();
-        
-        if (!this.isTimerRunning) {
-            this.startTimer();
-        }
-    }
-    
-    async toggleFocusMode() {
-        if (this.focusModeActive) {
-            await this.stopFocusMode();
-        } else {
-            await this.startFocusMode();
-        }
-    }
-    
-    async startFocusMode() {
-        const focusTime = prompt('Enter focus session duration (minutes):', '25');
-        if (focusTime && !isNaN(focusTime)) {
-            this.focusModeActive = true;
-            this.clock.classList.add('focus-active');
-            this.focusStatus.textContent = 'Active';
-            this.focusStatus.classList.add('active');
-            this.floatingFocusMode.textContent = 'Stop Focus';
-            
-            chrome.runtime.sendMessage({
-                action: 'startFocusMode',
-                duration: parseInt(focusTime) * 60
-            });
-        }
-    }
-    
-    async stopFocusMode() {
-        this.focusModeActive = false;
-        this.clock.classList.remove('focus-active');
-        this.focusStatus.textContent = 'Not Active';
-        this.focusStatus.classList.remove('active');
-        this.floatingFocusMode.textContent = 'Start Focus';
-        
-        chrome.runtime.sendMessage({
-            action: 'stopFocusMode'
-        });
-    }
-    
-    addQuickTask() {
-        const taskText = prompt('Enter quick task:');
-        if (taskText && taskText.trim()) {
-            const taskId = Date.now().toString();
-            const taskItem = document.createElement('div');
-            taskItem.className = 'task-item';
-            taskItem.innerHTML = `
-                <input type="checkbox" id="quickTask${taskId}">
-                <label for="quickTask${taskId}">${taskText.trim()}</label>
-            `;
-            
-            this.quickTaskList.appendChild(taskItem);
-            this.saveQuickTasks();
-        }
-    }
-    
-    async saveQuickTasks() {
-        const tasks = [];
-        this.quickTaskList.querySelectorAll('.task-item').forEach(item => {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            const label = item.querySelector('label');
-            tasks.push({
-                id: checkbox.id,
-                text: label.textContent,
-                completed: checkbox.checked
-            });
-        });
-        
-        await chrome.storage.local.set({ quickTasks: tasks });
-    }
-    
-    async loadQuickTasks() {
-        const result = await chrome.storage.local.get(['quickTasks']);
-        if (result.quickTasks && result.quickTasks.length > 0) {
-            this.quickTaskList.innerHTML = '';
-            result.quickTasks.forEach(task => {
-                const taskItem = document.createElement('div');
-                taskItem.className = 'task-item';
-                taskItem.innerHTML = `
-                    <input type="checkbox" id="${task.id}" ${task.completed ? 'checked' : ''}>
-                    <label for="${task.id}">${task.text}</label>
-                `;
-                this.quickTaskList.appendChild(taskItem);
-            });
-        }
-    }
-    
-    async savePosition() {
-        await chrome.storage.local.set({
-            clockPosition: {
-                x: this.currentX,
-                y: this.currentY
-            }
-        });
-    }
-    
-    async loadSettings() {
-        const result = await chrome.storage.local.get(['settings', 'clockPosition']);
-        
-        const settings = result.settings || {};
-        if (settings.theme) {
-            this.clock.classList.add(settings.theme + '-theme');
-        }
-        
-        if (settings.clockSize) {
-            this.clock.classList.add(settings.clockSize);
-        }
-        
-        const position = result.clockPosition || { x: 20, y: 20 };
-        this.currentX = position.x;
-        this.currentY = position.y;
-        this.xOffset = position.x;
-        this.yOffset = position.y;
-        this.setTranslate(position.x, position.y);
-    }
-    
-    handleMessage(message, sender, sendResponse) {
-        switch (message.action) {
-            case 'toggleClock':
-                this.toggleVisibility();
-                break;
-                
-            case 'focusModeStarted':
-                this.focusModeActive = true;
-                this.clock.classList.add('focus-active');
-                this.focusStatus.textContent = 'Active';
-                this.focusStatus.classList.add('active');
-                break;
-                
-            case 'focusModeStopped':
-                this.focusModeActive = false;
-                this.clock.classList.remove('focus-active');
-                this.focusStatus.textContent = 'Not Active';
-                this.focusStatus.classList.remove('active');
-                break;
-                
-            case 'playSound':
-                this.playSound(message.sound);
-                break;
-        }
-    }
-    
-    toggleVisibility() {
-        if (this.clock.style.display === 'none') {
-            this.clock.style.display = 'block';
-        } else {
-            this.clock.style.display = 'none';
-        }
-    }
-    
-    playSound(soundName) {
-        const audio = new Audio(`../assets/sounds/${soundName}.mp3`);
-        audio.play().catch(e => console.log('Could not play sound:', e));
-    }
-}
+/**
+ * clock.js — Clock face display only.
+ * Dragging and resizing are handled by the container in content/blocker.js.
+ */
+(function () {
+    const hmEl = document.getElementById('hm');
+    const secEl = document.getElementById('sec');
+    const dateEl = document.getElementById('dateDisplay');
+    const tzEl = document.getElementById('tzDisplay');
+    const focusEl = document.getElementById('focusIndicator');
 
-if (typeof window !== 'undefined') {
-    new FloatingClock();
-}
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    let cachedSettings = {};
+    let currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function updateClock() {
+        const s = cachedSettings || {};
+        const is12h = s.timeFormat === '12h';
+        const tz = s.timezone || currentTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour12: is12h,
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            const parts = formatter.formatToParts(new Date());
+            const get = (type) => parts.find(p => p.type === type)?.value || '';
+
+            let hour = get('hour');
+            const minute = get('minute');
+            const second = get('second');
+            const day = get('weekday');
+            const month = get('month');
+            const dayNum = get('day');
+
+            if (!is12h) {
+                hour = pad(parseInt(hour, 10));
+            }
+
+            hmEl.textContent = `${hour}:${minute}`;
+            const dayPeriod = get('dayPeriod');
+            const secPart = document.querySelector('.seconds-part');
+            
+            if (is12h && dayPeriod) {
+                secPart.textContent = `${get('second')} ${dayPeriod}`;
+            } else {
+                secPart.textContent = get('second');
+            }
+            
+            dateEl.textContent = `${get('weekday')}, ${get('month')} ${get('day')}`;
+        } catch (e) {
+            // Fallback to local time if timezone formatting fails
+            const now = new Date();
+            let h = now.getHours();
+            const m = pad(now.getMinutes());
+            const s2 = pad(now.getSeconds());
+            let ampm = '';
+            if (is12h) {
+                ampm = h >= 12 ? ' PM' : ' AM';
+                h = h % 12;
+                h = h ? h : 12;
+            }
+            const displayHour = is12h ? h.toString() : pad(h);
+            const day = DAYS[now.getDay()];
+            const date = now.getDate();
+            const mon = MONTHS[now.getMonth()];
+            hmEl.textContent = `${displayHour}:${m}`;
+            
+            const secPart = document.querySelector('.seconds-part');
+            secPart.textContent = s2 + (is12h ? ampm : '');
+            dateEl.textContent = `${day}, ${mon} ${date}`;
+        }
+    }
+
+    function updateTimezone() {
+        const s = cachedSettings || {};
+        const tz = s.timezone || currentTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        tzEl.textContent = tz || '';
+    }
+
+    let activeInterval = null;
+    function checkActiveTimers() {
+        chrome.storage.local.get(['focusState', 'timerState'], (res) => {
+            const focusActive = res.focusState?.isActive === true;
+            const timerActive = res.timerState?.isRunning === true;
+
+            if (activeInterval) clearInterval(activeInterval);
+
+            // Hide indicator when nothing is running
+            if (!focusActive && !timerActive) {
+                focusEl.style.display = 'none';
+                focusEl.textContent = '';
+                return;
+            }
+
+            focusEl.style.display = 'block';
+
+            const focusStart = res.focusState?.startTime;
+            const focusDuration = res.focusState?.duration || 0;
+            const timerStart = res.timerState?.startTime;
+            const timerDuration = res.timerState?.duration || 0;
+
+            const updateStatus = () => {
+                const parts = [];
+
+                if (focusActive && focusStart && focusDuration > 0) {
+                    const elapsed = Math.floor((Date.now() - focusStart) / 1000);
+                    const remaining = Math.max(0, focusDuration - elapsed);
+                    if (remaining > 0) {
+                        const m = Math.floor(remaining / 60);
+                        const s = remaining % 60;
+                        parts.push(`🎯 Focus: ${pad(m)}:${pad(s)}`);
+                    } else {
+                        parts.push('🎯 Focus Complete');
+                    }
+                }
+
+                if (timerActive && timerStart && timerDuration > 0) {
+                    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+                    const remaining = Math.max(0, timerDuration - elapsed);
+                    if (remaining > 0) {
+                        const m = Math.floor(remaining / 60);
+                        const s = remaining % 60;
+                        parts.push(`⏱️ Timer: ${pad(m)}:${pad(s)}`);
+                    } else {
+                        parts.push('⏱️ Timer Complete');
+                    }
+                }
+
+                if (!parts.length) {
+                    focusEl.innerHTML = '';
+                } else {
+                    focusEl.innerHTML = parts
+                        .map(text => `<div class="focus-indicator-line">${text}</div>`)
+                        .join('');
+                }
+            };
+
+            updateStatus();
+            activeInterval = setInterval(updateStatus, 1000);
+        });
+    }
+
+    async function applySettings() {
+        const result = await chrome.storage.local.get(['settings']);
+        cachedSettings = result.settings || {};
+        const s = cachedSettings;
+        currentTimezone = s.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        // Always use the standard digital style
+        dateEl.style.display = (s.showDate !== false) ? 'block' : 'none';
+        tzEl.style.display = (s.showTimezone !== false) ? 'block' : 'none';
+
+        // Range Opacity (if controlled by CSS variable)
+        if (s.clockOpacity) {
+            document.documentElement.style.setProperty('--bg-opacity', s.clockOpacity / 100);
+        }
+
+        if (s.showSeconds === false) {
+            document.querySelector('.seconds-part').style.display = 'none';
+        } else {
+            document.querySelector('.seconds-part').style.display = 'inline';
+        }
+
+        updateClock(); // Update immediately after applying settings
+        updateTimezone();
+    }
+
+    // Start ticking
+    applySettings();
+    updateClock();
+    updateTimezone();
+    checkActiveTimers();
+
+    // Regular updates while the tab is active
+    setInterval(updateClock, 1000);
+    setInterval(checkActiveTimers, 5000);
+
+    // Ensure the clock snaps to the correct time when a tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            updateClock();
+            updateTimezone();
+            checkActiveTimers();
+        }
+    });
+
+    // Listen for changes
+    chrome.storage.onChanged.addListener((changes) => {
+        if (changes.focusState || changes.timerState) checkActiveTimers();
+        if (changes.settings) applySettings();
+        if (changes.clockView) applyClockView(changes.clockView.newValue || 'standard');
+    });
+
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.action === 'settingsUpdated') {
+            applySettings();
+        }
+    });
+
+    // View switcher logic
+    const viewToggle = document.getElementById('view-toggle');
+    const clockFace = document.querySelector('.clock-face');
+    const flipFrame = document.getElementById('flip-clock-frame');
+    let isFlipView = false;
+
+    function applyClockView(mode) {
+        isFlipView = mode === 'flip';
+        if (isFlipView) {
+            clockFace.style.display = 'none';
+            flipFrame.style.display = 'block';
+        } else {
+            clockFace.style.display = 'flex';
+            flipFrame.style.display = 'none';
+        }
+    }
+
+    viewToggle.addEventListener('click', () => {
+        const next = isFlipView ? 'standard' : 'flip';
+        applyClockView(next);
+        chrome.storage.local.set({ clockView: next });
+    });
+
+    // Restore view state on load
+    chrome.storage.local.get('clockView', (result) => {
+        applyClockView(result.clockView || 'standard');
+    });
+
+})();
