@@ -112,65 +112,25 @@ class ContentBlocker {
     }
     
     blockCurrentPage() {
-        this.blockedAttempts++;
-        this.logBlockedAttempt();
-        
-        document.body.innerHTML = `
-            <div style="
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-                padding: 20px;
-            ">
-                <div style="max-width: 600px;">
-                    <h1 style="font-size: 3rem; margin-bottom: 20px; font-weight: 300;">🎯 Focus Mode Active</h1>
-                    <p style="font-size: 1.2rem; margin-bottom: 30px; opacity: 0.9;">
-                        This site is blocked during your focus session. Stay focused on your important tasks!
-                    </p>
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-                        <h2 style="margin-bottom: 20px;">💡 Quick Break Ideas</h2>
-                        <ul style="text-align: left; font-size: 1.1rem; line-height: 1.8;">
-                            <li>Take 5 deep breaths</li>
-                            <li>Stretch your arms and neck</li>
-                            <li>Drink a glass of water</li>
-                            <li>Look at something 20 feet away for 20 seconds</li>
-                            <li>Stand up and walk around for 2 minutes</li>
-                        </ul>
-                    </div>
-                    <div style="margin-bottom: 30px;">
-                        <p style="font-size: 1.1rem; margin-bottom: 15px;">Blocked attempts this session: <strong>${this.blockedAttempts}</strong></p>
-                        <p style="opacity: 0.8;">You're doing great! Every blocked attempt makes you stronger.</p>
-                    </div>
-                    <button id="emergencyOverride" style="
-                        background: rgba(220, 53, 69, 0.2);
-                        border: 2px solid rgba(220, 53, 69, 0.5);
-                        color: white;
-                        padding: 12px 24px;
-                        border-radius: 8px;
-                        font-size: 1rem;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                    ">
-                        Emergency Override (Break Focus)
-                    </button>
-                    <p style="font-size: 0.9rem; opacity: 0.7; margin-top: 10px;">
-                        Use only when absolutely necessary. This will end your focus session.
-                    </p>
-                </div>
-            </div>
+        // Inject the focus block page
+        const iframe = document.createElement('iframe');
+        iframe.src = chrome.runtime.getURL('floating/focus-block.html');
+        iframe.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 999999;
+            background: white;
         `;
         
-        document.getElementById('emergencyOverride').addEventListener('click', () => {
-            this.emergencyOverride();
-        });
+        document.body.innerHTML = '';
+        document.body.appendChild(iframe);
         
-        this.updateBlockedAttempts();
+        this.blockedAttempts++;
+        this.logBlockedAttempt();
     }
     
     async emergencyOverride() {
@@ -286,41 +246,64 @@ class ContentBlocker {
         }
     }
     
-    notification.innerHTML = `
-        <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
-            ⏰ Time Limit Reached
-        </div>
-        <div style="font-size: 14px; margin-bottom: 15px;">
-            Site: <strong>${site}</strong><br>
-            Time remaining: <strong>${Math.floor(remaining / 60)}h ${remaining % 60}m</strong><br>
-            <small>This site will be unblocked at midnight or when time limit resets.</small>
-        </div>
-        <div style="margin-top: 15px;">
-            <button onclick="this.parentElement.remove()" style="
-                background: rgba(255, 255, 255, 0.2);
-                border: none;
-                color: #333;
-                padding: 8px 16px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-            ">Close</button>
-        </div>
-    `;
+    async showTimeLimitWarning(site, remaining) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 300px;
+        `;
+        
+        notification.innerHTML = `
+            <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
+                ⏰ Time Limit Reached
+            </div>
+            <div style="font-size: 14px; margin-bottom: 15px;">
+                Site: <strong>${site}</strong><br>
+                Time remaining: <strong>${Math.floor(remaining / 60)}h ${remaining % 60}m</strong><br>
+                <small>This site will be unblocked at midnight or when time limit resets.</small>
+            </div>
+            <div style="margin-top: 15px;">
+                <button onclick="this.parentElement.remove()" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: none;
+                    color: #333;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">Close</button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+    }
     
-    document.body.appendChild(notification);
-}
-
-async logBlockedAttempt() {
-    const result = await chrome.storage.local.get(['blockedAttempts']);
-    const attempts = result.blockedAttempts || [];
+    async logBlockedAttempt() {
+        const result = await chrome.storage.local.get(['blockedAttempts']);
+        const attempts = result.blockedAttempts || [];
+        
+        attempts.push({
+            url: window.location.href,
+            domain: this.getCurrentDomain(),
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+        });
+        
+        await chrome.storage.local.set({ blockedAttempts: attempts });
+    }
     
-    attempts.push({
-        url: window.location.href,
-        domain: this.getCurrentDomain(),
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    });
+    async updateBlockedAttempts() {
+        const result = await chrome.storage.local.get(['todayStats']);
+        let stats = result.todayStats || {
             tasksCompleted: 0,
             sessionsCompleted: 0,
             date: new Date().toDateString(),
@@ -342,11 +325,10 @@ async logBlockedAttempt() {
         const overrides = result.emergencyOverrides || [];
         
         overrides.push({
-            reason: reason,
             url: window.location.href,
             domain: this.getCurrentDomain(),
-            timestamp: new Date().toISOString(),
-            blockedAttempts: this.blockedAttempts
+            reason: reason,
+            timestamp: new Date().toISOString()
         });
         
         await chrome.storage.local.set({ emergencyOverrides: overrides });
@@ -368,18 +350,3 @@ async logBlockedAttempt() {
 if (typeof window !== 'undefined' && window.location.protocol !== 'chrome-extension:') {
     new ContentBlocker();
 }
-
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-`;
-document.head.appendChild(style);

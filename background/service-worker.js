@@ -279,8 +279,10 @@ class BackgroundService {
         
         await chrome.storage.local.set({ timerState: this.timerState });
         
+        // Update extension icon
         chrome.action.setBadgeText({ text: '⏱️' });
         chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+        chrome.action.setTitle({ title: 'Productivity Clock - Timer Running' });
     }
     
     startTimerAlarm() {
@@ -299,7 +301,9 @@ class BackgroundService {
         
         await chrome.storage.local.set({ timerState: this.timerState });
         
+        // Update extension icon
         chrome.action.setBadgeText({ text: '' });
+        chrome.action.setTitle({ title: 'Productivity Clock - Focus & Time Manager' });
     }
     
     async timerComplete() {
@@ -381,9 +385,12 @@ class BackgroundService {
         });
         
         await chrome.storage.local.set({ focusState: this.focusState });
+        await this.enableSiteBlocking(blockedSites);
         
+        // Update extension icon
         chrome.action.setBadgeText({ text: '🎯' });
         chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+        chrome.action.setTitle({ title: 'Productivity Clock - Focus Mode Active' });
         
         chrome.tabs.query({}, (tabs) => {
             tabs.forEach(tab => {
@@ -402,7 +409,9 @@ class BackgroundService {
         await this.disableSiteBlocking();
         await chrome.storage.local.set({ focusState: this.focusState });
         
+        // Update extension icon
         chrome.action.setBadgeText({ text: '' });
+        chrome.action.setTitle({ title: 'Productivity Clock - Focus & Time Manager' });
         
         chrome.tabs.query({}, (tabs) => {
             tabs.forEach(tab => {

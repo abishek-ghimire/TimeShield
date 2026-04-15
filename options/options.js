@@ -158,13 +158,26 @@ class OptionsManager {
             tab.addEventListener('click', () => {
                 const targetTab = tab.dataset.tab;
                 
+                // Remove active class from all tabs and contents
                 tabs.forEach(t => t.classList.remove('active'));
                 tabContents.forEach(tc => tc.classList.remove('active'));
                 
+                // Add active class to clicked tab and corresponding content
                 tab.classList.add('active');
-                document.getElementById(targetTab).classList.add('active');
+                const targetContent = document.getElementById(targetTab);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                console.log('Switched to tab:', targetTab); // Debug log
             });
         });
+        
+        // Set first tab as active by default
+        if (tabs.length > 0 && tabContents.length > 0) {
+            tabs[0].classList.add('active');
+            tabContents[0].classList.add('active');
+        }
     }
     
     setupFormListeners() {
@@ -686,17 +699,28 @@ async saveScheduledBlocking() {
     };
     
     await chrome.storage.local.set({ scheduledBlocking: this.scheduledBlocking });
-}
-
     }
     
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.remove();
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        
+        if (type === 'error') {
+            notification.style.background = '#dc3545';
+        } else if (type === 'warning') {
+            notification.style.background = '#ffc107';
+            notification.style.color = '#333';
         }
-    }, 300);
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
