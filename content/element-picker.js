@@ -3,196 +3,220 @@ class ElementPicker {
   constructor() {
     this.active = false;
     this.highlightedElement = null;
+    // Store bound handlers as instance properties so removeEventListener works correctly
+    this._onMouseOver = this.onMouseOver.bind(this);
+    this._onMouseOut = this.onMouseOut.bind(this);
+    this._onClick = this.onClick.bind(this);
+    this._onKeyDown = this.onKeyDown.bind(this);
     this.setupListeners();
   }
-  
+
   setupListeners() {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === 'startElementPicker') {
         this.startPicker();
         sendResponse({ success: true });
       }
+      return true;
     });
   }
-  
+
   startPicker() {
     if (this.active) return;
-    
     this.active = true;
-    
-    // Add picker UI
+
     this.createPickerUI();
-    
-    // Add event listeners
-    document.addEventListener('mouseover', this.onMouseOver.bind(this));
-    document.addEventListener('mouseout', this.onMouseOut.bind(this));
-    document.addEventListener('click', this.onClick.bind(this), true);
-    
-    // Change cursor
+
+    document.addEventListener('mouseover', this._onMouseOver);
+    document.addEventListener('mouseout', this._onMouseOut);
+    document.addEventListener('click', this._onClick, true);
+    document.addEventListener('keydown', this._onKeyDown);
+
     document.body.style.cursor = 'crosshair';
   }
-  
+
   stopPicker() {
     this.active = false;
-    
-    // Remove highlight
+
     if (this.highlightedElement) {
       this.highlightedElement.style.outline = '';
+      this.highlightedElement = null;
     }
-    
-    // Remove listeners
-    document.removeEventListener('mouseover', this.onMouseOver.bind(this));
-    document.removeEventListener('mouseout', this.onMouseOut.bind(this));
-    document.removeEventListener('click', this.onClick.bind(this), true);
-    
-    // Remove UI
+
+    document.removeEventListener('mouseover', this._onMouseOver);
+    document.removeEventListener('mouseout', this._onMouseOut);
+    document.removeEventListener('click', this._onClick, true);
+    document.removeEventListener('keydown', this._onKeyDown);
+
     const ui = document.getElementById('element-picker-ui');
     if (ui) ui.remove();
-    
-    // Reset cursor
+
     document.body.style.cursor = '';
   }
-  
+
   createPickerUI() {
+    const existing = document.getElementById('element-picker-ui');
+    if (existing) existing.remove();
+
     const ui = document.createElement('div');
     ui.id = 'element-picker-ui';
     ui.innerHTML = `
-      <div style="position:fixed; top:10px; left:50%; transform:translateX(-50%); 
-                  background:#333; color:white; padding:10px 20px; border-radius:5px; 
-                  z-index:999999; font-family:Arial; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
-        Click on an element to block it (Esc to cancel)
+      <div style="
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15,23,42,0.9);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 100px;
+        z-index: 2147483647;
+        font-family: 'Inter', -apple-system, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      ">
+        <span style="font-size:18px;">🎯</span>
+        Click any element to block it &nbsp;<kbd style="background:rgba(255,255,255,0.1); border-radius:4px; padding:2px 6px; font-size:12px;">Esc</kbd> to cancel
       </div>
     `;
     document.body.appendChild(ui);
   }
-  
+
   onMouseOver(event) {
     if (!this.active) return;
-    
-    const element = event.target;
-    
-    // Remove previous highlight
+
     if (this.highlightedElement) {
       this.highlightedElement.style.outline = '';
     }
-    
-    // Highlight new element
-    element.style.outline = '2px solid #ff4444';
-    this.highlightedElement = element;
+
+    const el = event.target;
+    el.style.outline = '2px solid #f43f5e';
+    el.style.outlineOffset = '2px';
+    this.highlightedElement = el;
   }
-  
+
   onMouseOut(event) {
     if (!this.active || !this.highlightedElement) return;
-    
     this.highlightedElement.style.outline = '';
+    this.highlightedElement.style.outlineOffset = '';
     this.highlightedElement = null;
   }
-  
+
   onClick(event) {
     event.preventDefault();
     event.stopPropagation();
-    
+
     if (!this.active) return;
-    
+
     const element = event.target;
-    
-    // Generate selector
     const selector = this.generateSelector(element);
-    
-    // Show block confirmation
+
     this.showBlockDialog(selector, element);
   }
-  
-  generateSelector(element) {
-    // Simple ID selector if available
-    if (element.id) {
-      return `#${element.id}`;
+
+  onKeyDown(event) {
+    if (event.key === 'Escape') {
+      this.stopPicker();
     }
-    
-    // Class-based selector
+  }
+
+  generateSelector(element) {
+    // Best: ID
+    if (element.id) {
+      return `#${CSS.escape(element.id)}`;
+    }
+
+    // Class-based (skip dynamic/generic single-char classes)
     if (element.className && typeof element.className === 'string') {
-      const classes = element.className.split(' ').filter(c => c.trim());
+      const classes = element.className.trim().split(/\s+/).filter(c => c.length > 2);
       if (classes.length > 0) {
-        return '.' + classes.join('.');
+        return '.' + classes.map(c => CSS.escape(c)).join('.');
       }
     }
-    
-    // Tag + attributes
+
+    // Tag + src/href attributes
     const tag = element.tagName.toLowerCase();
-    const attributes = [];
-    
-    if (element.getAttribute('src')) {
-      attributes.push(`[src*="${element.getAttribute('src').substring(0, 20)}"]`);
-    }
-    
-    if (element.getAttribute('href')) {
-      attributes.push(`[href*="${element.getAttribute('href').substring(0, 20)}"]`);
-    }
-    
-    return tag + attributes.join('');
+    const attrs = [];
+
+    const src = element.getAttribute('src');
+    if (src) attrs.push(`[src*="${src.substring(0, 30)}"]`);
+
+    const href = element.getAttribute('href');
+    if (href) attrs.push(`[href*="${href.substring(0, 30)}"]`);
+
+    return tag + attrs.join('');
   }
-  
+
   showBlockDialog(selector, element) {
+    // Remove existing dialog
+    const old = document.getElementById('element-picker-dialog');
+    if (old) old.remove();
+
     const dialog = document.createElement('div');
+    dialog.id = 'element-picker-dialog';
     dialog.style.cssText = `
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      background:white; padding:20px; border-radius:8px; 
-      box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:1000000;
-      font-family:Arial; min-width:300px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15,23,42,0.97);
+      color: white;
+      padding: 28px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+      z-index: 2147483647;
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-width: 340px;
+      backdrop-filter: blur(16px);
     `;
-    
+
     dialog.innerHTML = `
-      <h3 style="margin-top:0; color:#333;">Block Element</h3>
-      <p style="color:#666; font-size:14px;">Selector: <code>${selector}</code></p>
-      <div style="margin:15px 0;">
-        <label style="display:block; margin-bottom:5px; color:#333;">Block on:</label>
-        <select id="block-scope" style="width:100%; padding:5px;">
+      <h3 style="margin:0 0 8px; font-size:16px; font-weight:600;">Block Element</h3>
+      <p style="color:#94a3b8; font-size:13px; margin:0 0 16px;">Selector: <code style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:12px;">${selector}</code></p>
+      <div style="margin-bottom:16px;">
+        <label style="display:block; margin-bottom:6px; color:#94a3b8; font-size:13px;">Apply to:</label>
+        <select id="picker-block-scope" style="width:100%; padding:10px; border-radius:10px; border: 1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:white; font-size:13px;">
           <option value="domain">This website only</option>
           <option value="global">All websites</option>
         </select>
       </div>
       <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button id="cancel-block" style="padding:5px 15px; background:#ccc; border:none; border-radius:3px; cursor:pointer;">Cancel</button>
-        <button id="confirm-block" style="padding:5px 15px; background:#ff4444; color:white; border:none; border-radius:3px; cursor:pointer;">Block Element</button>
+        <button id="picker-cancel" style="padding:10px 18px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white; cursor:pointer; font-size:13px;">Cancel</button>
+        <button id="picker-confirm" style="padding:10px 18px; background:#f43f5e; border:none; border-radius:10px; color:white; cursor:pointer; font-size:13px; font-weight:600;">Block</button>
       </div>
     `;
-    
+
     document.body.appendChild(dialog);
-    
-    // Handle buttons
-    document.getElementById('cancel-block').onclick = () => {
+
+    document.getElementById('picker-cancel').onclick = () => {
       dialog.remove();
       this.stopPicker();
     };
-    
-    document.getElementById('confirm-block').onclick = () => {
-      const scope = document.getElementById('block-scope').value;
-      
-      // Send to background
+
+    document.getElementById('picker-confirm').onclick = () => {
+      const scope = document.getElementById('picker-block-scope').value;
+
       chrome.runtime.sendMessage({
         action: 'blockElement',
         selector: selector,
         domain: scope === 'domain' ? window.location.hostname : '*'
       });
-      
-      // Hide element immediately
+
+      // Immediately hide the element
       element.style.setProperty('display', 'none', 'important');
-      
+
       dialog.remove();
       this.stopPicker();
     };
-    
-    // Handle Escape key
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        dialog.remove();
-        document.removeEventListener('keydown', onKeyDown);
-        this.stopPicker();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
   }
 }
 
-// Initialize
+// Initialize once
 new ElementPicker();
