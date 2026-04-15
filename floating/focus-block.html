@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Mode - Site Blocked</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .focus-container {
+            max-width: 600px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .focus-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .break-ideas {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .break-ideas h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        
+        .break-list {
+            text-align: left;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .break-list li {
+            margin-bottom: 10px;
+            list-style: none;
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .break-list li:before {
+            content: '✨';
+            position: absolute;
+            left: 0;
+        }
+        
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .blocked-count {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .encouragement {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .emergency-btn {
+            background: rgba(220, 53, 69, 0.2);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        
+        .emergency-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
+        }
+        
+        .warning {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+        
+        .quote {
+            font-style: italic;
+            opacity: 0.8;
+            margin-top: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .timer-display {
+            font-size: 1.5rem;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+        
+        .breathing-exercise {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .breathing-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            margin: 20px auto;
+            animation: breathe 4s infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+        
+        .breathing-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .breathing-instruction {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="focus-container">
+        <div class="focus-icon">🎯</div>
+        <h1>Focus Mode Active</h1>
+        <p class="message">
+            This site is blocked during your focus session. Stay focused on your important tasks!
+        </p>
+        
+        <div class="timer-display" id="focusTimer">Session in progress...</div>
+        
+        <div class="breathing-exercise">
+            <div class="breathing-text">Take a moment to breathe</div>
+            <div class="breathing-circle"></div>
+            <div class="breathing-instruction">Follow the circle: 4 seconds in, 4 seconds hold, 4 seconds out</div>
+        </div>
+        
+        <div class="break-ideas">
+            <h2>💡 Quick Break Ideas</h2>
+            <ul class="break-list">
+                <li>Take 5 deep breaths</li>
+                <li>Stretch your arms and neck</li>
+                <li>Drink a glass of water</li>
+                <li>Look at something 20 feet away for 20 seconds</li>
+                <li>Stand up and walk around for 2 minutes</li>
+                <li>Do 10 jumping jacks</li>
+                <li>Write down 3 things you're grateful for</li>
+            </ul>
+        </div>
+        
+        <div class="stats">
+            <div class="blocked-count" id="blockedCount">0</div>
+            <div class="encouragement">Blocked attempts this session</div>
+            <p class="encouragement">You're doing great! Every blocked attempt makes you stronger.</p>
+        </div>
+        
+        <button class="emergency-btn" id="emergencyOverride">Emergency Override (Break Focus)</button>
+        <p class="warning">Use only when absolutely necessary. This will end your focus session.</p>
+        
+        <div class="quote" id="motivationalQuote">
+            "Focus is not about saying yes to the thing you've got to focus on. It's about saying no to the hundred other good ideas." - Steve Jobs
+        </div>
+    </div>
+    
+    <script>
+        class FocusBlockPage {
+            constructor() {
+                this.blockedAttempts = 0;
+                this.quotes = [
+                    "Focus is not about saying yes to the thing you've got to focus on. It's about saying no to the hundred other good ideas. - Steve Jobs",
+                    "The successful warrior is the average man, with laser-like focus. - Bruce Lee",
+                    "Concentrate all your thoughts upon the work at hand. The sun's rays do not burn until brought to a focus. - Alexander Graham Bell",
+                    "Focus on being productive instead of busy. - Tim Ferriss",
+                    "You can't depend on your eyes when your imagination is out of focus. - Mark Twain",
+                    "The ability to concentrate and use your time well is everything. - Lee Iacocca",
+                    "My success, part of it is that I focused more on the product than on the money. - Elon Musk",
+                    "Focus on the journey, not the destination. Joy is found not in finishing an activity but in doing it. - Greg Anderson"
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                this.loadBlockedAttempts();
+                this.setupEventListeners();
+                this.startMotivationalRotation();
+                this.loadFocusSessionInfo();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('emergencyOverride').addEventListener('click', () => {
+                    this.emergencyOverride();
+                });
+            }
+            
+            async loadBlockedAttempts() {
+                try {
+                    const result = await chrome.storage.local.get(['todayStats']);
+                    const stats = result.todayStats || {};
+                    this.blockedAttempts = stats.blockedAttempts || 0;
+                    document.getElementById('blockedCount').textContent = this.blockedAttempts;
+                } catch (error) {
+                    console.log('Could not load blocked attempts:', error);
+                }
+            }
+            
+            async loadFocusSessionInfo() {
+                try {
+                    const result = await chrome.storage.local.get(['focusState']);
+                    const focusState = result.focusState;
+                    
+                    if (focusState && focusState.isActive) {
+                        const elapsed = Math.floor((Date.now() - focusState.startTime) / 1000);
+                        const minutes = Math.floor(elapsed / 60);
+                        const seconds = elapsed % 60;
+                        document.getElementById('focusTimer').textContent = 
+                            `Session time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        this.updateTimer(focusState.startTime);
+                    }
+                } catch (error) {
+                    console.log('Could not load focus session info:', error);
+                }
+            }
+            
+            updateTimer(startTime) {
+                setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('focusTimer').textContent = 
+                        `Session time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+            }
+            
+            async emergencyOverride() {
+                const reason = prompt('Please enter the reason for breaking focus mode:');
+                if (reason && reason.trim()) {
+                    await this.logEmergencyOverride(reason.trim());
+                    
+                    chrome.runtime.sendMessage({
+                        action: 'stopFocusMode'
+                    });
+                    
+                    location.reload();
+                }
+            }
+            
+            async logEmergencyOverride(reason) {
+                try {
+                    const result = await chrome.storage.local.get(['emergencyOverrides']);
+                    const overrides = result.emergencyOverrides || [];
+                    
+                    overrides.push({
+                        reason: reason,
+                        url: window.location.href,
+                        domain: window.location.hostname,
+                        timestamp: new Date().toISOString(),
+                        blockedAttempts: this.blockedAttempts
+                    });
+                    
+                    await chrome.storage.local.set({ emergencyOverrides: overrides });
+                } catch (error) {
+                    console.log('Could not log emergency override:', error);
+                }
+            }
+            
+            startMotivationalRotation() {
+                let currentIndex = 0;
+                
+                setInterval(() => {
+                    currentIndex = (currentIndex + 1) % this.quotes.length;
+                    const quoteElement = document.getElementById('motivationalQuote');
+                    
+                    quoteElement.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        quoteElement.textContent = `"${this.quotes[currentIndex]}"`;
+                        quoteElement.style.opacity = '0.8';
+                    }, 500);
+                }, 10000);
+            }
+        }
+        
+        new FocusBlockPage();
+    </script>
+</body>
+</html>
