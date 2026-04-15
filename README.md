@@ -2,10 +2,7 @@
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Version](https://img.shields.io/badge/Version-2.1.0-green.svg)]()
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![Repo Views](https://visitor-badge.laobi.icu/badge?page_id=abishekgh-6.AdBlocker-FloatingClock-Extension)](https://github.com/abishekgh-6/AdBlocker-FloatingClock-Extension)
-[![Downloads](https://img.shields.io/github/downloads/abishekgh-6/AdBlocker-FloatingClock-Extension/total.svg?style=flat&label=Downloads)](https://github.com/abishekgh-6/AdBlocker-FloatingClock-Extension/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](https://github.com/abishekgh-6/TimeShield/releases/tag/v1.0.0)
 
 **TimeShield** is a productivity extension for Chrome/Brave that combines high-performance ad blocking with a focused deep-work toolkit. It turns your browser into a dedicated workspace with a floating clock overlay, intelligent site blocking, and detailed usage analytics.
 
@@ -13,41 +10,50 @@
 
 ---
 
-## ✨ Key Pillar Features
+## ✨ Features
 
-### 🕒 Floating Clock Overlay
-*   **Always-Visible:** A sleek, draggable clock that stays on top of any website.
-*   **Dynamic Resizing:** Pin it as a minimalist pill or expand it into a full productivity dashboard.
-*   **Refined Design:** High-quality glassmorphism, blur effects, and subtle animations.
-*   **Minimize Logic:** Collapse the clock into the title bar to save space while keeping it accessible.
+### 🕐 Two types of clocks
+*   **Always on top:** A simple clock you can drag around that stays on top of other websites.
+*   **3D Flip Clock:** A cool retro clock that opens in its own tab with nice animations.
+*   **Resize it:** You can makes the clock small like a pill or big like a box.
+*   **Hide it:** Minimize the clock into the title bar when you need more space.
 
-### 🎯 Deep Focus Protocol
-*   **Total Immersion:** Temporarily block distracting domains during high-intensity work sessions.
-*   **Immediate Redirection:** Distracting sites are instantly swapped for a mindful "Focus in Progress" screen.
-*   **Accurate Countdowns:** Real-time remaining time updates right on the block screen and the floating clock.
-*   **Auto-Acknowledge Popups:** When your session ends, a beautiful summary popup appears and auto-closes after 5 seconds to keep your transition smooth.
+### 🛑 Challenge to turn off the block
+*   **Hard to stop:** If you want to pause your blocks, you have to go through a challenge first.
+*   **Real warnings:** It shows you a few popups to make sure you really want to stop working.
+*   **Type to unlock:** You have to type out two motivational lines exactly right to turn off the block.
+*   **Pick your time:** Pause for 5 minutes, an hour, or the rest of the day.
 
-### 🩹 Surgical Ad-Shielding
-*   **Ad-Shield:** High-efficiency blocking of ads, trackers, and intrusive scripts using the Declarative Net Request API.
-*   **Surgical Content Preservation:** Intelligent detection that blocks ads while strictly whitelisting user posts, captions, and comments.
-*   **Element Picker:** Right-click and hide any annoying element on a page permanently.
-*   **False-Positive Prevention:** Whitelists `role="article"` and content-heavy text blocks to ensure social media feeds remain intact.
+### ⚡ Quick block buttons
+*   **Block sites fast:** Add the site you're on to your blocklist right from the popup.
+*   **Toggle ads:** Quickly turn the ad blocker on or off from the main menu.
 
-### 📋 Task List
-*   **Integrated Tasks:** Track your daily objectives directly in the extension popup.
-*   **Focus-Linked:** Associate tasks with focus sessions to see what you completed during deep work.
+### 🎯 Focus sessions
+*   **Pure focus:** Block all distracting sites while you work.
+*   **Redirects:** If you try to visit a blocked site, it sends you to a focus screen instead.
+*   **Live timers:** See exactly how much time you have left on the block screen and the clock.
 
-### 📊 Screen Time & Usage Analytics
-*   **Per-Site Breakdown:** See how much total time and how many opens each site gets.
-*   **Day / Week / Month Ranges:** Toggle between Today, last 7 days, and last 30 days to understand your habits.
-*   **24-Hour Bar Graphs:** Click any site to reveal a beautiful 24h bar graph (x-axis = hour, y-axis = time spent).
-*   **Inline Detail:** Usage graphs expand directly under each site row for a clean dashboard feel.
+### 🩹 A better ad blocker
+*   **Smart blocking:** Blocks ads and trackers but keeps the stuff you want to see.
+*   **Keep posts:** It won't hide social media posts, captions, or comments by mistake.
+*   **Hide anything:** Use the element picker to right-click and hide anything annoying on a page.
+
+### 📊 Track your screen time
+*   **See your habits:** Check exactly how much time you spend on each site every day.
+*   **Stats for the week:** Look back at the last 7 or 30 days to see your progress.
+*   **Simple graphs:** Click a site to see a basic bar chart of when you used it.
+*   **Go to stats:** If you try to open a blocked site, you can jump straight to your stats from there.
 
 ### ⏱️ Schedules & Time Limits
-*   **Scheduled Blocking:** Automatically block distracting sites during your chosen hours and days.
-*   **Per-Site Daily Limits:** Cap time on specific sites (e.g., 30 minutes/day on YouTube).
-*   **Global Distraction Pool:** Put multiple time-waster sites behind one shared time budget.
-*   **Whitelist:** Keep important sites unblocked even when other rules are active.
+*   **Set daily limits:** Cap how much time you can spend on sites like YouTube or Instagram.
+*   **Scheduled blocks:** Automatically block sites during certain hours of the day.
+*   **Shared budget:** Put multiple sites behind one shared time limit.
+*   **Whitelist:** Keep important sites unblocked even when other rules are on.
+
+---
+
+## 🎨 Themes and Light Mode
+TimeShield includes multiple themes like Dark, Light, and Solar Ember. We fixed the colors so everything is easy to read even in light mode.
 
 ---
 
