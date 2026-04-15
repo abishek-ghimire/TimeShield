@@ -148,6 +148,14 @@ class PopupController {
         const minutes = Math.floor(this.timerSeconds / 60);
         const seconds = this.timerSeconds % 60;
         this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Update input fields to match display
+        if (this.timerMinutes) {
+            this.timerMinutes.value = minutes;
+        }
+        if (this.timerSeconds) {
+            this.timerSeconds.value = seconds;
+        }
     }
     
     toggleTimer() {

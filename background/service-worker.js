@@ -43,19 +43,31 @@ class BackgroundService {
     // NEW: Initialize Ad Blocking
     async initializeAdBlocking() {
         try {
+            console.log('🔄 Starting ad blocker initialization...');
+            
+            // Check if components are properly initialized
+            if (!this.filterManager || !this.ruleCompiler || !this.adBlocker) {
+                console.error('❌ Ad blocker components not properly initialized');
+                return;
+            }
+            
             // Load and compile filter lists
             const filters = await this.filterManager.loadAllLists();
+            console.log(`📋 Loaded ${filters.length} filters`);
+            
             const rules = await this.ruleCompiler.compile(filters);
+            console.log(`⚙️ Compiled ${rules.length} DNR rules`);
             
             // Apply DNR rules
             await this.adBlocker.applyRules(rules);
             
-            console.log(`✅ Ad blocker initialized with ${rules.length} rules`);
+            console.log(`✅ Ad blocker initialized successfully with ${rules.length} rules`);
             
             // Setup rule tracking
             this.setupRuleTracking();
         } catch (error) {
-            console.error('Failed to initialize ad blocker:', error);
+            console.error('❌ Failed to initialize ad blocker:', error);
+            console.error('Stack trace:', error.stack);
         }
     }
     
