@@ -9,6 +9,11 @@ class PopupController {
         this.sessionsCompleted = document.getElementById('sessionsCompleted');
         this.todoList = document.getElementById('todoList');
         
+        // Ad blocker elements
+        this.adsBlocked = document.getElementById('adsBlocked');
+        this.bandwidthSaved = document.getElementById('bandwidthSaved');
+        this.timeSaved = document.getElementById('timeSaved');
+        
         this.timerInterval = null;
         this.timeInterval = null;
         this.timerSeconds = 0;
@@ -24,6 +29,26 @@ class PopupController {
         await this.loadTodayStats();
         await this.loadTodos();
         await this.restoreTimerState();
+        await this.loadAdBlockStats(); // NEW
+    }
+    
+    async loadAdBlockStats() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAdStats' });
+            if (response) {
+                this.adsBlocked.textContent = this.formatNumber(response.adsBlocked);
+                this.bandwidthSaved.textContent = response.bandwidthSaved;
+                this.timeSaved.textContent = response.timeSaved;
+            }
+        } catch (error) {
+            console.error('Failed to load ad block stats:', error);
+        }
+    }
+    
+    formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
     }
     
     async restoreTimerState() {
@@ -50,11 +75,47 @@ class PopupController {
         document.getElementById('startTimer').addEventListener('click', () => this.toggleTimer());
         document.getElementById('addTask').addEventListener('click', () => this.addTask());
         
+        // NEW: Ad blocker event listeners
+        document.getElementById('blockElement').addEventListener('click', () => this.startElementPicker());
+        document.getElementById('updateFilters').addEventListener('click', () => this.updateFilters());
+        
         this.timerMinutes.addEventListener('input', () => this.updateTimerDisplay());
         
         document.querySelectorAll('#todoList input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => this.toggleTask(e.target));
         });
+    }
+    
+    async startElementPicker() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            await chrome.tabs.sendMessage(tab.id, { action: 'startElementPicker' });
+            window.close(); // Close popup
+        } catch (error) {
+            console.error('Failed to start element picker:', error);
+        }
+    }
+    
+    async updateFilters() {
+        const btn = document.getElementById('updateFilters');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Updating...';
+        btn.disabled = true;
+        
+        try {
+            await chrome.runtime.sendMessage({ action: 'updateFilters' });
+            btn.textContent = '✅ Updated!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        } catch (error) {
+            btn.textContent = '❌ Error';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
     }
     
     async toggleFocusMode() {
@@ -84,8 +145,8 @@ class PopupController {
     }
     
     updateTimerDisplay() {
-        const minutes = parseInt(this.timerMinutes.value) || 0;
-        const seconds = parseInt(this.timerSeconds.value) || 0;
+        const minutes = Math.floor(this.timerSeconds / 60);
+        const seconds = this.timerSeconds % 60;
         this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
     
@@ -149,9 +210,18 @@ class PopupController {
     }
     
     async toggleFloatingClock() {
-        chrome.runtime.sendMessage({
-            action: 'toggleClock'
-        });
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'toggleClock'
+            });
+            
+            if (response && response.success) {
+                this.showNotification('Clock toggled successfully', 'success');
+            }
+        } catch (error) {
+            console.error('Error toggling clock:', error);
+            this.showNotification('Error toggling clock', 'error');
+        }
     }
     
     async startFocusMode() {
@@ -177,6 +247,31 @@ class PopupController {
     
     openSettings() {
         chrome.runtime.openOptionsPage();
+    }
+    
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'error' ? '#dc3545' : '#28a745'};
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
     }
     
     async addTask() {

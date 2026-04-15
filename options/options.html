@@ -110,8 +110,351 @@
             font-weight: 600;
         }
         
+        .dark-theme {
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .dark-theme .tab-content {
+            background: #2a2a2a;
+            color: white;
+        }
+        
+        .light-theme {
+            background: #f8f9fa;
+            color: #333;
+        }
+        
+        .light-theme .tab-content {
+            background: white;
+            color: #333;
+        }
+        
+        .blue-theme {
+            background: linear-gradient(135deg, #667eea 0%, #4c51bf 100%);
+            color: white;
+        }
+        
+        .blue-theme .tab-content {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .gradient-theme {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .gradient-theme .tab-content {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .neon-theme {
+            background: #0a0a0a;
+            color: #00ff88;
+        }
+        
+        .neon-theme .tab-content {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+        
         .dark-theme .section h2 {
             color: #a78bfa;
+        }
+        
+        .light-theme .section h2 {
+            color: #4c51bf;
+        }
+        
+        .blue-theme .section h2 {
+            color: #e0e7ff;
+        }
+        
+        .gradient-theme .section h2 {
+            color: #e0e7ff;
+        }
+        
+        .neon-theme .section h2 {
+            color: #00ff88;
+            text-shadow: 0 0 10px #00ff88;
+        }
+        
+        /* Data Management Tab Styles */
+        .export-import {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .export-import > div {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .export-import > div:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .export-import h3 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .export-import p {
+            color: #6c757d;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .file-input-label:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        
+        .file-input-wrapper input[type="file"]:focus + .file-input-label {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+        
+        .danger-zone {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border: 2px solid #feb2b2;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        .danger-zone h3 {
+            color: #dc3545;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .danger-zone p {
+            color: #721c24;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        
+        /* NEW: Ad Blocker Tab Styles */
+        .filter-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .filter-list .checkbox-group {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .filter-list .checkbox-group:hover {
+            background: #e9ecef;
+        }
+        
+        #customFilters, #whitelist {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            width: 100%;
+            resize: vertical;
+        }
+        
+        #customFilters:focus, #whitelist:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .hint {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        #lastUpdate {
+            margin-left: 10px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Theme-specific data management styles */
+        .dark-theme .export-import > div {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            border-color: #4a4a4a;
+        }
+        
+        .dark-theme .export-import h3 {
+            color: #e0e0e0;
+        }
+        
+        .dark-theme .export-import p {
+            color: #b0b0b0;
+        }
+        
+        .dark-theme .danger-zone {
+            background: linear-gradient(135deg, #2a1a1a 0%, #3a2a2a 100%);
+            border-color: #dc3545;
+        }
+        
+        .dark-theme .file-input-label {
+            background: #4a4a4a;
+            color: white;
+        }
+        
+        .blue-theme .export-import > div {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .blue-theme .export-import h3 {
+            color: #e0e7ff;
+        }
+        
+        .blue-theme .export-import p {
+            color: #c7d2fe;
+        }
+        
+        .gradient-theme .export-import > div {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-theme .export-import h3 {
+            color: #e0e7ff;
+        }
+        
+        .gradient-theme .export-import p {
+            color: #c7d2fe;
+        }
+        
+        .neon-theme .export-import > div {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+        }
+        
+        .neon-theme .export-import h3 {
+            color: #00ff88;
+            text-shadow: 0 0 5px #00ff88;
+        }
+        
+        .neon-theme .export-import p {
+            color: #00cc6a;
+        }
+        
+        .neon-theme .danger-zone {
+            background: rgba(255, 0, 68, 0.1);
+            border: 1px solid #ff0044;
+        }
+        
+        .neon-theme .danger-zone h3 {
+            color: #ff0044;
+            text-shadow: 0 0 5px #ff0044;
+        }
+        
+        .neon-theme .danger-zone p {
+            color: #ff0066;
         }
         
         .form-group {
@@ -466,6 +809,7 @@
             <button class="tab active" data-tab="general">General</button>
             <button class="tab" data-tab="clock">Clock</button>
             <button class="tab" data-tab="focus">Focus Mode</button>
+            <button class="tab" data-tab="adblock">🚫 Ad Blocker</button>
             <button class="tab" data-tab="tasks">Tasks</button>
             <button class="tab" data-tab="blocking">Site Blocking</button>
             <button class="tab" data-tab="analytics">Analytics</button>
@@ -648,6 +992,74 @@
                 <div class="checkbox-group">
                     <input type="checkbox" id="autoStartBreaks">
                     <label for="autoStartBreaks">Auto-start breaks</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW: Ad Blocker Tab -->
+        <div id="adblock" class="tab-content">
+            <div class="section">
+                <h2>🚫 Ad Blocker Settings</h2>
+                
+                <div class="form-group">
+                    <h3>Filter Lists</h3>
+                    <p class="description">Select which filter lists to use (more lists = better blocking)</p>
+                    
+                    <div class="filter-list" id="filterLists">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="easyList" checked>
+                            <label for="easyList">EasyList (Ads)</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="easyPrivacy" checked>
+                            <label for="easyPrivacy">EasyPrivacy (Trackers)</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="uBlockAnnoyances" checked>
+                            <label for="uBlockAnnoyances">uBlock Annoyances</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="fanboysAnnoyances">
+                            <label for="fanboysAnnoyances">Fanboy's Annoyances</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="malwareDomains" checked>
+                            <label for="malwareDomains">Malware Domains</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Custom Filters</h3>
+                    <p class="description">Add your own blocking rules (one per line)</p>
+                    <textarea id="customFilters" rows="5" placeholder="||example.com^&#10;##.ad-banner"></textarea>
+                    <p class="hint">Use Adblock Plus syntax: ||domain.com^ for network, ##.class for hiding</p>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Whitelist</h3>
+                    <p class="description">Sites where ad blocking should be disabled (one per line)</p>
+                    <textarea id="whitelist" rows="3" placeholder="example.com&#10;youtube.com"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="blockingLevel">Blocking Level</label>
+                    <select id="blockingLevel">
+                        <option value="basic">Basic (block obvious ads only)</option>
+                        <option value="medium" selected>Medium (recommended)</option>
+                        <option value="aggressive">Aggressive (block everything, may break sites)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Stats Reset</h3>
+                    <button id="resetStats" class="btn btn-danger">Reset Ad Blocking Statistics</button>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Manual Update</h3>
+                    <button id="manualUpdate" class="btn btn-primary">Update Filter Lists Now</button>
+                    <span id="lastUpdate"></span>
                 </div>
             </div>
         </div>
@@ -838,9 +1250,9 @@
                     </div>
                 </div>
                 
-                <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #e1e8ed;">
-                    <h3 style="color: #dc3545;">Danger Zone</h3>
-                    <p style="color: #666; margin-bottom: 20px;">These actions cannot be undone</p>
+                <div class="danger-zone">
+                    <h3>Danger Zone</h3>
+                    <p>These actions cannot be undone</p>
                     
                     <div class="btn-group">
                         <button class="btn btn-danger" id="clearAnalytics">Clear Analytics Data</button>
