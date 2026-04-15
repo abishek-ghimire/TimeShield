@@ -234,7 +234,7 @@ _File: assets/screenshots/timer-complete.png_
 
 ## 🎨 Themes
 
-TimeShield includes multiple visual themes (Dark, Light, Aurora Gradient, Neon Focus, Solar Ember, Forest Deep Work) so you can match the clock and options UI to your style.
+TimeShield includes multiple visual themes (Dark, Light and Solar Ember) so you can match the clock and options UI to your style.
 
 - Open the **Options** page and go to the **General / Appearance** section.
 - Use the **Theme** dropdown to switch between themes.
@@ -247,16 +247,7 @@ TimeShield is private by design. **None of your browsing data, site usage, or ta
 
 ---
 
-## 🤝 Contributing
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
 
 ## 📄 License
 Distributed under the Apache License 2.0. See `LICENSE` for full terms.
