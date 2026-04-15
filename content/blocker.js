@@ -36,7 +36,13 @@ class ContentBlocker {
                 break;
                 
             case 'toggleClock':
-                this.toggleFloatingClock();
+                if (message.visible !== undefined) {
+                    // Set visibility to specific state
+                    this.setClockVisibility(message.visible);
+                } else {
+                    // Toggle current state
+                    this.toggleFloatingClock();
+                }
                 // Send response back to background
                 if (sendResponse) {
                     sendResponse({ success: true });
@@ -71,32 +77,84 @@ class ContentBlocker {
     }
     
     async checkScheduledBlocking() {
-        const isActive = await this.isScheduledBlockingActive();
-        if (isActive) {
+        const result = await chrome.storage.local.get(['scheduledBlocking']);
+        const scheduled = result.scheduledBlocking || { enabled: false };
+        
+        if (scheduled.enabled && this.isInScheduledTime(scheduled)) {
             await this.enableScheduledBlocking();
         } else {
             await this.disableScheduledBlocking();
         }
     }
     
+    isInScheduledTime(scheduled) {
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const dayOfWeek = now.getDay();
+        
+        // Check if current day is enabled
+        if (scheduled.days && !scheduled.days.includes(dayOfWeek)) {
+            return false;
+        }
+        
+        // Check if current time is within scheduled range
+        if (scheduled.startTime && scheduled.endTime) {
+            const [startHour, startMin] = scheduled.startTime.split(':').map(Number);
+            const [endHour, endMin] = scheduled.endTime.split(':').map(Number);
+            const startTime = startHour * 60 + startMin;
+            const endTime = endHour * 60 + endMin;
+            
+            return currentTime >= startTime && currentTime <= endTime;
+        }
+        
+        return false;
+    }
+    
     async checkTimeLimit() {
         const currentDomain = this.getCurrentDomain();
-        const allowed = await this.isTimeLimitAllowed(currentDomain);
-        const remaining = await this.getTimeLimitRemaining(currentDomain);
         
-        if (!allowed && remaining !== null) {
+        // Check if time limits are enabled
+        const result = await chrome.storage.local.get(['timeLimits']);
+        const timeLimits = result.timeLimits || [];
+        
+        const limit = timeLimits.find(limit => limit.site === currentDomain);
+        if (!limit) {
+            return; // No limit set for this site
+        }
+        
+        const today = new Date().toDateString();
+        let usedToday = limit.usedToday || 0;
+        
+        // Reset daily usage at midnight
+        if (limit.lastReset !== today) {
+            usedToday = 0;
+            limit.lastReset = today;
+            limit.usedToday = 0;
+            await chrome.storage.local.set({ timeLimits });
+        }
+        
+        const remaining = Math.max(0, limit.minutes - usedToday);
+        
+        if (remaining <= 0) {
             // Block site and show time limit message
             await this.enableSiteBlocking([currentDomain]);
             
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'showTimeLimitWarning',
-                        site: currentDomain,
-                        remaining: remaining
-                    });
-                }
-            });
+            this.showTimeLimitWarning(currentDomain, 0);
+        } else if (remaining <= 5) {
+            // Show warning when 5 minutes or less remaining
+            this.showTimeLimitWarning(currentDomain, remaining);
+        }
+    }
+    
+    checkCurrentPage() {
+        console.log('ContentBlocker: checkCurrentPage called');
+        console.log('ContentBlocker: Focus mode active:', this.isFocusModeActive);
+        console.log('ContentBlocker: Should block current site:', this.shouldBlockCurrentSite());
+        
+        // Check if focus mode is active and current site should be blocked
+        if (this.isFocusModeActive && this.shouldBlockCurrentSite()) {
+            console.log('ContentBlocker: Blocking current page due to focus mode');
+            this.blockCurrentPage();
         }
     }
     
@@ -116,6 +174,8 @@ class ContentBlocker {
     }
     
     blockCurrentPage() {
+        console.log('ContentBlocker: blockCurrentPage called');
+        
         // Inject the focus block page
         const iframe = document.createElement('iframe');
         iframe.src = chrome.runtime.getURL('floating/focus-block.html');
@@ -137,6 +197,15 @@ class ContentBlocker {
         this.logBlockedAttempt();
     }
     
+    async enableSiteBlocking(sites) {
+        console.log('ContentBlocker: enableSiteBlocking called with sites:', sites);
+        this.blockedSites = sites;
+        
+        if (this.shouldBlockCurrentSite()) {
+            this.blockCurrentPage();
+        }
+    }
+    
     async emergencyOverride() {
         const reason = prompt('Please enter the reason for breaking focus mode:');
         if (reason && reason.trim()) {
@@ -150,17 +219,31 @@ class ContentBlocker {
     }
     
     async startFocusMode(duration) {
+        console.log('ContentBlocker: startFocusMode called with duration:', duration);
         this.isFocusModeActive = true;
         this.blockedAttempts = 0;
         
+        // Get blocked sites from storage or use default
+        const result = await chrome.storage.local.get(['blockedSites']);
+        this.blockedSites = result.blockedSites || [
+            'facebook.com', 'twitter.com', 'instagram.com', 
+            'youtube.com', 'tiktok.com', 'reddit.com', 'netflix.com'
+        ];
+        
+        console.log('ContentBlocker: Blocked sites:', this.blockedSites);
+        
         if (this.shouldBlockCurrentSite()) {
+            console.log('ContentBlocker: Blocking current site');
             this.blockCurrentPage();
+        } else {
+            console.log('ContentBlocker: Current site not in blocklist');
         }
         
         this.showFocusNotification();
     }
     
     async stopFocusMode() {
+        console.log('ContentBlocker: stopFocusMode called');
         this.isFocusModeActive = false;
         
         if (document.body.innerHTML.includes('Focus Mode Active')) {
@@ -169,35 +252,35 @@ class ContentBlocker {
     }
     
     showFocusNotification() {
+        // Show notification that focus mode started
         const notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
-            padding: 16px 20px;
+            padding: 15px 20px;
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            z-index: 10001;
+            z-index: 10000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 14px;
             max-width: 300px;
-            animation: slideIn 0.3s ease;
         `;
         
         notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">🎯</span>
-                <div>
-                    <strong>Focus Mode Started</strong>
-                    <div style="font-size: 12px; opacity: 0.9;">Distractions are now blocked</div>
-                </div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+                🎯 Focus Mode Active
+            </div>
+            <div style="font-size: 13px;">
+                Blocking distracting sites. Stay focused!
             </div>
         `;
         
         document.body.appendChild(notification);
         
+        // Auto-remove after 5 seconds
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
@@ -225,13 +308,84 @@ class ContentBlocker {
             border: none;
             z-index: 9999;
             pointer-events: auto;
+            resize: both;
+            overflow: auto;
+            min-width: 200px;
+            min-height: 100px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
         `;
+        
+        // Make draggable
+        this.makeDraggable(iframe);
         
         document.body.appendChild(iframe);
         console.log('ContentBlocker: Clock iframe injected');
         
         // Set initial visibility based on stored state
         this.restoreClockVisibility();
+    }
+    
+    makeDraggable(element) {
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+        
+        const dragStart = (e) => {
+            if (e.target.closest('button') || e.target.closest('input')) {
+                return; // Don't drag when clicking buttons/inputs
+            }
+            
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+            
+            if (e.target === element || element.contains(e.target)) {
+                isDragging = true;
+            }
+        };
+        
+        const dragEnd = () => {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        };
+        
+        const drag = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+                
+                xOffset = currentX;
+                yOffset = currentY;
+                
+                element.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            }
+        };
+        
+        // Add event listeners
+        element.addEventListener('touchstart', dragStart, false);
+        element.addEventListener('touchend', dragEnd, false);
+        element.addEventListener('touchmove', drag, false);
+        
+        element.addEventListener('mousedown', dragStart, false);
+        element.addEventListener('mouseup', dragEnd, false);
+        element.addEventListener('mousemove', drag, false);
     }
     
     async restoreClockVisibility() {
@@ -264,6 +418,40 @@ class ContentBlocker {
             console.log('ContentBlocker: No iframe found, injecting new clock');
             // Inject clock if it doesn't exist
             this.injectFloatingClock();
+        }
+    }
+    
+    setClockVisibility(visible) {
+        console.log('ContentBlocker: setClockVisibility called with:', visible);
+        
+        const iframe = document.getElementById('floatingClockFrame');
+        if (iframe) {
+            iframe.style.display = visible ? 'block' : 'none';
+            console.log('ContentBlocker: Set clock visibility to:', visible);
+            
+            // Update storage
+            chrome.storage.local.set({ clockVisible: visible });
+        } else if (visible) {
+            // Inject clock if it doesn't exist and should be visible
+            this.injectFloatingClock();
+        }
+    }
+    
+    async enableScheduledBlocking() {
+        console.log('ContentBlocker: enableScheduledBlocking called');
+        const result = await chrome.storage.local.get(['blockedSites']);
+        this.blockedSites = result.blockedSites || [];
+        
+        if (this.shouldBlockCurrentSite()) {
+            this.blockCurrentPage();
+        }
+    }
+    
+    async disableScheduledBlocking() {
+        console.log('ContentBlocker: disableScheduledBlocking called');
+        // Reload page if currently blocked by scheduled blocking
+        if (document.body.innerHTML.includes('Focus Mode Active')) {
+            location.reload();
         }
     }
     
