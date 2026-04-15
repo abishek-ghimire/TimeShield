@@ -1,95 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TimeShield - Settings</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --page-bg: radial-gradient(circle at top left, #0f172a 0%, #020617 40%, #020617 100%);
+            --text-main: #d0dae7;
+            --text-soft: #94a3b8;
+            --surface: rgba(15, 23, 42, 0.88);
+            --surface-strong: rgba(15, 23, 42, 0.95);
+            --surface-muted: rgba(255, 255, 255, 0.04);
+            --border: rgba(148, 163, 184, 0.22);
+            --ring: rgba(99, 102, 241, 0.35);
+            --header-bg: radial-gradient(circle at top left, #4f46e5 0%, #7c3aed 45%, #0f172a 100%);
+            --tab-active-bg: radial-gradient(circle at top, rgba(79, 70, 229, 0.28), transparent 60%);
+            --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.55);
+            --input-bg: rgba(255, 255, 255, 0.04);
+            --input-text: #ccd6e3;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #333;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--page-bg);
+            color: var(--text-main);
             line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 24px;
         }
-        
+
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--header-bg);
             color: white;
             padding: 30px 0;
-            margin-bottom: 30px;
-            border-radius: 12px;
+            margin-bottom: 24px;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.8);
         }
-        
+
         .header-content {
             text-align: center;
         }
-        
+
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            font-weight: 300;
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: 2.15rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
         }
-        
+
+        .header-logo-wrap {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.32);
+        }
+
+        .header-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transform: scale(1.1);
+            display: block;
+        }
+
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 0.86rem;
             opacity: 0.9;
+            color: #cbd5f5;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
-        
+
         .tabs {
             display: flex;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+            margin-bottom: 24px;
             overflow: hidden;
+            backdrop-filter: blur(18px);
+            border: 1px solid var(--border);
         }
-        
+
         .tab {
             flex: 1;
-            padding: 15px 20px;
-            background: none;
+            padding: 12px 16px;
+            background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.86rem;
             font-weight: 500;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
+            transition: all 0.25s ease;
+            border-bottom: 2px solid transparent;
+            color: var(--text-soft);
         }
-        
+
         .tab:hover {
-            background: rgba(102, 126, 234, 0.1);
+            background: var(--surface-muted);
+            color: var(--text-main);
         }
-        
+
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
+            color: var(--text-main);
+            border-bottom-color: #4f46e5;
+            background: var(--tab-active-bg);
         }
-        
+
         .tab-content {
             display: none;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: var(--surface-strong);
+            border-radius: 18px;
+            padding: 24px 26px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
         }
-        
+
         .tab-content.active {
             display: block;
         }
-        
+
         .tab-content.dark {
             display: block;
             background: #1a1a1a;
@@ -98,90 +153,417 @@
             padding: 30px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
-        
+
         .section {
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
-        
+
         .section h2 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #667eea;
+            font-size: 1.05rem;
+            margin-bottom: 14px;
+            color: var(--text-main);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        /* Theme shells: enhanced dark and new palettes */
+        .dark-theme {
+            --page-bg: radial-gradient(circle at top left, #05070b 0%, #000000 58%, #000000 100%);
+            --text-main: #d3dcea;
+            --text-soft: #94a3b8;
+            --surface: rgba(6, 8, 12, 0.9);
+            --surface-strong: rgba(3, 5, 8, 0.96);
+            --surface-muted: rgba(255, 255, 255, 0.035);
+            --border: rgba(148, 163, 184, 0.2);
+            --header-bg: radial-gradient(circle at top left, #312e81 0%, #581c87 45%, #05070b 100%);
+            --tab-active-bg: radial-gradient(circle at top, rgba(99, 102, 241, 0.24), transparent 62%);
+            --shadow-lg: 0 28px 62px rgba(0, 0, 0, 0.7);
+            --input-bg: rgba(255, 255, 255, 0.03);
+            --input-text: #cfd9e6;
+        }
+
+        .light-theme {
+            --page-bg: radial-gradient(circle at top left, #f5f7fb 0%, #f8fafc 45%, #ffffff 100%);
+            --text-main: #1f2937;
+            --text-soft: #6b7280;
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-strong: rgba(255, 255, 255, 0.98);
+            --surface-muted: rgba(15, 23, 42, 0.03);
+            --border: rgba(148, 163, 184, 0.24);
+            --header-bg: radial-gradient(circle at top left, #4f46e5 0%, #6366f1 45%, #4338ca 100%);
+            --tab-active-bg: radial-gradient(circle at top, rgba(99, 102, 241, 0.18), transparent 62%);
+            --shadow-lg: 0 16px 36px rgba(148, 163, 184, 0.2);
+            --input-bg: #ffffff;
+            --input-text: #1f2937;
+        }
+
+        .light-theme .tab,
+        .light-theme .stat-label,
+        .light-theme .screen-time-site-summary,
+        .light-theme .screen-time-graph-meta,
+        .light-theme .screen-time-graph-row,
+        .light-theme .screen-time-graph-empty,
+        .light-theme .footer-tagline {
+            color: var(--text-soft);
+        }
+
+        .light-theme .hint {
+            color: #000000;
+        }
+
+        /* Fix subtitle readability in light theme (header is always purple so white text is OK,
+           but add explicit contrast for safety) */
+        .light-theme header .subtitle {
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .light-theme .tab.active,
+        .light-theme .section h2,
+        .light-theme label,
+        .light-theme .screen-time-site-domain,
+        .light-theme .screen-time-graph-title {
+            color: var(--text-main);
+        }
+
+        .light-theme input[type="text"],
+        .light-theme input[type="number"],
+        .light-theme input[type="time"],
+        .light-theme select,
+        .light-theme textarea {
+            background: var(--input-bg);
+            color: var(--input-text);
+            border-color: #cbd5e1;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="time"],
+        select,
+        textarea {
+            background: var(--input-bg);
+            color: var(--input-text);
+            border-color: var(--border);
+        }
+
+        body:not(.light-theme) select option {
+            background: #0b1220;
+            color: #d3dcea;
+        }
+
+        .light-theme select option {
+            background: #ffffff;
+            color: #1f2937;
+        }
+
+        .light-theme header {
+            box-shadow: 0 14px 34px rgba(79, 70, 229, 0.22);
+        }
+
+        .dark-theme header {
+            box-shadow: 0 24px 58px rgba(0, 0, 0, 0.62);
+        }
+
+        .light-theme .tabs,
+        .light-theme .tab-content {
+            backdrop-filter: blur(14px);
+        }
+
+        .light-theme .tab:hover {
+            background: rgba(79, 70, 229, 0.08);
+        }
+
+        .light-theme .screen-time-site-main:hover {
+            box-shadow: 0 8px 18px rgba(148, 163, 184, 0.26);
+        }
+
+        .light-theme .btn {
+            box-shadow: 0 6px 14px rgba(148, 163, 184, 0.2);
+        }
+
+        .light-theme .site-list,
+        .light-theme .filter-list,
+        .light-theme .screen-time-graph-card {
+            background: rgba(248, 250, 252, 0.9);
+            border-color: #dbe3ee;
+        }
+
+        .gradient-theme {
+            background: radial-gradient(circle at top left, #0f172a 0%, #4c1d95 40%, #020617 100%);
+            color: #f9fafb;
+        }
+
+        .gradient-theme .tab-content {
+            background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+            color: #e5e7eb;
+        }
+
+        .neon-theme {
+            background: radial-gradient(circle at top left, #020617 0%, #020617 45%, #22c55e 130%);
+            color: #bbf7d0;
+        }
+
+        .neon-theme .tab-content {
+            background: radial-gradient(circle at top left, #020617 0%, #052e16 100%);
+            color: #bbf7d0;
+            border-color: rgba(34, 197, 94, 0.6);
+        }
+
+        .solar-theme {
+            background: radial-gradient(circle at top left, #0f172a 0%, #f97316 140%);
+            color: #fffbeb;
+        }
+
+        .solar-theme .tab-content {
+            background: linear-gradient(160deg, #1c0a00 0%, #2d1200 100%);
+            color: #fef3c7;
+            border-color: rgba(251, 146, 60, 0.45);
+        }
+
+        .solar-theme .section h2,
+        .solar-theme label {
+            color: #fed7aa;
+        }
+
+        .solar-theme .tab {
+            color: #fdba74;
+        }
+
+        .solar-theme .tab.active {
+            color: #fef3c7;
+            border-bottom-color: #f97316;
+        }
+
+        .solar-theme input[type="text"],
+        .solar-theme input[type="number"],
+        .solar-theme input[type="time"],
+        .solar-theme select,
+        .solar-theme textarea {
+            background: rgba(255, 255, 255, 0.06);
+            color: #fef3c7;
+            border-color: rgba(251, 146, 60, 0.4);
+        }
+
+        .solar-theme select option {
+            background: #1c0a00;
+            color: #fef3c7;
+        }
+
+        .solar-theme .export-import>div {
+            background: linear-gradient(160deg, #1c0a00 0%, #2d1200 100%);
+            border-color: rgba(251, 146, 60, 0.4);
+        }
+
+        .solar-theme .export-import h3 {
+            color: #fed7aa;
+        }
+
+        .solar-theme .export-import p {
+            color: #fef3c7;
+        }
+
+        .solar-theme .danger-zone {
+            background: rgba(124, 45, 18, 0.3);
+            border-color: #c2410c;
+        }
+
+        .solar-theme .danger-zone h3 {
+            color: #fdba74;
+        }
+
+        .solar-theme .danger-zone p {
+            color: #fed7aa;
+        }
+
+        .forest-theme {
+            background: radial-gradient(circle at top left, #022c22 0%, #022c22 100%);
+            color: #dcfce7;
+        }
+
+        .forest-theme .tab-content {
+            background: radial-gradient(circle at top left, #022c22 0%, #052e16 100%);
+            color: #dcfce7;
+            border-color: rgba(34, 197, 94, 0.55);
+        }
+
+        /* Screen Time range select: ensure readable text across themes */
+        #screenTimeRange {
+            background: rgba(15, 23, 42, 0.96);
+            color: #e5e7eb;
+        }
+
+        .light-theme #screenTimeRange {
+            background: #ffffff;
+            color: #111827;
+        }
+
+        /* Screen Time per-site cards and graphs */
+        .screen-time-site {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .screen-time-site-main {
+            background: var(--surface);
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+
+        .screen-time-site-main:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.6);
+            border-color: rgba(129, 140, 248, 0.7);
+        }
+
+        .screen-time-site-main.active {
+            border-color: rgba(129, 140, 248, 0.9);
+            box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.5), 0 10px 25px rgba(15, 23, 42, 0.8);
+        }
+
+        .screen-time-site-favicon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+
+        .screen-time-site-main-content {
+            flex: 1;
+        }
+
+        .screen-time-site-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .screen-time-site-domain {
             font-weight: 600;
         }
-        
-        .dark-theme {
-            background: #1a1a1a;
-            color: white;
+
+        .dark-theme .screen-time-site-domain,
+        .solar-theme .screen-time-site-domain {
+            color: #ffffff;
         }
-        
-        .dark-theme .tab-content {
-            background: #2a2a2a;
-            color: white;
+
+        .screen-time-site-summary {
+            color: var(--text-soft);
+            font-weight: 500;
+            font-size: 12px;
         }
-        
-        .light-theme {
-            background: #f8f9fa;
-            color: #333;
+
+        .screen-time-site-bar-track {
+            background: rgba(148, 163, 184, 0.2);
+            height: 7px;
+            border-radius: 999px;
+            overflow: hidden;
+            width: 100%;
         }
-        
-        .light-theme .tab-content {
-            background: white;
-            color: #333;
+
+        .light-theme .screen-time-site-bar-track {
+            background: rgba(15, 23, 42, 0.12);
         }
-        
-        .blue-theme {
-            background: linear-gradient(135deg, #667eea 0%, #4c51bf 100%);
-            color: white;
+
+        .screen-time-site-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.5s ease-out;
         }
-        
-        .blue-theme .tab-content {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+
+        .screen-time-site-detail {
+            padding-left: 56px;
         }
-        
-        .gradient-theme {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        .screen-time-graph-card {
+            padding: 12px 14px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.9);
         }
-        
-        .gradient-theme .tab-content {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+
+        .light-theme .screen-time-graph-card {
+            background: #ffffff;
         }
-        
-        .neon-theme {
-            background: #0a0a0a;
-            color: #00ff88;
+
+        .screen-time-graph-header {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 8px;
         }
-        
-        .neon-theme .tab-content {
-            background: rgba(0, 255, 136, 0.1);
-            color: #00ff88;
-            border: 1px solid #00ff88;
+
+        .screen-time-graph-title {
+            font-size: 13px;
+            font-weight: 600;
         }
-        
-        .dark-theme .section h2 {
-            color: #a78bfa;
+
+        .screen-time-graph-meta {
+            font-size: 12px;
+            color: var(--text-soft);
         }
-        
-        .light-theme .section h2 {
-            color: #4c51bf;
+
+        .screen-time-graph-body {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 220px;
+            overflow: auto;
+            padding-right: 4px;
         }
-        
-        .blue-theme .section h2 {
-            color: #e0e7ff;
+
+        .screen-time-graph-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--text-soft);
         }
-        
-        .gradient-theme .section h2 {
-            color: #e0e7ff;
+
+        .screen-time-graph-hour {
+            width: 44px;
         }
-        
-        .neon-theme .section h2 {
-            color: #00ff88;
-            text-shadow: 0 0 10px #00ff88;
+
+        .screen-time-graph-bar-track {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 999px;
+            overflow: hidden;
+            height: 6px;
         }
-        
+
+        .light-theme .screen-time-graph-bar-track {
+            background: #e5e7eb;
+        }
+
+        .screen-time-graph-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.6);
+        }
+
+        .screen-time-graph-value {
+            width: 56px;
+            text-align: right;
+            color: var(--text-soft);
+        }
+
+        .screen-time-graph-empty {
+            font-size: 12px;
+            color: var(--text-soft);
+            text-align: center;
+            padding: 6px 0;
+        }
+
         /* Data Management Tab Styles */
         .export-import {
             display: grid;
@@ -189,38 +571,38 @@
             gap: 30px;
             margin-bottom: 40px;
         }
-        
-        .export-import > div {
+
+        .export-import>div {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 30px;
             border-radius: 12px;
             border: 1px solid #dee2e6;
             transition: all 0.3s ease;
         }
-        
-        .export-import > div:hover {
+
+        .export-import>div:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
-        
+
         .export-import h3 {
             color: #495057;
             margin-bottom: 10px;
             font-size: 1.3rem;
             font-weight: 600;
         }
-        
+
         .export-import p {
             color: #6c757d;
             margin-bottom: 20px;
             line-height: 1.5;
         }
-        
+
         .file-input-wrapper {
             position: relative;
             margin-bottom: 15px;
         }
-        
+
         .file-input-wrapper input[type="file"] {
             position: absolute;
             opacity: 0;
@@ -228,7 +610,7 @@
             height: 100%;
             cursor: pointer;
         }
-        
+
         .file-input-label {
             display: inline-block;
             padding: 10px 20px;
@@ -239,17 +621,17 @@
             transition: all 0.3s ease;
             font-size: 14px;
         }
-        
+
         .file-input-label:hover {
             background: #5a6268;
             transform: translateY(-1px);
         }
-        
-        .file-input-wrapper input[type="file"]:focus + .file-input-label {
+
+        .file-input-wrapper input[type="file"]:focus+.file-input-label {
             outline: 2px solid #667eea;
             outline-offset: 2px;
         }
-        
+
         .danger-zone {
             background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
             border: 2px solid #feb2b2;
@@ -257,26 +639,26 @@
             padding: 30px;
             margin-top: 40px;
         }
-        
+
         .danger-zone h3 {
             color: #dc3545;
             margin-bottom: 10px;
             font-size: 1.3rem;
             font-weight: 600;
         }
-        
+
         .danger-zone p {
             color: #721c24;
             margin-bottom: 25px;
             font-weight: 500;
         }
-        
+
         .btn-group {
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
         }
-        
+
         .btn {
             padding: 12px 24px;
             border: none;
@@ -291,63 +673,80 @@
             justify-content: center;
             min-width: 120px;
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-        
+
         .btn-primary:hover {
             background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
-        
+
         .btn-secondary {
             background: #6c757d;
             color: white;
         }
-        
+
         .btn-secondary:hover {
             background: #5a6268;
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
         }
-        
+
         .btn-danger {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
         }
-        
+
         .btn-danger:hover {
             background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
-        
-        /* NEW: Ad Blocker Tab Styles */
+
+        /* Filter lists: dark-first, only light styles in light-theme */
         .filter-list {
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #dee2e6;
+            border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 8px;
             padding: 15px;
-            background: #f8f9fa;
+            background: rgba(15, 23, 42, 0.9);
         }
-        
+
+        .light-theme .filter-list {
+            background: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
         .filter-list .checkbox-group {
             margin-bottom: 10px;
             padding: 8px;
-            background: white;
+            background: rgba(255, 255, 255, 0.04);
             border-radius: 4px;
-            border: 1px solid #e9ecef;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            color: var(--text-main);
         }
-        
+
+        .light-theme .filter-list .checkbox-group {
+            background: #ffffff;
+            border-color: #e9ecef;
+            color: #1f2937;
+        }
+
         .filter-list .checkbox-group:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .light-theme .filter-list .checkbox-group:hover {
             background: #e9ecef;
         }
-        
-        #customFilters, #whitelist {
+
+        #customFilters,
+        #whitelist {
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
             border: 1px solid #dee2e6;
@@ -356,160 +755,165 @@
             width: 100%;
             resize: vertical;
         }
-        
-        #customFilters:focus, #whitelist:focus {
+
+        #customFilters:focus,
+        #whitelist:focus {
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .hint {
             font-size: 0.85rem;
             color: #6c757d;
             margin-top: 5px;
             font-style: italic;
         }
-        
+
         #lastUpdate {
             margin-left: 10px;
             color: #6c757d;
             font-size: 0.9rem;
         }
-        
+
         .btn:active {
             transform: translateY(0);
         }
-        
+
         /* Theme-specific data management styles */
-        .dark-theme .export-import > div {
+        .dark-theme .export-import>div {
             background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
             border-color: #4a4a4a;
         }
-        
+
         .dark-theme .export-import h3 {
             color: #e0e0e0;
         }
-        
+
         .dark-theme .export-import p {
             color: #b0b0b0;
         }
-        
+
         .dark-theme .danger-zone {
             background: linear-gradient(135deg, #2a1a1a 0%, #3a2a2a 100%);
             border-color: #dc3545;
         }
-        
+
         .dark-theme .file-input-label {
             background: #4a4a4a;
             color: white;
         }
-        
-        .blue-theme .export-import > div {
+
+        .blue-theme .export-import>div {
             background: rgba(255, 255, 255, 0.15);
             border-color: rgba(255, 255, 255, 0.3);
         }
-        
+
         .blue-theme .export-import h3 {
             color: #e0e7ff;
         }
-        
+
         .blue-theme .export-import p {
             color: #c7d2fe;
         }
-        
-        .gradient-theme .export-import > div {
+
+        .gradient-theme .export-import>div {
             background: rgba(255, 255, 255, 0.15);
             border-color: rgba(255, 255, 255, 0.3);
         }
-        
+
         .gradient-theme .export-import h3 {
             color: #e0e7ff;
         }
-        
+
         .gradient-theme .export-import p {
             color: #c7d2fe;
         }
-        
-        .neon-theme .export-import > div {
+
+        .neon-theme .export-import>div {
             background: rgba(0, 255, 136, 0.1);
             border: 1px solid #00ff88;
         }
-        
+
         .neon-theme .export-import h3 {
             color: #00ff88;
             text-shadow: 0 0 5px #00ff88;
         }
-        
+
         .neon-theme .export-import p {
             color: #00cc6a;
         }
-        
+
         .neon-theme .danger-zone {
             background: rgba(255, 0, 68, 0.1);
             border: 1px solid #ff0044;
         }
-        
+
         .neon-theme .danger-zone h3 {
             color: #ff0044;
             text-shadow: 0 0 5px #ff0044;
         }
-        
+
         .neon-theme .danger-zone p {
             color: #ff0066;
         }
-        
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
-        
+
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 500;
-            color: #555;
+            color: var(--text-main);
+            font-size: 0.92rem;
         }
-        
+
         input[type="text"],
         input[type="number"],
         input[type="color"],
         select,
         textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--input-text);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
         }
-        
+
         input:focus,
         select:focus,
         textarea:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 2px var(--ring);
         }
-        
+
         .checkbox-group {
             display: flex;
             align-items: center;
             margin-bottom: 15px;
         }
-        
+
         .checkbox-group input[type="checkbox"] {
             width: 20px;
             height: 20px;
             margin-right: 10px;
         }
-        
+
         .range-group {
             margin-bottom: 20px;
         }
-        
+
         .range-group label {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .range-value {
             background: #667eea;
             color: white;
@@ -517,48 +921,48 @@
             border-radius: 4px;
             font-size: 0.9rem;
         }
-        
+
         input[type="range"] {
             width: 100%;
             margin-top: 10px;
         }
-        
+
         .btn {
-            padding: 12px 24px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
-        
+
         .btn-secondary {
             background: #6c757d;
             color: white;
         }
-        
+
         .btn-danger {
             background: #dc3545;
             color: white;
         }
-        
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        
+
         .btn-group {
             display: flex;
             gap: 10px;
             margin-top: 20px;
         }
-        
+
         .site-list {
             max-height: 300px;
             overflow-y: auto;
@@ -566,24 +970,24 @@
             border-radius: 8px;
             padding: 10px;
         }
-        
+
         .site-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 10px 12px;
             border-bottom: 1px solid #f1f3f4;
         }
-        
+
         .site-item:last-child {
             border-bottom: none;
         }
-        
+
         .site-url {
             flex: 1;
             font-family: 'Courier New', monospace;
         }
-        
+
         .remove-site {
             background: #dc3545;
             color: white;
@@ -593,60 +997,60 @@
             cursor: pointer;
             font-size: 0.8rem;
         }
-        
+
         .add-site-form {
             display: flex;
             gap: 10px;
             margin-top: 15px;
         }
-        
+
         .add-site-form input {
             flex: 1;
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-        
+
         .stat-card {
             background: rgba(102, 126, 234, 0.1);
             padding: 20px;
             border-radius: 8px;
             text-align: center;
         }
-        
+
         .stat-value {
             font-size: 2rem;
             font-weight: 600;
             color: #667eea;
             margin-bottom: 5px;
         }
-        
+
         .stat-label {
             color: #666;
             font-size: 0.9rem;
         }
-        
+
         .export-import {
             display: flex;
             gap: 20px;
             margin-top: 30px;
         }
-        
+
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
             display: inline-block;
         }
-        
+
         .file-input-wrapper input[type=file] {
             position: absolute;
             left: -9999px;
         }
-        
+
         .file-input-label {
             display: inline-block;
             padding: 12px 24px;
@@ -656,12 +1060,12 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .file-input-label:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        
+
         .notification {
             position: fixed;
             top: 20px;
@@ -675,7 +1079,7 @@
             font-weight: 500;
             animation: slideIn 0.3s ease;
         }
-        
+
         /* Footer Styles */
         .app-footer {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -685,7 +1089,7 @@
             border-radius: 12px 12px 0 0;
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
         }
-        
+
         .footer-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -695,29 +1099,29 @@
             flex-wrap: wrap;
             gap: 30px;
         }
-        
+
         .footer-text p {
             margin: 5px 0;
             font-size: 14px;
         }
-        
+
         .footer-text strong {
             color: #ffd700;
             font-weight: 600;
         }
-        
+
         .footer-tagline {
             opacity: 0.9;
             font-style: italic;
             font-size: 13px !important;
         }
-        
+
         .footer-links {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
         }
-        
+
         .footer-link {
             color: white;
             text-decoration: none;
@@ -730,16 +1134,16 @@
             transition: all 0.3s ease;
             font-size: 14px;
         }
-        
+
         .footer-link:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
         }
-        
+
         .link-icon {
             font-size: 16px;
         }
-        
+
         .footer-bottom {
             text-align: center;
             margin-top: 30px;
@@ -748,110 +1152,106 @@
             font-size: 12px;
             opacity: 0.8;
         }
-        
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         .color-picker-group {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-        
+
         .color-preview {
             width: 40px;
             height: 40px;
             border-radius: 8px;
             border: 2px solid #e1e8ed;
         }
-        
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
             }
-            
+
             .tabs {
                 flex-direction: column;
             }
-            
+
             .tab-content {
                 padding: 20px;
             }
-            
+
             .stats-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .btn-group {
                 flex-direction: column;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>⚙️ TimeShield Settings</h1>
-                <p class="subtitle">Customize your productivity experience</p>
+                <h1><span class="header-logo-wrap"><img src="../assets/icons/iconi1.png" alt="TimeShield"
+                            class="header-logo"></span>TimeShield Settings</h1>
+                <p class="subtitle">Customize your focus experience</p>
             </div>
         </header>
-        
+
         <div class="tabs">
             <button class="tab active" data-tab="general">General</button>
             <button class="tab" data-tab="clock">Clock</button>
             <button class="tab" data-tab="focus">Focus Mode</button>
             <button class="tab" data-tab="adblock">🚫 Ad Blocker</button>
             <button class="tab" data-tab="tasks">Tasks</button>
-            <button class="tab" data-tab="blocking">Site Blocking</button>
-            <button class="tab" data-tab="analytics">Analytics</button>
+            <button class="tab" data-tab="blocking">Schedules &amp; Limits</button>
+            <button class="tab" data-tab="screentime">⏱️ Screen Time</button>
             <button class="tab" data-tab="data">Data Management</button>
         </div>
-        
+
         <div id="general" class="tab-content active">
             <div class="section">
                 <h2>General Settings</h2>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="soundEnabled">
                     <label for="soundEnabled">Enable sound notifications</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="notificationsEnabled">
                     <label for="notificationsEnabled">Enable desktop notifications</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="breakReminders">
                     <label for="breakReminders">Enable break reminders</label>
                 </div>
-                
-                <div class="checkbox-group">
-                    <input type="checkbox" id="analyticsEnabled">
-                    <label for="analyticsEnabled">Enable analytics tracking</label>
-                </div>
-                
+
+
                 <div class="form-group">
                     <label for="theme">Theme</label>
                     <select id="theme">
-                        <option value="default">Default</option>
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
-                        <option value="blue">Blue</option>
-                        <option value="gradient">Gradient</option>
-                        <option value="neon">Neon</option>
+                        <option value="light">Light Mode</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="solar">Solar Ember</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="animationSpeed">Animation Speed</label>
                     <select id="animationSpeed">
@@ -861,45 +1261,35 @@
                         <option value="instant">Instant</option>
                     </select>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="autoStartClock">
                     <label for="autoStartClock">Auto-start clock on browser launch</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="syncAcrossDevices">
                     <label for="syncAcrossDevices">Sync settings across devices</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="showProductivityTips">
-                    <label for="showProductivityTips">Show daily productivity tips</label>
+                    <label for="showProductivityTips">Show daily focus tips</label>
                 </div>
             </div>
         </div>
-        
+
         <div id="clock" class="tab-content">
             <div class="section">
                 <h2>Clock Settings</h2>
-                
-                <div class="form-group">
-                    <label for="clockStyle">Clock Style</label>
-                    <select id="clockStyle">
-                        <option value="digital">Digital</option>
-                        <option value="analog">Analog</option>
-                        <option value="minimal">Minimal</option>
-                    </select>
-                </div>
-                
                 <div class="form-group">
                     <label for="timeFormat">Time Format</label>
                     <select id="timeFormat">
-                        <option value="12">12-hour (AM/PM)</option>
-                        <option value="24">24-hour</option>
+                        <option value="12h">12-hour (AM/PM)</option>
+                        <option value="24h">24-hour</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="clockSize">Clock Size</label>
                     <select id="clockSize">
@@ -908,13 +1298,13 @@
                         <option value="large">Large</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="clockOpacity">Clock Opacity</label>
                     <input type="range" id="clockOpacity" min="10" max="100" value="90">
                     <span id="clockOpacityValue">90%</span>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="clockPosition">Default Position</label>
                     <select id="clockPosition">
@@ -925,86 +1315,145 @@
                         <option value="center">Center</option>
                     </select>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="showSeconds">
                     <label for="showSeconds">Show seconds</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="showDate">
                     <label for="showDate">Show date</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="showTimezone">
                     <label for="showTimezone">Show timezone</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="nepalTime">
                     <label for="nepalTime">Use Nepal Time (NPT)</label>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="timezone">Timezone</label>
-                    <select id="timezone">
+                    <input type="text" id="timezone" list="timezoneList" placeholder="e.g., Europe/London">
+                    <datalist id="timezoneList">
                         <option value="Asia/Kathmandu">Nepal Time (NPT)</option>
                         <option value="UTC">UTC</option>
-                        <option value="America/New_York">Eastern Time</option>
-                        <option value="America/Los_Angeles">Pacific Time</option>
-                        <option value="Europe/Paris">Central European</option>
+                        <option value="America/New_York">Eastern Time (US)</option>
+                        <option value="America/Los_Angeles">Pacific Time (US)</option>
+                        <option value="Europe/London">UK Time</option>
+                        <option value="Europe/Paris">Central European Time</option>
                         <option value="Asia/Tokyo">Japan Time</option>
-                    </select>
+                        <option value="Australia/Sydney">Australia (Sydney)</option>
+                    </datalist>
+                    <p class="hint">You can type any valid IANA timezone (e.g., America/Chicago, Europe/Berlin).</p>
                 </div>
             </div>
         </div>
-        
+
         <div id="focus" class="tab-content">
             <div class="section">
                 <h2>Focus Mode Settings</h2>
-                
+
                 <div class="form-group">
                     <label for="focusDuration">Default Focus Duration (minutes)</label>
                     <input type="number" id="focusDuration" min="1" max="180" value="25">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="breakDuration">Short Break Duration (minutes)</label>
                     <input type="number" id="breakDuration" min="1" max="30" value="5">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="longBreakDuration">Long Break Duration (minutes)</label>
                     <input type="number" id="longBreakDuration" min="1" max="60" value="15">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="pomodoroCount">Pomodoro sessions until long break</label>
                     <input type="number" id="pomodoroCount" min="2" max="10" value="4">
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="autoStartFocus">
                     <label for="autoStartFocus">Auto-start focus sessions</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="autoStartBreaks">
                     <label for="autoStartBreaks">Auto-start breaks</label>
                 </div>
+
+                <h3 style="margin-top: 30px;">Challenge-Based Unlock</h3>
+                <p class="hint">Critical disable actions require progressive confirmation and all enabled challenges.
+                </p>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="challengeTextEnabled">
+                    <label for="challengeTextEnabled">Enable text challenge</label>
+                </div>
+                <div class="form-group">
+                    <label for="challengeTextValue">Text challenge sentence</label>
+                    <input type="text" id="challengeTextValue" placeholder="I choose focus over distraction.">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="challengePinEnabled">
+                    <label for="challengePinEnabled">Enable PIN challenge</label>
+                </div>
+                <div class="form-group">
+                    <label for="challengePinValue">PIN (4-6 digits)</label>
+                    <input type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="challengePasswordEnabled">
+                    <label for="challengePasswordEnabled">Enable password challenge</label>
+                </div>
+                <div class="form-group">
+                    <label for="challengePasswordValue">Password</label>
+                    <input type="text" id="challengePasswordValue" placeholder="focus">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="challengeDelayEnabled">
+                    <label for="challengeDelayEnabled">Enable forced delay challenge</label>
+                </div>
+                <div class="form-group">
+                    <label for="challengeDelaySeconds">Delay seconds (3-60)</label>
+                    <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
+                </div>
+
+                <h3 style="margin-top: 30px;">Focus Mode Blocklist</h3>
+                <p class="hint">Sites listed here will be blocked only during an active Focus Session.</p>
+                <div class="site-list" id="focusSitesList">
+                </div>
+
+                <div class="add-site-form">
+                    <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
+                    <button class="btn btn-primary" id="addFocusSite">Add Site</button>
+                </div>
             </div>
         </div>
-        
+
         <!-- NEW: Ad Blocker Tab -->
         <div id="adblock" class="tab-content">
             <div class="section">
                 <h2>🚫 Ad Blocker Settings</h2>
-                
+
+                <div class="checkbox-group" style="margin-bottom: 18px;">
+                    <input type="checkbox" id="adBlockEnabledToggle">
+                    <label for="adBlockEnabledToggle">Enable ad blocking (turn off to see ads for testing)</label>
+                </div>
+
                 <div class="form-group">
                     <h3>Filter Lists</h3>
                     <p class="description">Select which filter lists to use (more lists = better blocking)</p>
-                    
+
                     <div class="filter-list" id="filterLists">
                         <div class="checkbox-group">
                             <input type="checkbox" id="easyList" checked>
@@ -1015,8 +1464,8 @@
                             <label for="easyPrivacy">EasyPrivacy (Trackers)</label>
                         </div>
                         <div class="checkbox-group">
-                            <input type="checkbox" id="uBlockAnnoyances" checked>
-                            <label for="uBlockAnnoyances">uBlock Annoyances</label>
+                            <input type="checkbox" id="advancedAnnoyances" checked>
+                            <label for="advancedAnnoyances">Advanced Annoyances</label>
                         </div>
                         <div class="checkbox-group">
                             <input type="checkbox" id="fanboysAnnoyances">
@@ -1028,20 +1477,20 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <h3>Custom Filters</h3>
                     <p class="description">Add your own blocking rules (one per line)</p>
                     <textarea id="customFilters" rows="5" placeholder="||example.com^&#10;##.ad-banner"></textarea>
                     <p class="hint">Use Adblock Plus syntax: ||domain.com^ for network, ##.class for hiding</p>
                 </div>
-                
+
                 <div class="form-group">
                     <h3>Whitelist</h3>
                     <p class="description">Sites where ad blocking should be disabled (one per line)</p>
                     <textarea id="whitelist" rows="3" placeholder="example.com&#10;youtube.com"></textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="blockingLevel">Blocking Level</label>
                     <select id="blockingLevel">
@@ -1050,12 +1499,12 @@
                         <option value="aggressive">Aggressive (block everything, may break sites)</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <h3>Stats Reset</h3>
                     <button id="resetStats" class="btn btn-danger">Reset Ad Blocking Statistics</button>
                 </div>
-                
+
                 <div class="form-group">
                     <h3>Manual Update</h3>
                     <button id="manualUpdate" class="btn btn-primary">Update Filter Lists Now</button>
@@ -1063,16 +1512,16 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="tasks" class="tab-content">
             <div class="section">
                 <h2>Task Settings</h2>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="taskReminders">
                     <label for="taskReminders">Enable task reminders</label>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="defaultTaskPriority">Default Task Priority</label>
                     <select id="defaultTaskPriority">
@@ -1081,33 +1530,34 @@
                         <option value="high">High</option>
                     </select>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="trackTaskTime">
                     <label for="trackTaskTime">Track time spent on tasks</label>
                 </div>
-                
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="autoSortTasks">
                     <label for="autoSortTasks">Auto-sort tasks by priority</label>
                 </div>
             </div>
         </div>
-        
+
         <div id="blocking" class="tab-content">
             <div class="section">
-                <h2>Site Blocking</h2>
-                
-                <h3>Blocked Sites</h3>
-                <div class="site-list" id="blockedSitesList">
+                <h2>Schedules & Time Limits</h2>
+
+                <h3>Scheduled Blocking List</h3>
+                <p class="hint">Sites listed here will be blocked automatically during your scheduled hours.</p>
+                <div class="site-list" id="scheduledSitesList">
                 </div>
-                
+
                 <div class="add-site-form">
-                    <input type="text" id="newBlockedSite" placeholder="Enter domain (e.g., facebook.com)">
-                    <button class="btn btn-primary" id="addBlockedSite">Add Site</button>
+                    <input type="text" id="newScheduledSite" placeholder="Enter domain (e.g., facebook.com)">
+                    <button class="btn btn-primary" id="addScheduledSite">Add Site</button>
                 </div>
-                
-                <h3 style="margin-top: 30px;">Scheduled Blocking</h3>
+
+                <h3 style="margin-top: 30px;">Schedule Settings</h3>
                 <div class="form-group">
                     <label for="scheduledBlocking">Enable Scheduled Blocking</label>
                     <select id="scheduledBlocking">
@@ -1115,18 +1565,18 @@
                         <option value="enabled">Enabled</option>
                     </select>
                 </div>
-                
+
                 <div id="scheduledBlockingSettings" style="display: none;">
                     <div class="form-group">
                         <label for="blockingStartTime">Start Time</label>
                         <input type="time" id="blockingStartTime" value="09:00">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="blockingEndTime">End Time</label>
                         <input type="time" id="blockingEndTime" value="17:00">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="blockingDays">Blocking Days</label>
                         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
@@ -1161,7 +1611,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <h3 style="margin-top: 30px;">Time Limits</h3>
                 <div class="form-group">
                     <label for="timeLimits">Enable Daily Time Limits</label>
@@ -1170,78 +1620,123 @@
                         <option value="enabled">Enabled</option>
                     </select>
                 </div>
-                
+
                 <div id="timeLimitsSettings" style="display: none;">
                     <div class="site-list" id="timeLimitsList">
                     </div>
-                    
+
                     <div class="add-site-form">
                         <input type="text" id="limitSite" placeholder="Site domain (e.g., youtube.com)">
-                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="1" max="480" style="width: 200px; margin-right: 10px;">
+                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="1" max="480"
+                            style="width: 200px; margin-right: 10px;">
                         <button class="btn btn-primary" id="addTimeLimit">Add Limit</button>
                     </div>
                 </div>
-                
+
+                <h3 style="margin-top: 30px;">Global Distraction Limit 🌍</h3>
+                <p class="hint">Set a single shared time limit for a combined group of distracting websites.</p>
+                <div class="form-group">
+                    <label for="globalLimitEnabled">Enable Global Shared Limit</label>
+                    <select id="globalLimitEnabled">
+                        <option value="disabled">Disabled</option>
+                        <option value="enabled">Enabled</option>
+                    </select>
+                </div>
+
+                <div id="globalLimitSettings" style="display: none;">
+                    <div class="form-group" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <label for="globalLimitMinutes" style="margin: 0;">Max Time Allowed (Minutes):</label>
+                        <input type="number" id="globalLimitMinutes" value="60" min="1" max="1440"
+                            style="width: 100px;">
+                    </div>
+
+                    <h4 style="margin-bottom: 15px; color: var(--slate-300);">Sites in Global Pool</h4>
+                    <div class="site-list" id="globalLimitList">
+                    </div>
+
+                    <div class="add-site-form">
+                        <input type="text" id="newGlobalLimitSite" placeholder="Enter domain (e.g., netflix.com)">
+                        <button class="btn btn-primary" id="addGlobalLimitSite">Add to Pool</button>
+                    </div>
+                </div>
+
+
                 <h3 style="margin-top: 30px;">Whitelist</h3>
                 <div class="site-list" id="whitelistList">
                 </div>
-                
+
                 <div class="add-site-form">
                     <input type="text" id="newWhitelistSite" placeholder="Enter domain (e.g., github.com)">
                     <button class="btn btn-primary" id="addWhitelistSite">Add Site</button>
                 </div>
             </div>
         </div>
-        
-        <div id="analytics" class="tab-content">
+
+        <!-- NEW: Screen Time Tab -->
+        <div id="screentime" class="tab-content">
             <div class="section">
-                <h2>Productivity Analytics</h2>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalFocusTime">0h 0m</div>
-                        <div class="stat-label">Total Focus Time</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalSessions">0</div>
-                        <div class="stat-label">Focus Sessions</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalTasks">0</div>
-                        <div class="stat-label">Tasks Completed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="productivityScore">0</div>
-                        <div class="stat-label">Productivity Score</div>
+                <h2>⏱️ Screen Time</h2>
+                <p class="subtitle"
+                    style="margin-bottom: 16px; text-transform:none; letter-spacing:0; font-size:0.9rem; color: var(--text-soft);">
+                    Visualize how
+                    your attention is spent across sites.</p>
+
+                <div
+                    style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap;">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--slate-400);">
+                        <span style="opacity:0.9;">Range</span>
+                        <select id="screenTimeRange"
+                            style="border-radius:999px; border:1px solid var(--border); padding:4px 10px; font-size:0.85rem;">
+                            <option value="day">Today</option>
+                            <option value="week">Last 7 days</option>
+                            <option value="month">Last 30 days</option>
+                        </select>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="dataRetentionDays">Data Retention (days)</label>
-                    <input type="number" id="dataRetentionDays" min="7" max="365" value="90">
+
+                <div style="display: flex; gap: 40px; align-items: flex-start;">
+                    <!-- SVG Chart Container -->
+                    <div id="screenTimeChart"
+                        style="flex: 0 0 250px; position: relative; display: flex; justify-content: center; align-items: center;">
+                        <svg width="250" height="250" viewBox="0 0 250 250">
+                            <circle cx="125" cy="125" r="100" fill="none" stroke="var(--surface)" stroke-width="30" />
+                        </svg>
+                        <div id="screenTimeTotal" style="position: absolute; text-align: center;">
+                            <div style="font-size: 14px; color: var(--slate-400);">Total Time</div>
+                            <div style="font-size: 24px; font-weight: bold; color: var(--slate-100);"
+                                id="totalTimeText">0m</div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bars Container -->
+                    <div id="screenTimeContainer"
+                        style="flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 200px;">
+                        <div style="text-align: center; padding: 20px; color: var(--slate-400);">Loading data...</div>
+                    </div>
                 </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-primary" id="exportAnalytics">Export Analytics</button>
-                    <button class="btn btn-secondary" id="refreshAnalytics">Refresh</button>
+                <div style="margin-top: 30px; text-align: center; display: flex; gap: 10px; justify-content: center;">
+                    <button id="refreshScreenTime" class="btn btn-secondary" style="padding: 10px 20px;">Refresh
+                        Data</button>
+                    <button id="clearScreenTime" class="btn btn-secondary"
+                        style="padding: 10px 20px; border-color: rgba(244, 63, 94, 0.4); color: var(--text-main);">Clear
+                        Data</button>
                 </div>
             </div>
         </div>
-        
+
         <div id="data" class="tab-content">
             <div class="section">
                 <h2>Data Management</h2>
-                
+
                 <div class="export-import">
                     <div>
                         <h3>Export Data</h3>
-                        <p>Export all your settings, tasks, and analytics data</p>
-                        <button class="btn btn-primary" id="exportData">Export All Data</button>
+                        <button class="btn btn-primary" id="exportData" style="margin-top: 10px;">Export All
+                            Data</button>
                     </div>
-                    
+
                     <div>
                         <h3>Import Data</h3>
-                        <p>Import data from a previous export</p>
                         <div class="file-input-wrapper">
                             <input type="file" id="importFile" accept=".json">
                             <label for="importFile" class="file-input-label">Choose File</label>
@@ -1249,26 +1744,26 @@
                         <button class="btn btn-secondary" id="importData" style="margin-top: 10px;">Import Data</button>
                     </div>
                 </div>
-                
+
                 <div class="danger-zone">
                     <h3>Danger Zone</h3>
                     <p>These actions cannot be undone</p>
-                    
+
                     <div class="btn-group">
-                        <button class="btn btn-danger" id="clearAnalytics">Clear Analytics Data</button>
+
                         <button class="btn btn-danger" id="resetSettings">Reset Settings</button>
                         <button class="btn btn-danger" id="clearAllData">Clear All Data</button>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="btn-group" style="margin-top: 30px;">
             <button class="btn btn-primary" id="saveSettings">Save Settings</button>
             <button class="btn btn-secondary" id="resetToDefaults">Reset to Defaults</button>
         </div>
     </div>
-    
+
     <footer class="app-footer">
         <div class="footer-content">
             <div class="footer-text">
@@ -1292,10 +1787,11 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>© 2026 TimeShield. Made with passion for productivity enthusiasts.</p>
+            <p>&copy; <span id="copyright-year"></span> TimeShield. Made with passion for focus enthusiasts.</p>
         </div>
     </footer>
-    
+
     <script src="options.js"></script>
 </body>
+
 </html>
