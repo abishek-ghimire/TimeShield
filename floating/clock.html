@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Clock</title>
+    <link rel="stylesheet" href="clock.css">
+</head>
+<body>
+    <div id="floatingClock" class="floating-clock">
+        <div class="clock-header">
+            <div class="clock-drag-handle">⋮⋮</div>
+            <div class="clock-controls">
+                <button id="minimizeClock" class="control-btn" title="Minimize">−</button>
+                <button id="expandClock" class="control-btn" title="Expand">□</button>
+                <button id="closeClock" class="control-btn" title="Close">×</button>
+            </div>
+        </div>
+        
+        <div class="clock-content">
+            <div class="clock-display" id="clockDisplay">
+                <div class="time-display" id="timeDisplay">00:00:00</div>
+                <div class="date-display" id="dateDisplay">Monday, January 1</div>
+                <div class="timezone-display" id="timezoneDisplay">NPT (UTC+5:45)</div>
+            </div>
+            
+            <div class="clock-expanded" id="clockExpanded" style="display: none;">
+                <div class="timer-section">
+                    <h3>Timer</h3>
+                    <div class="timer-controls">
+                        <input type="number" id="floatingTimerMinutes" placeholder="25" min="1" max="120">
+                        <span>:</span>
+                        <input type="number" id="floatingTimerSeconds" placeholder="00" min="0" max="59">
+                        <button id="floatingStartTimer" class="btn-timer">Start</button>
+                    </div>
+                    <div class="timer-display" id="floatingTimerDisplay">25:00</div>
+                </div>
+                
+                <div class="pomodoro-section">
+                    <h3>Pomodoro</h3>
+                    <div class="pomodoro-controls">
+                        <button id="pomodoro25" class="btn-pomodoro">25 min</button>
+                        <button id="pomodoro50" class="btn-pomodoro">50 min</button>
+                        <button id="pomodoro90" class="btn-pomodoro">90 min</button>
+                    </div>
+                </div>
+                
+                <div class="focus-section">
+                    <h3>Focus Mode</h3>
+                    <button id="floatingFocusMode" class="btn-focus">Start Focus</button>
+                    <div class="focus-status" id="focusStatus">Not Active</div>
+                </div>
+                
+                <div class="quick-tasks">
+                    <h3>Quick Tasks</h3>
+                    <div class="task-list" id="quickTaskList">
+                        <div class="task-item">
+                            <input type="checkbox" id="quickTask1">
+                            <label for="quickTask1">Review emails</label>
+                        </div>
+                        <div class="task-item">
+                            <input type="checkbox" id="quickTask2">
+                            <label for="quickTask2">Team standup</label>
+                        </div>
+                    </div>
+                    <button id="addQuickTask" class="btn-add-task">+ Add</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="clock-minimized" id="clockMinimized" style="display: none;">
+            <div class="minimized-time" id="minimizedTime">00:00</div>
+        </div>
+    </div>
+    
+    <script src="clock.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productivity Clock</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <h1>Productivity Clock</h1>
+            <div class="current-time" id="currentTime">00:00:00</div>
+        </header>
+        
+        <main class="popup-main">
+            <section class="quick-actions">
+                <button id="toggleClock" class="btn btn-primary">
+                    <span class="icon">🕐</span>
+                    Toggle Clock
+                </button>
+                <button id="startFocus" class="btn btn-focus">
+                    <span class="icon">🎯</span>
+                    Focus Mode
+                </button>
+                <button id="openSettings" class="btn btn-secondary">
+                    <span class="icon">⚙️</span>
+                    Settings
+                </button>
+            </section>
+            
+            <section class="timer-section">
+                <h2>Quick Timer</h2>
+                <div class="timer-controls">
+                    <input type="number" id="timerMinutes" placeholder="Min" min="1" max="120" value="25">
+                    <span>:</span>
+                    <input type="number" id="timerSeconds" placeholder="Sec" min="0" max="59" value="0">
+                    <button id="startTimer" class="btn btn-timer">Start</button>
+                </div>
+                <div class="timer-display" id="timerDisplay">25:00</div>
+            </section>
+            
+            <section class="todo-section">
+                <h2>Today's Tasks</h2>
+                <div class="todo-list" id="todoList">
+                    <div class="todo-item">
+                        <input type="checkbox" id="task1">
+                        <label for="task1">Complete project documentation</label>
+                    </div>
+                    <div class="todo-item">
+                        <input type="checkbox" id="task2">
+                        <label for="task2">Review pull requests</label>
+                    </div>
+                </div>
+                <button id="addTask" class="btn btn-add">+ Add Task</button>
+            </section>
+            
+            <section class="stats-section">
+                <h2>Today's Progress</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="focusTime">0h 0m</span>
+                        <span class="stat-label">Focus Time</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="tasksCompleted">0</span>
+                        <span class="stat-label">Tasks Done</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="sessionsCompleted">0</span>
+                        <span class="stat-label">Sessions</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
