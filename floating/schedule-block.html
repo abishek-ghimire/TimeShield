@@ -4,18 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeShield - Stay Focused</title>
+    <title>TimeShield - Scheduled Blocking</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
         rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
-            --accent: #f43f5e;
+            --primary: #10b981;
+            /* Emerald/Green for Scheduled */
+            --accent: #3b82f6;
             --slate-50: #f8fafc;
             --slate-400: #94a3b8;
             --slate-900: #0f172a;
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --bg-gradient: linear-gradient(135deg, #064e3b 0%, #0f172a 100%);
         }
 
         * {
@@ -36,7 +37,6 @@
             overflow-x: hidden;
         }
 
-        /* Premium Glass Container */
         .glass-container {
             max-width: 800px;
             width: 100%;
@@ -48,18 +48,18 @@
             padding: 60px;
             text-align: center;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: fadeIn 0.8s ease-out;
         }
 
-        @keyframes slideUp {
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: scale(0.95);
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: scale(1);
             }
         }
 
@@ -68,8 +68,8 @@
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
             border-radius: 100px;
             color: var(--primary);
             font-size: 0.85rem;
@@ -84,7 +84,7 @@
             font-size: 3.5rem;
             font-weight: 700;
             margin-bottom: 16px;
-            background: linear-gradient(to bottom right, #fff 30%, var(--slate-400));
+            background: linear-gradient(to bottom right, #fff 30%, var(--primary));
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -101,14 +101,115 @@
             margin-right: auto;
         }
 
+        .status-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .status-text {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .time-info {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .stats-banner {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-group {
+            text-align: center;
+        }
+
+        .stat-val {
+            display: block;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--slate-400);
+            margin-top: 4px;
+        }
+
         .quote-box {
-            margin-top: 60px;
+            margin-top: 40px;
             font-family: 'Outfit', sans-serif;
             font-size: 1.1rem;
             font-style: italic;
             color: var(--slate-400);
-            position: relative;
-            padding: 0 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 30px;
+        }
+
+        /* New styles for countdown */
+        .countdown-section {
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 40px;
+        }
+
+        .countdown-label {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            color: var(--slate-50);
+        }
+
+        .countdown-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+        }
+
+        .countdown-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .countdown-digits {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--primary);
+        }
+
+        .countdown-unit-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--slate-400);
+            margin-top: 4px;
+        }
+
+        .countdown-sep {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--slate-400);
         }
 
         .footer-note {
@@ -117,35 +218,25 @@
             margin-top: 30px;
             opacity: 0.7;
         }
-
-        /* Mobile Optimization */
-        @media (max-width: 640px) {
-            .glass-container {
-                padding: 40px 20px;
-                border-radius: 0;
-            }
-
-            h1 {
-                font-size: 2.5rem;
-            }
-        }
     </style>
 </head>
 
 <body>
     <div class="glass-container">
-        <div class="brand-badge">🛡️ TimeShield Protocol Active</div>
+        <div class="brand-badge">🔐 Scheduled Blocking Active</div>
         <h1>Focus Restricted</h1>
-        <p class="message" id="professionalMessage">This domain has been restricted to help you stay focused. Redirect
-            your energy back to your core mission.</p>
+        <p class="message" id="professionalMessage">This site is restricted until your scheduled focus window concludes.
+        </p>
 
         <div class="quote-box" id="motivationalQuote">
-            "Your focus determines your reality." — Qui-Gon Jinn
+            "Discipline is the bridge between goals and accomplishment." — Jim Rohn
         </div>
+
+        <p class="footer-note">This site will become available automatically once the schedule ends.</p>
     </div>
 
     <script>
-        class FocusBlockPage {
+        class ScheduleBlockPage {
             constructor() {
                 this.quotes = [
                     "Your focus determines your reality. — Qui-Gon Jinn",
@@ -175,12 +266,21 @@
             }
 
             async init() {
+                await this.incrementBlocked();
                 this.startQuoteRotation();
+            }
+
+            async incrementBlocked() {
+                // Increment blocked count via background
+                try {
+                    await chrome.runtime.sendMessage({ action: 'incrementBlockedAttempts' });
+                } catch (e) {
+                    console.warn('Failed to increment stats:', e);
+                }
             }
 
             startQuoteRotation() {
                 const el = document.getElementById('motivationalQuote');
-                // Initial jump to a random quote
                 el.textContent = `"${this.quotes[Math.floor(Math.random() * this.quotes.length)]}"`;
 
                 setInterval(() => {
@@ -193,7 +293,7 @@
             }
         }
 
-        new FocusBlockPage();
+        new ScheduleBlockPage();
     </script>
 </body>
 

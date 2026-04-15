@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeShield - Protection Pause Menu</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #f43f5e;
+            /* Rose / Accent warning */
+            --slate-50: #f8fafc;
+            --slate-400: #94a3b8;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #4c0519 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--slate-50);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .glass-container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            border-radius: 100px;
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .message {
+            font-size: 1.1rem;
+            color: var(--slate-400);
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--slate-400);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1);
+        }
+
+        .challenge-text {
+            user-select: none;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(244, 63, 94, 0.4);
+        }
+
+        .error-msg {
+            color: var(--primary);
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Duration options grid */
+        .duration-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .duration-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--slate-50);
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .duration-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--slate-400);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="glass-container">
+        <div class="brand-badge">⏸️ Protection Pause Menu</div>
+
+        <!-- Auth View -->
+        <div id="authView" class="section">
+            <h1>Verification Required</h1>
+            <p class="message" id="authMessage">Please complete the challenge to temporarily pause TimeShield
+                protection.</p>
+
+            <div id="passwordBlock" class="form-group" style="display:none;">
+                <label>Master Password</label>
+                <input type="password" id="passwordInput" placeholder="Enter your password">
+            </div>
+
+            <div id="challengeBlock" class="form-group" style="display:none;">
+                <label>Typing Challenge</label>
+                <div class="challenge-text" id="challengeTextDisplay"></div>
+                <input type="text" id="challengeInput" placeholder="Type the exact text above" autocomplete="off"
+                    onpaste="return false;" ondrop="return false;">
+            </div>
+
+            <button class="btn" id="verifyBtn">Verify & Proceed</button>
+            <div id="errorMsg" class="error-msg">Verification failed. Try again.</div>
+        </div>
+
+        <!-- Duration View -->
+        <div id="durationView" class="section">
+            <h1>Select Pause Duration</h1>
+            <p class="message">How long would you like to pause all blocking protection?</p>
+
+            <div class="duration-grid">
+                <button class="duration-btn" data-minutes="5">5 minutes</button>
+                <button class="duration-btn" data-minutes="15">15 minutes</button>
+                <button class="duration-btn" data-minutes="30">30 minutes</button>
+                <button class="duration-btn" data-minutes="60">1 hour</button>
+                <button class="duration-btn" data-minutes="eod">Rest of the Day</button>
+                <button class="duration-btn" data-minutes="-1">Until I Turn Off</button>
+            </div>
+
+            <button class="btn" id="cancelBtn1" style="background:rgba(255,255,255,0.1);">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Motivation View -->
+    <div id="motivationView" class="section">
+        <h1>Final Warning</h1>
+        <p class="message" style="color:var(--primary);">You are about to breach your defenses. Type the motivation
+            lines below to confirm.</p>
+
+        <div class="form-group">
+            <div class="challenge-text" id="motivationText1" style="font-size: 0.95rem;">I accept that giving in to
+                distraction reduces my potential.</div>
+            <input type="text" id="motivationInput1" placeholder="Type the line above" autocomplete="off"
+                onpaste="return false;" style="margin-bottom: 12px; font-size:0.9rem;">
+
+            <div class="challenge-text" id="motivationText2" style="font-size: 0.95rem;">I will stay mindful of how I
+                spend my time.</div>
+            <input type="text" id="motivationInput2" placeholder="Type the line above" autocomplete="off"
+                onpaste="return false;" style="font-size:0.9rem;">
+        </div>
+
+        <button class="btn" id="confirmPauseBtn"
+            style="background:#0f172a; border:1px solid rgba(255,255,255,0.1);">Unlock Access</button>
+        <div id="motivationErrorMsg" class="error-msg">Text does not match. Try again.</div>
+        <button class="btn" id="cancelBtn2" style="background:rgba(255,255,255,0.1); margin-top: 12px;">Nevermind, Keep
+            Me
+            Focused</button>
+    </div>
+    </div>
+
+    <script src="pause-overlay.js"></script>
+</body>
+
+</html>

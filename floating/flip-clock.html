@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeShield — Flip Clock</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;900&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="flip-clock.css">
+</head>
+
+<body>
+    <div class="page-wrapper">
+        <div class="brand-label">TimeShield</div>
+
+        <div class="flip-clock">
+            <!-- Hours -->
+            <div class="flip-group">
+                <div class="flip-card" id="card-hours">
+                    <div class="card-half upper-half">
+                        <div class="digit" id="upper-hours">00</div>
+                    </div>
+                    <div class="card-half lower-half">
+                        <div class="digit" id="lower-hours">00</div>
+                    </div>
+                    <!-- Animated overlay -->
+                    <div class="fold" id="fold-hours">
+                        <div class="fold-panel fold-upper-panel">
+                            <div class="digit" id="fold-upper-digit-hours">00</div>
+                        </div>
+                        <div class="fold-panel fold-lower-panel">
+                            <div class="digit" id="fold-lower-digit-hours">00</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="unit-label">Hours</div>
+            </div>
+
+            <div class="separator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+
+            <!-- Minutes -->
+            <div class="flip-group">
+                <div class="flip-card" id="card-minutes">
+                    <div class="card-half upper-half">
+                        <div class="digit" id="upper-minutes">00</div>
+                    </div>
+                    <div class="card-half lower-half">
+                        <div class="digit" id="lower-minutes">00</div>
+                    </div>
+                    <div class="fold" id="fold-minutes">
+                        <div class="fold-panel fold-upper-panel">
+                            <div class="digit" id="fold-upper-digit-minutes">00</div>
+                        </div>
+                        <div class="fold-panel fold-lower-panel">
+                            <div class="digit" id="fold-lower-digit-minutes">00</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="unit-label">Minutes</div>
+            </div>
+
+            <div class="separator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+
+            <!-- Seconds (no flip) -->
+            <div class="flip-group">
+                <div class="seconds-card">
+                    <div class="seconds-value" id="seconds-display">00</div>
+                </div>
+                <div class="unit-label">Seconds</div>
+            </div>
+        </div>
+
+        <div class="date-display" id="date-display">Loading...</div>
+    </div>
+
+    <script src="flip-clock.js"></script>
+</body>
+
+</html>
