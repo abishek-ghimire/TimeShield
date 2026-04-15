@@ -21,6 +21,29 @@ class BackgroundService {
         this.setupMessageHandlers();
         this.setupAlarmHandlers();
         this.initializeStorage();
+        this.restoreState();
+    }
+    
+    async restoreState() {
+        // Restore timer state
+        const timerResult = await chrome.storage.local.get(['timerState']);
+        if (timerResult.timerState) {
+            this.timerState = timerResult.timerState;
+            if (this.timerState.isRunning) {
+                this.startTimerAlarm();
+            }
+        }
+        
+        // Restore focus state
+        const focusResult = await chrome.storage.local.get(['focusState']);
+        if (focusResult.focusState) {
+            this.focusState = focusResult.focusState;
+            if (this.focusState.isActive) {
+                this.enableSiteBlocking(this.focusState.blockedSites);
+                chrome.action.setBadgeText({ text: '🎯' });
+                chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+            }
+        }
     }
     
     setupMessageHandlers() {
@@ -28,6 +51,28 @@ class BackgroundService {
             this.handleMessage(message, sender, sendResponse);
             return true;
         });
+    }
+    
+    setupAlarmHandlers() {
+        chrome.alarms.onAlarm.addListener((alarm) => {
+            this.handleAlarm(alarm);
+        });
+    }
+    
+    async handleAlarm(alarm) {
+        switch (alarm.name) {
+            case 'timer':
+                await this.timerComplete();
+                break;
+                
+            case 'focusMode':
+                await this.focusModeComplete();
+                break;
+                
+            case 'breakReminder':
+                await this.sendBreakReminder();
+                break;
+        }
     }
     
     async handleMessage(message, sender, sendResponse) {
@@ -52,6 +97,21 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
                 
+            case 'toggleClock':
+                await this.toggleFloatingClock();
+                sendResponse({ success: true });
+                break;
+                
+            case 'playSound':
+                this.playSound(message.sound);
+                sendResponse({ success: true });
+                break;
+                
+            case 'updateBlockList':
+                await this.updateBlockList(message.blockedSites, message.whitelist);
+                sendResponse({ success: true });
+                break;
+                
             case 'getTimerState':
                 sendResponse({ state: this.timerState });
                 break;
@@ -65,15 +125,128 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
                 
+            case 'checkScheduledBlocking':
+                await this.checkScheduledBlocking();
+                sendResponse({ active: await this.isScheduledBlockingActive() });
+                break;
+                
+            case 'checkTimeLimit':
+                await this.checkTimeLimit(message.site);
+                sendResponse({ allowed: await this.isTimeLimitAllowed(message.site), remaining: await this.getTimeLimitRemaining(message.site) });
+                break;
+                
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
     }
     
-    setupAlarmHandlers() {
-        chrome.alarms.onAlarm.addListener((alarm) => {
-            this.handleAlarm(alarm);
-        });
+    async isScheduledBlockingActive() {
+        const result = await chrome.storage.local.get(['scheduledBlocking']);
+        const scheduled = result.scheduledBlocking;
+        
+        if (!scheduled || !scheduled.enabled) {
+            return false;
+        }
+        
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const startTime = this.timeToMinutes(scheduled.startTime);
+        const endTime = this.timeToMinutes(scheduled.endTime);
+        const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        // Check if current time is within blocking window and current day is selected
+        return currentTime >= startTime && currentTime <= endTime && scheduled.days.includes(currentDay);
+    }
+    
+    async isTimeLimitAllowed(site) {
+        const result = await chrome.storage.local.get(['timeLimits']);
+        const timeLimits = result.timeLimits || [];
+        
+        const limit = timeLimits.find(limit => limit.site === site);
+        if (!limit) {
+            return true; // No limit set
+        }
+        
+        const today = new Date().toDateString();
+        
+        // Reset daily usage at midnight
+        if (limit.lastReset !== today) {
+            limit.usedToday = 0;
+            limit.lastReset = today;
+        }
+        
+        return limit.usedToday < limit.minutes;
+    }
+    
+    async getTimeLimitRemaining(site) {
+        const result = await chrome.storage.local.get(['timeLimits']);
+        const timeLimits = result.timeLimits || [];
+        
+        const limit = timeLimits.find(limit => limit.site === site);
+        if (!limit) {
+            return null; // No limit set
+        }
+        
+        const today = new Date().toDateString();
+        
+        // Reset daily usage at midnight
+        if (limit.lastReset !== today) {
+            limit.usedToday = 0;
+            limit.lastReset = today;
+        }
+        
+        return Math.max(0, limit.minutes - limit.usedToday);
+    }
+    
+    async checkScheduledBlocking() {
+        const isActive = await this.isScheduledBlockingActive();
+        if (isActive) {
+            await this.enableScheduledBlocking();
+        } else {
+            await this.disableScheduledBlocking();
+        }
+    }
+    
+    async enableScheduledBlocking() {
+        const result = await chrome.storage.local.get(['blockedSites']);
+        const blockedSites = result.blockedSites || StorageManager.getDefaultBlockedSites();
+        
+        await this.enableSiteBlocking(blockedSites);
+        
+        chrome.action.setBadgeText({ text: '🚫' });
+        chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+    }
+    
+    async disableScheduledBlocking() {
+        await this.disableSiteBlocking();
+        
+        chrome.action.setBadgeText({ text: '' });
+        chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
+    }
+    
+    async checkTimeLimit(site) {
+        const allowed = await this.isTimeLimitAllowed(site);
+        const remaining = await this.getTimeLimitRemaining(site);
+        
+        if (!allowed && remaining !== null) {
+            // Block the site and show time limit message
+            await this.enableSiteBlocking([site]);
+            
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'showTimeLimitWarning',
+                        site: site,
+                        remaining: remaining
+                    });
+                }
+            });
+        }
+    }
+    
+    timeToMinutes(timeString) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        return hours * 60 + minutes;
     }
     
     async handleAlarm(alarm) {
@@ -110,6 +283,15 @@ class BackgroundService {
         chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
     }
     
+    startTimerAlarm() {
+        const remainingTime = (this.timerState.startTime + this.timerState.duration * 1000) - Date.now();
+        if (remainingTime > 0) {
+            chrome.alarms.create('timer', {
+                delayInMinutes: remainingTime / 60000
+            });
+        }
+    }
+    
     async stopTimer() {
         this.timerState.isRunning = false;
         
@@ -121,29 +303,69 @@ class BackgroundService {
     }
     
     async timerComplete() {
-        const settings = await this.getSettings();
-        
-        if (settings.notificationsEnabled) {
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: 'assets/icons/icon48.png',
-                title: 'Timer Complete!',
-                message: 'Your timer has finished. Time for a break!'
-            });
-        }
-        
-        if (settings.soundEnabled) {
-            await this.playSound('timer-complete');
-        }
-        
         this.timerState.isRunning = false;
         await chrome.storage.local.set({ timerState: this.timerState });
         
         chrome.action.setBadgeText({ text: '' });
         
-        await this.updateStats({
-            sessionsCompleted: 1
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'assets/icons/icon48.png',
+            title: 'Timer Complete!',
+            message: 'Your timer has finished.'
         });
+        
+        this.playSound('timer-complete');
+    }
+    
+    async focusModeComplete() {
+        const focusTime = Math.floor((Date.now() - this.focusState.startTime) / 1000);
+        
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'assets/icons/icon48.png',
+            title: 'Focus Session Complete!',
+            message: `Great job! You focused for ${Math.floor(focusTime / 60)} minutes.`
+        });
+        
+        this.playSound('timer-complete');
+        await this.stopFocusMode();
+    }
+    
+    async sendBreakReminder() {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'assets/icons/icon48.png',
+            title: 'Break Reminder',
+            message: 'Time to take a break and stretch!'
+        });
+        
+        this.playSound('break-time');
+    }
+    
+    async checkTimeLimit(site) {
+        const allowed = await this.isTimeLimitAllowed(site);
+        const remaining = await this.getTimeLimitRemaining(site);
+        
+        if (!allowed && remaining !== null) {
+            // Block the site and show time limit message
+            await this.enableSiteBlocking([site]);
+            
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'showTimeLimitWarning',
+                        site: site,
+                        remaining: remaining
+                    });
+                }
+            });
+        }
+    }
+    
+    timeToMinutes(timeString) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        return hours * 60 + minutes;
     }
     
     async startFocusMode(duration, blockedSites = []) {
@@ -158,7 +380,6 @@ class BackgroundService {
             delayInMinutes: duration / 60
         });
         
-        await this.enableSiteBlocking(blockedSites);
         await chrome.storage.local.set({ focusState: this.focusState });
         
         chrome.action.setBadgeText({ text: '🎯' });
@@ -306,6 +527,26 @@ class BackgroundService {
                     sound: soundName
                 });
             }
+        });
+    }
+    
+    async toggleFloatingClock() {
+        const result = await chrome.storage.local.get(['clockVisible']);
+        const isVisible = result.clockVisible || false;
+        
+        // Toggle the state
+        const newState = !isVisible;
+        await chrome.storage.local.set({ clockVisible: newState });
+        
+        // Send message to all tabs to toggle clock
+        const tabs = await chrome.tabs.query({});
+        tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+                action: 'toggleClock',
+                visible: newState
+            }).catch(() => {
+                // Ignore errors for tabs that don't have content script
+            });
         });
     }
     

@@ -156,29 +156,69 @@ class FloatingClock {
     startClock() {
         const updateTime = () => {
             const now = new Date();
-            const nepalTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
+            let timeString = '';
             
-            const timeString = nepalTime.toLocaleTimeString('en-US', { 
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            const dateString = nepalTime.toLocaleDateString('en-US', { 
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            if (this.settings.nepalTime) {
+                // Nepal Time (UTC+5:45)
+                const nepalTime = new Date(now.getTime() + (5.75 * 60 * 60 * 1000));
+                timeString = this.formatTime(nepalTime);
+            } else {
+                timeString = this.formatTime(now);
+            }
             
             this.timeDisplay.textContent = timeString;
+            
+            // Update date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('en-US', options);
             this.dateDisplay.textContent = dateString;
-            this.minimizedTime.textContent = timeString.substring(0, 5);
+            
+            // Update timezone
+            if (this.settings.nepalTime) {
+                this.timezoneDisplay.textContent = 'NPT (UTC+5:45)';
+            } else {
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const offset = now.getTimezoneOffset();
+                const offsetHours = Math.floor(Math.abs(offset) / 60);
+                const offsetMinutes = Math.abs(offset) % 60;
+                const offsetString = `UTC${offset >= 0 ? '-' : '+'}${offsetHours}:${offsetMinutes.toString().padStart(2, '0')}`;
+                this.timezoneDisplay.textContent = `${timezone} (${offsetString})`;
+            }
         };
         
         updateTime();
         setInterval(updateTime, 1000);
+    }
+    
+    formatTime(date) {
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+        let seconds = date.getSeconds();
+        let ampm = '';
+        
+        // Handle 12/24 hour format
+        if (this.settings.timeFormat === '12') {
+            ampm = hours >= 12 ? ' PM' : ' AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0 should be 12
+        }
+        
+        // Format with leading zeros
+        hours = hours.toString().padStart(2, '0');
+        minutes = minutes.toString().padStart(2, '0');
+        seconds = seconds.toString().padStart(2, '0');
+        
+        let timeString = `${hours}:${minutes}`;
+        
+        // Add seconds if enabled
+        if (this.settings.showSeconds) {
+            timeString += `:${seconds}`;
+        }
+        
+        // Add AM/PM for 12-hour format
+        timeString += ampm;
+        
+        return timeString;
     }
     
     updateTimerDisplay() {

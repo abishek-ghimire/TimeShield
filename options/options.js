@@ -16,12 +16,15 @@ class OptionsManager {
     
     async loadData() {
         const result = await chrome.storage.local.get([
-            'settings', 'blockedSites', 'whitelist', 'todayStats', 'analyticsData'
+            'settings', 'blockedSites', 'whitelist', 'todayStats', 'analyticsData',
+            'scheduledBlocking', 'timeLimits'
         ]);
         
         this.settings = result.settings || StorageManager.getDefaultSettings();
         this.blockedSites = result.blockedSites || StorageManager.getDefaultBlockedSites();
         this.whitelist = result.whitelist || [];
+        this.scheduledBlocking = result.scheduledBlocking || this.getDefaultScheduledBlocking();
+        this.timeLimits = result.timeLimits || [];
     }
     
     setupEventListeners() {
@@ -30,6 +33,121 @@ class OptionsManager {
         this.setupSiteManagement();
         this.setupDataManagement();
         this.setupAnalytics();
+        this.setupThemeListener();
+        this.setupFooterInteractions();
+        this.setupEnhancedInteractions();
+    }
+    
+    setupFooterInteractions() {
+        // Report bug link
+        document.getElementById('reportBug').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showNotification('Opening GitHub issues to report a bug...', 'success');
+            setTimeout(() => {
+                window.open('https://github.com/abishekgh-6/FloatingClockExtension/issues/new', '_blank');
+            }, 1000);
+        });
+        
+        // Request feature link
+        document.getElementById('requestFeature').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showNotification('Opening GitHub issues to request a feature...', 'success');
+            setTimeout(() => {
+                window.open('https://github.com/abishekgh-6/FloatingClockExtension/issues/new?template=feature_request.md', '_blank');
+            }, 1000);
+        });
+    }
+    
+    setupEnhancedInteractions() {
+        // Add ripple effect to buttons
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                this.appendChild(ripple);
+                
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+        
+        // Add loading states to save buttons
+        document.getElementById('saveSettings').addEventListener('click', async () => {
+            const button = document.getElementById('saveSettings');
+            button.classList.add('loading');
+            button.textContent = 'Saving...';
+            
+            try {
+                await this.saveSettings();
+                this.showNotification('Settings saved successfully!', 'success');
+            } catch (error) {
+                this.showNotification('Error saving settings', 'error');
+            } finally {
+                button.classList.remove('loading');
+                button.textContent = 'Save Settings';
+            }
+        });
+        
+        // Add confirmation for reset
+        document.getElementById('resetToDefaults').addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+                this.resetToDefaults();
+            }
+        });
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + S to save
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('saveSettings').click();
+            }
+            
+            // Ctrl/Cmd + R to reset
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                document.getElementById('resetToDefaults').click();
+            }
+        });
+        
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    }
+    
+    setupFormListeners() {
+        this.setupTabSwitching();
+        this.setupFormListeners();
+        this.setupSiteManagement();
+        this.setupDataManagement();
+        this.setupAnalytics();
+        this.setupThemeListener();
+    }
+    
+    setupThemeListener() {
+        const themeSelect = document.getElementById('theme');
+        if (themeSelect) {
+            themeSelect.addEventListener('change', (e) => {
+                this.settings.theme = e.target.value;
+                this.saveSettings();
+                this.applyTheme();
+            });
+        }
     }
     
     setupTabSwitching() {
@@ -68,6 +186,26 @@ class OptionsManager {
         document.getElementById('addBlockedSite').addEventListener('click', () => this.addBlockedSite());
         document.getElementById('addWhitelistSite').addEventListener('click', () => this.addWhitelistSite());
         
+        // Scheduled blocking
+        document.getElementById('scheduledBlocking').addEventListener('change', (e) => {
+            this.toggleScheduledBlocking(e.target.value);
+        });
+        
+        document.getElementById('blockingStartTime').addEventListener('change', () => this.saveScheduledBlocking());
+        document.getElementById('blockingEndTime').addEventListener('change', () => this.saveScheduledBlocking());
+        
+        // Day checkboxes
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+            document.getElementById(day).addEventListener('change', () => this.saveScheduledBlocking());
+        });
+        
+        // Time limits
+        document.getElementById('timeLimits').addEventListener('change', (e) => {
+            this.toggleTimeLimits(e.target.value);
+        });
+        
+        document.getElementById('addTimeLimit').addEventListener('click', () => this.addTimeLimit());
+        
         document.getElementById('newBlockedSite').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addBlockedSite();
         });
@@ -101,6 +239,8 @@ class OptionsManager {
             if (this.settings.hasOwnProperty(element.id)) {
                 if (element.type === 'checkbox') {
                     element.checked = this.settings[element.id];
+                } else if (element.type === 'range' || element.type === 'number') {
+                    element.value = this.settings[element.id];
                 } else {
                     element.value = this.settings[element.id];
                 }
@@ -108,7 +248,82 @@ class OptionsManager {
         });
         
         this.updateSiteLists();
+        this.populateScheduledBlocking();
+        this.populateTimeLimits();
         this.updateRangeDisplays();
+        this.applyTheme();
+    }
+    
+    applyTheme() {
+        const theme = this.settings.theme || 'default';
+        const body = document.body;
+        
+        // Remove existing theme classes
+        body.classList.remove('dark-theme', 'light-theme', 'blue-theme');
+        
+        // Apply new theme class
+        if (theme !== 'default') {
+            body.classList.add(`${theme}-theme`);
+        }
+    }
+    
+    populateScheduledBlocking() {
+        const scheduledBlockingSelect = document.getElementById('scheduledBlocking');
+        const scheduledSettings = document.getElementById('scheduledBlockingSettings');
+        
+        if (this.scheduledBlocking.enabled) {
+            scheduledBlockingSelect.value = 'enabled';
+            scheduledSettings.style.display = 'block';
+        } else {
+            scheduledBlockingSelect.value = 'disabled';
+            scheduledSettings.style.display = 'none';
+        }
+        
+        // Populate time inputs
+        document.getElementById('blockingStartTime').value = this.scheduledBlocking.startTime || '09:00';
+        document.getElementById('blockingEndTime').value = this.scheduledBlocking.endTime || '17:00';
+        
+        // Populate day checkboxes
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        days.forEach(day => {
+            document.getElementById(day).checked = this.scheduledBlocking.days && this.scheduledBlocking.days.includes(parseInt(day === 'sunday' ? 0 : day === 'monday' ? 1 : day === 'tuesday' ? 2 : day === 'wednesday' ? 3 : day === 'thursday' ? 4 : day === 'friday' ? 5 : 6));
+        });
+    }
+    
+    populateTimeLimits() {
+        const timeLimitsSelect = document.getElementById('timeLimits');
+        const timeLimitsSettings = document.getElementById('timeLimitsSettings');
+        
+        if (this.timeLimits.length > 0) {
+            timeLimitsSelect.value = 'enabled';
+            timeLimitsSettings.style.display = 'block';
+        } else {
+            timeLimitsSelect.value = 'disabled';
+            timeLimitsSettings.style.display = 'none';
+        }
+        
+        this.updateTimeLimitsList();
+    }
+    
+    updateTimeLimitsList() {
+        const timeLimitsList = document.getElementById('timeLimitsList');
+        timeLimitsList.innerHTML = '';
+        
+        this.timeLimits.forEach(limit => {
+            const limitItem = document.createElement('div');
+            limitItem.className = 'site-item';
+            limitItem.innerHTML = `
+                <span class="site-url">${limit.site}</span>
+                <span class="site-url">${limit.minutes} minutes/day</span>
+                <button class="remove-site" data-site="${limit.site}" data-type="timelimit">Remove</button>
+            `;
+            
+            limitItem.querySelector('.remove-site').addEventListener('click', (e) => {
+                this.removeTimeLimit(e.target.dataset.site);
+            });
+            
+            timeLimitsList.appendChild(limitItem);
+        });
     }
     
     updateRangeDisplays() {
@@ -327,29 +542,161 @@ class OptionsManager {
         }
     }
     
+    getDefaultScheduledBlocking() {
+        return {
+            enabled: false,
+            startTime: '09:00',
+            endTime: '17:00',
+            days: [1, 2, 3, 4, 5] // Monday to Friday
+        };
+    }
+    
+    toggleScheduledBlocking(value) {
+        this.scheduledBlocking.enabled = value === 'enabled';
+        this.saveScheduledBlocking();
+        this.populateScheduledBlocking();
+    }
+    
+    toggleTimeLimits(value) {
+        if (value === 'enabled') {
+            // Initialize with empty array if enabling
+            if (this.timeLimits.length === 0) {
+                this.timeLimits = [];
+            }
+        } else {
+            this.timeLimits = [];
+        }
+        this.saveTimeLimits();
+        this.populateTimeLimits();
+    }
+    
+    addTimeLimit() {
+        const site = document.getElementById('limitSite').value.trim();
+        const minutes = parseInt(document.getElementById('limitMinutes').value);
+        
+        if (site && minutes && minutes > 0) {
+            const existingIndex = this.timeLimits.findIndex(limit => limit.site === site);
+            if (existingIndex !== -1) {
+                this.timeLimits[existingIndex].minutes = minutes;
+            } else {
+                this.timeLimits.push({
+                    site: site,
+                    minutes: minutes,
+                    usedToday: 0,
+                    lastReset: new Date().toDateString()
+                });
+            }
+            
+            this.saveTimeLimits();
+            this.populateTimeLimits();
+            
+            document.getElementById('limitSite').value = '';
+            document.getElementById('limitMinutes').value = '';
+            
+            this.showNotification('Time limit added successfully', 'success');
+        }
+    }
+    
+    removeTimeLimit(site) {
+        this.timeLimits = this.timeLimits.filter(limit => limit.site !== site);
+        this.saveTimeLimits();
+        this.populateTimeLimits();
+        this.showNotification('Time limit removed', 'success');
+    }
+    
+    async saveScheduledBlocking() {
+        const startTime = document.getElementById('blockingStartTime').value;
+        const endTime = document.getElementById('blockingEndTime').value;
+        const days = [];
+        
+        ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].forEach((day, index) => {
+            if (document.getElementById(day).checked) {
+                days.push(index === 0 ? 0 : index);
+            }
+        });
+        
+        this.scheduledBlocking = {
+            enabled: this.scheduledBlocking.enabled,
+            startTime: startTime,
+            endTime: endTime,
+            days: days
+        };
+        
+        await chrome.storage.local.set({ scheduledBlocking: this.scheduledBlocking });
+    }
+    
+    async saveTimeLimits() {
+        await chrome.storage.local.set({ timeLimits: this.timeLimits });
+    }
+    
     showNotification(message, type = 'success') {
         const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = message;
-        
-        if (type === 'error') {
-            notification.style.background = '#dc3545';
-        } else if (type === 'warning') {
-            notification.style.background = '#ffc107';
-            notification.style.color = '#333';
+}
+
+addTimeLimit() {
+    const site = document.getElementById('limitSite').value.trim();
+    const minutes = parseInt(document.getElementById('limitMinutes').value);
+    
+    if (site && minutes && minutes > 0) {
+        const existingIndex = this.timeLimits.findIndex(limit => limit.site === site);
+        if (existingIndex !== -1) {
+            this.timeLimits[existingIndex].minutes = minutes;
+        } else {
+            this.timeLimits.push({
+                site: site,
+                minutes: minutes,
+                usedToday: 0,
+                lastReset: new Date().toDateString()
+            });
         }
         
-        document.body.appendChild(notification);
+        this.saveTimeLimits();
+        this.populateTimeLimits();
         
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
-        }, 3000);
+        document.getElementById('limitSite').value = '';
+        document.getElementById('limitMinutes').value = '';
+        
+        this.showNotification('Time limit added successfully', 'success');
     }
+}
+
+removeTimeLimit(site) {
+    this.timeLimits = this.timeLimits.filter(limit => limit.site !== site);
+    this.saveTimeLimits();
+    this.populateTimeLimits();
+    this.showNotification('Time limit removed', 'success');
+}
+
+async saveScheduledBlocking() {
+    const startTime = document.getElementById('blockingStartTime').value;
+    const endTime = document.getElementById('blockingEndTime').value;
+    const days = [];
+    
+    ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].forEach((day, index) => {
+        if (document.getElementById(day).checked) {
+            days.push(index === 0 ? 0 : index);
+        }
+    });
+    
+    this.scheduledBlocking = {
+        enabled: this.scheduledBlocking.enabled,
+        startTime: startTime,
+        endTime: endTime,
+        days: days
+    };
+    
+    await chrome.storage.local.set({ scheduledBlocking: this.scheduledBlocking });
+}
+
+    }
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 300);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
