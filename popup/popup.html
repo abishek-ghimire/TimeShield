@@ -1,103 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeShield</title>
+    <title>TimeShield - Focus Master</title>
     <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
     <div class="popup-container">
         <header class="popup-header">
-            <h1>TimeShield</h1>
-            <div class="current-time" id="currentTime">00:00:00</div>
+            <div class="brand">
+                <h1><span class="brand-logo-wrap"><img src="../assets/icons/iconi1.png" alt="TimeShield"
+                            class="brand-logo"></span> TimeShield</h1>
+                <span class="brand-subtitle">Smart Focus & Ad Control</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button id="toggleFormat" class="btn-mini"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; cursor: pointer;">24H</button>
+                <div class="current-time" id="currentTime">00:00:00</div>
+            </div>
         </header>
-        
+
         <main class="popup-main">
-            <section class="quick-actions">
+            <!-- Quick Actions Grid -->
+            <div class="quick-actions">
                 <button id="toggleClock" class="btn btn-primary">
-                    <span class="icon">🕐</span>
-                    Toggle Clock
+                    <span class="icon">🕐</span> Clock View
                 </button>
                 <button id="startFocus" class="btn btn-focus">
-                    <span class="icon">🎯</span>
-                    Focus Mode
+                    <span class="icon">🎯</span> Focus Mode
                 </button>
                 <button id="openSettings" class="btn btn-secondary">
                     <span class="icon">⚙️</span>
-                    Settings
+                </button>
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-top: 12px; margin-bottom: 8px;">
+                <button id="flipClockMode" class="btn btn-secondary flip-clock-btn" style="flex: 1;">
+                    <span class="icon">🌀</span> Flip Clock
+                </button>
+                <button id="pauseProtectionMode" class="btn btn-secondary pause-btn"
+                    style="flex: 1; border-color: rgba(244, 63, 94, 0.3);">
+                    <span class="icon" id="pauseIcon">⏸️</span> <span id="pauseLabel">Pause Blocks</span>
+                </button>
+            </div>
+
+            <!-- Quick-Add Current Site -->
+            <section id="quickAddPanel" class="card" style="display:none; padding: 10px 12px;">
+                <div class="card-title" style="font-size:0.72rem; margin-bottom:8px;">
+                    <span class="icon">🌐</span> Current Site: <span id="quickAddDomain"
+                        style="font-weight:700; color: var(--text-main);"></span>
+                </div>
+                <!-- Remaining usage time row (hidden when no limit is set) -->
+                <div id="remainingTimeRow" style="display:none; flex-direction:column; gap:2px;
+                     background:rgba(255,255,255,0.03); border-radius:8px;
+                     padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.06);">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="addToFocus" class="btn btn-secondary" style="flex:1; font-size:0.72rem; padding: 6px;">
+                        ➕ Focus Block
+                    </button>
+                    <button id="addToSchedule" class="btn btn-secondary"
+                        style="flex:1; font-size:0.72rem; padding: 6px;">
+                        🗓️ Schedule Block
+                    </button>
+                </div>
+            </section>
+
+            <!-- Ad Blocker Mini Dashboard -->
+            <section class="card adblock-card">
+                <div class="card-title">
+                    <span class="icon">🛡️</span> Ad Protection
+                </div>
+                <div class="ad-controls" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Enhanced
+                            Protection</span>
+                        <label class="switch">
+                            <input type="checkbox" id="adBlockToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="blockElement" class="btn btn-secondary"
+                            style="flex: 1; padding: 8px; font-size: 0.75rem;">
+                            Select Element
+                        </button>
+                        <button id="updateFilters" class="btn btn-secondary"
+                            style="flex: 1; padding: 8px; font-size: 0.75rem;">
+                            Sync Lists
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Precision Timer -->
+            <section class="card timer-card">
+                <div class="card-title">
+                    <span class="icon">⏱️</span> Timer
+                </div>
+                <div class="timer-ui">
+                    <div class="timer-main-display" id="timerDisplay"
+                        style="display:none; font-size: 2.2rem; font-weight:700;">25:00</div>
+                    <div class="timer-inputs" id="timerInputsContainer">
+                        <input type="number" id="timerMinutes" placeholder="Min" min="0" max="120" value="25">
+                        <span style="font-weight: 700; color: var(--text-muted);">:</span>
+                        <input type="number" id="timerSeconds" placeholder="Sec" min="0" max="59" value="0">
+                    </div>
+                    <button id="startTimer" class="btn btn-primary" style="width: 100%;">Start Flow</button>
+                    <button id="openTimerPopup" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">Open
+                        Timer Window</button>
+                </div>
+            </section>
+
+            <!-- Tasks Today -->
+            <section class="card todo-card">
+                <div class="card-title">
+                    <span class="icon">📋</span> Mission Plan
+                </div>
+                <div class="todo-list" id="todoList">
+                    <!-- Dynamic Items -->
+                </div>
+                <button id="addTask" class="btn btn-secondary"
+                    style="width: 100%; margin-top: 12px; font-size: 0.8rem; border-style: dashed;">
+                    + New Objective
                 </button>
             </section>
-            
-            <!-- Ad Blocker Section (NEW) -->
-            <section class="adblock-section">
-                <h2>🚫 Ad Blocker</h2>
-                <div class="ad-stats">
-                    <div class="ad-stat">
-                        <span class="ad-stat-value" id="adsBlocked">0</span>
-                        <span class="ad-stat-label">Ads Blocked</span>
-                    </div>
-                    <div class="ad-stat">
-                        <span class="ad-stat-value" id="bandwidthSaved">0 MB</span>
-                        <span class="ad-stat-label">Bandwidth Saved</span>
-                    </div>
-                    <div class="ad-stat">
-                        <span class="ad-stat-value" id="timeSaved">0 min</span>
-                        <span class="ad-stat-label">Time Saved</span>
-                    </div>
-                </div>
-                <div class="ad-controls">
-                    <button id="blockElement" class="btn btn-ad">🎯 Block Element</button>
-                    <button id="updateFilters" class="btn btn-ad">🔄 Update Filters</button>
-                </div>
-            </section>
-            
-            <section class="timer-section">
-                <h2>Quick Timer</h2>
-                <div class="timer-controls">
-                    <input type="number" id="timerMinutes" placeholder="Min" min="1" max="120" value="25">
-                    <span>:</span>
-                    <input type="number" id="timerSeconds" placeholder="Sec" min="0" max="59" value="0">
-                    <button id="startTimer" class="btn btn-timer">Start</button>
-                </div>
-                <div class="timer-display" id="timerDisplay">25:00</div>
-            </section>
-            
-            <section class="todo-section">
-                <h2>Today's Tasks</h2>
-                <div class="todo-list" id="todoList">
-                    <div class="todo-item">
-                        <input type="checkbox" id="task1">
-                        <label for="task1">Complete project documentation</label>
-                    </div>
-                    <div class="todo-item">
-                        <input type="checkbox" id="task2">
-                        <label for="task2">Review pull requests</label>
-                    </div>
-                </div>
-                <button id="addTask" class="btn btn-add">+ Add Task</button>
-            </section>
-            
-            <section class="stats-section">
-                <h2>Today's Progress</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-value" id="focusTime">0h 0m</span>
-                        <span class="stat-label">Focus Time</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="tasksCompleted">0</span>
-                        <span class="stat-label">Tasks Done</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="sessionsCompleted">0</span>
-                        <span class="stat-label">Sessions</span>
-                    </div>
-                </div>
-            </section>
+
+
         </main>
     </div>
-    
+
     <script src="popup.js"></script>
 </body>
+
 </html>
