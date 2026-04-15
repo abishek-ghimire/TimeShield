@@ -1,9 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TimeShield",
-  "version": "2.0.0",
-  "description": "All-in-one productivity timer, website blocker, and powerful ad blocker",
-  
+  "version": "2.1.0",
+  "description": "Floating clock, website blocker, focus tools, and optional ad blocking",
   "permissions": [
     "storage",
     "alarms",
@@ -11,63 +10,96 @@
     "tabs",
     "declarativeNetRequest",
     "declarativeNetRequestFeedback",
+    "declarativeNetRequestWithHostAccess",
     "scripting",
     "webNavigation",
     "activeTab"
   ],
-  
   "host_permissions": [
     "<all_urls>"
   ],
-  
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "base-adblock",
+        "enabled": false,
+        "path": "rules/base-adblock.json"
+      },
+      {
+        "id": "focus-rules",
+        "enabled": false,
+        "path": "rules/focus-rules.json"
+      }
+    ]
+  },
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"
   },
-  
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "content/blocker.js",
         "content/adblock-cosmetic.js",
-        "content/element-picker.js"
+        "content/element-picker.js",
+        "content/anti-antiblock.js"
       ],
-      "css": ["content/adblock-styles.css"],
-      "run_at": "document_start"
+      "css": [
+        "content/adblock-styles.css"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
     }
   ],
-  
-  "web_accessible_resources": [{
-    "resources": [
-      "filters/*.txt",
-      "floating/clock.html",
-      "floating/focus-block.html",
-      "content/element-picker.css",
-      "assets/sounds/*",
-      "assets/fonts/*",
-      "assets/icons/icon.png"
-    ],
-    "matches": ["<all_urls>"]
-  }],
-  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "filters/*.txt",
+        "floating/clock.html",
+        "floating/clock.css",
+        "floating/clock.js",
+        "floating/flip-clock.html",
+        "floating/flip-clock.css",
+        "floating/flip-clock.js",
+        "floating/complete.js",
+        "floating/pause-overlay.html",
+        "floating/focus-block.html",
+        "floating/schedule-block.html",
+        "floating/limit-block.html",
+        "floating/limit-block.js",
+        "floating/timer-complete.html",
+        "floating/focus-complete.html",
+        "floating/limit-block.html",
+        "content/element-picker.css",
+        "assets/sounds/*",
+        "assets/fonts/*",
+        "assets/icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "assets/icons/icon16.png",
-      "48": "assets/icons/icon48.png",
-      "128": "assets/icons/icon128.png"
+      "16": "assets/icons/iconi1.png",
+      "32": "assets/icons/iconi1.png",
+      "48": "assets/icons/iconi1.png",
+      "128": "assets/icons/iconi1.png"
     }
   },
-  
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true
   },
-  
   "icons": {
-    "16": "assets/icons/icon16.png",
-    "48": "assets/icons/icon48.png",
-    "128": "assets/icons/icon128.png"
+    "16": "assets/icons/iconi1.png",
+    "32": "assets/icons/iconi1.png",
+    "48": "assets/icons/iconi1.png",
+    "128": "assets/icons/iconi1.png"
   }
 }
