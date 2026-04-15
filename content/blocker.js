@@ -13,6 +13,9 @@ class ContentBlocker {
         this.setupMessageHandlers();
         this.checkCurrentPage();
         this.injectFloatingClock();
+        this.checkScheduledBlocking();
+        this.checkTimeLimit();
+        this.restoreClockVisibility();
     }
     
     setupMessageHandlers() {
@@ -43,33 +46,53 @@ class ContentBlocker {
             case 'updateBlockList':
                 await this.updateBlockList(message.blockedSites, message.whitelist);
                 break;
+                
+            case 'showTimeLimitWarning':
+                this.showTimeLimitWarning(message.site, message.remaining);
+                break;
         }
     }
     
     async loadSettings() {
-        const result = await chrome.storage.local.get(['focusState', 'blockedSites', 'whitelist']);
+        const result = await chrome.storage.local.get(['focusState', 'blockedSites', 'whitelist', 'scheduledBlocking', 'timeLimits']);
         
         if (result.focusState) {
             this.isFocusModeActive = result.focusState.isActive;
         }
         
-        this.blockedSites = result.blockedSites || [
-            'facebook.com',
-            'twitter.com',
-            'instagram.com',
-            'youtube.com',
-            'reddit.com',
-            'netflix.com',
-            'tiktok.com',
-            'linkedin.com'
-        ];
-        
+        this.blockedSites = result.blockedSites || [];
         this.whitelist = result.whitelist || [];
+        this.scheduledBlocking = result.scheduledBlocking || { enabled: false };
+        this.timeLimits = result.timeLimits || [];
     }
     
-    checkCurrentPage() {
-        if (this.isFocusModeActive && this.shouldBlockCurrentSite()) {
-            this.blockCurrentPage();
+    async checkScheduledBlocking() {
+        const isActive = await this.isScheduledBlockingActive();
+        if (isActive) {
+            await this.enableScheduledBlocking();
+        } else {
+            await this.disableScheduledBlocking();
+        }
+    }
+    
+    async checkTimeLimit() {
+        const currentDomain = this.getCurrentDomain();
+        const allowed = await this.isTimeLimitAllowed(currentDomain);
+        const remaining = await this.getTimeLimitRemaining(currentDomain);
+        
+        if (!allowed && remaining !== null) {
+            // Block site and show time limit message
+            await this.enableSiteBlocking([currentDomain]);
+            
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'showTimeLimitWarning',
+                        site: currentDomain,
+                        remaining: remaining
+                    });
+                }
+            });
         }
     }
     
@@ -240,6 +263,16 @@ class ContentBlocker {
         document.body.appendChild(iframe);
     }
     
+    async restoreClockVisibility() {
+        const result = await chrome.storage.local.get(['clockVisible']);
+        const isVisible = result.clockVisible || false;
+        
+        const iframe = document.getElementById('floatingClockFrame');
+        if (iframe) {
+            iframe.style.display = isVisible ? 'block' : 'none';
+        }
+    }
+    
     toggleFloatingClock() {
         const iframe = document.getElementById('floatingClockFrame');
         if (iframe) {
@@ -253,29 +286,41 @@ class ContentBlocker {
         }
     }
     
-    playSound(soundName) {
-        const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${soundName}.mp3`));
-        audio.play().catch(e => console.log('Could not play sound:', e));
-    }
+    notification.innerHTML = `
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
+            ⏰ Time Limit Reached
+        </div>
+        <div style="font-size: 14px; margin-bottom: 15px;">
+            Site: <strong>${site}</strong><br>
+            Time remaining: <strong>${Math.floor(remaining / 60)}h ${remaining % 60}m</strong><br>
+            <small>This site will be unblocked at midnight or when time limit resets.</small>
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="this.parentElement.remove()" style="
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: #333;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            ">Close</button>
+        </div>
+    `;
     
-    async logBlockedAttempt() {
-        const result = await chrome.storage.local.get(['blockedAttempts']);
-        const attempts = result.blockedAttempts || [];
-        
-        attempts.push({
-            url: window.location.href,
-            domain: this.getCurrentDomain(),
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
-        });
-        
-        await chrome.storage.local.set({ blockedAttempts: attempts });
-    }
+    document.body.appendChild(notification);
+}
+
+async logBlockedAttempt() {
+    const result = await chrome.storage.local.get(['blockedAttempts']);
+    const attempts = result.blockedAttempts || [];
     
-    async updateBlockedAttempts() {
-        const result = await chrome.storage.local.get(['todayStats']);
-        let stats = result.todayStats || {
-            focusTime: 0,
+    attempts.push({
+        url: window.location.href,
+        domain: this.getCurrentDomain(),
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
+    });
             tasksCompleted: 0,
             sessionsCompleted: 0,
             date: new Date().toDateString(),
@@ -314,6 +359,9 @@ class ContentBlocker {
         if (this.isFocusModeActive && this.shouldBlockCurrentSite()) {
             this.blockCurrentPage();
         }
+        
+        this.checkScheduledBlocking();
+        this.checkTimeLimit();
     }
 }
 
