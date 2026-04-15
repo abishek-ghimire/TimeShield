@@ -23,28 +23,55 @@ class PopupController {
         await this.loadSettings();
         await this.loadTodayStats();
         await this.loadTodos();
+        await this.restoreTimerState();
+    }
+    
+    async restoreTimerState() {
+        const result = await chrome.storage.local.get(['timerState', 'focusState']);
+        
+        // Restore timer state
+        if (result.timerState && result.timerState.isRunning) {
+            this.timerSeconds = Math.floor((Date.now() - result.timerState.startTime) / 1000);
+            this.isTimerRunning = true;
+            this.startTimerInterval();
+            document.getElementById('startTimer').textContent = 'Stop Timer';
+        }
+        
+        // Restore focus state
+        if (result.focusState && result.focusState.isActive) {
+            document.getElementById('startFocus').textContent = 'Stop Focus';
+        }
     }
     
     setupEventListeners() {
         document.getElementById('toggleClock').addEventListener('click', () => this.toggleFloatingClock());
-        document.getElementById('startFocus').addEventListener('click', () => this.startFocusMode());
+        document.getElementById('startFocus').addEventListener('click', () => this.toggleFocusMode());
         document.getElementById('openSettings').addEventListener('click', () => this.openSettings());
         document.getElementById('startTimer').addEventListener('click', () => this.toggleTimer());
         document.getElementById('addTask').addEventListener('click', () => this.addTask());
         
         this.timerMinutes.addEventListener('input', () => this.updateTimerDisplay());
-        this.timerSeconds.addEventListener('input', () => this.updateTimerDisplay());
         
         document.querySelectorAll('#todoList input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => this.toggleTask(e.target));
         });
     }
     
+    async toggleFocusMode() {
+        const result = await chrome.storage.local.get(['focusState']);
+        const focusState = result.focusState || { isActive: false };
+        
+        if (focusState.isActive) {
+            await this.stopFocusMode();
+        } else {
+            await this.startFocusMode();
+        }
+    }
+    
     startClock() {
         const updateTime = () => {
             const now = new Date();
-            const nepalTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Kathmandu"}));
-            this.currentTime.textContent = nepalTime.toLocaleTimeString('en-US', { 
+            this.currentTime.textContent = now.toLocaleTimeString('en-US', { 
                 hour12: false,
                 hour: '2-digit',
                 minute: '2-digit',
@@ -66,35 +93,34 @@ class PopupController {
         if (this.isTimerRunning) {
             this.stopTimer();
         } else {
-            this.startTimer();
+            const minutes = parseInt(this.timerMinutes.value) || 25;
+            this.startTimer(minutes * 60);
         }
     }
     
-    startTimer() {
-        const minutes = parseInt(this.timerMinutes.value) || 25;
-        const seconds = parseInt(this.timerSeconds.value) || 0;
-        this.timerSeconds = minutes * 60 + seconds;
-        
+    startTimer(duration) {
+        this.timerSeconds = duration;
         this.isTimerRunning = true;
-        document.getElementById('startTimer').textContent = 'Stop';
-        document.getElementById('startTimer').style.background = '#dc3545';
         
-        this.timerInterval = setInterval(() => {
-            this.timerSeconds--;
-            if (this.timerSeconds <= 0) {
-                this.stopTimer();
-                this.timerComplete();
-            } else {
-                const mins = Math.floor(this.timerSeconds / 60);
-                const secs = this.timerSeconds % 60;
-                this.timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            }
-        }, 1000);
-        
+        // Start timer in background service worker
         chrome.runtime.sendMessage({
             action: 'startTimer',
-            duration: this.timerSeconds
+            duration: duration
         });
+        
+        document.getElementById('startTimer').textContent = 'Stop Timer';
+        this.startTimerInterval();
+    }
+    
+    startTimerInterval() {
+        this.timerInterval = setInterval(() => {
+            if (this.timerSeconds > 0) {
+                this.timerSeconds--;
+                this.updateTimerDisplay();
+            } else {
+                this.timerComplete();
+            }
+        }, 1000);
     }
     
     stopTimer() {
@@ -136,8 +162,17 @@ class PopupController {
                 duration: parseInt(focusTime) * 60
             });
             
+            document.getElementById('startFocus').textContent = 'Stop Focus';
             window.close();
         }
+    }
+    
+    async stopFocusMode() {
+        chrome.runtime.sendMessage({
+            action: 'stopFocusMode'
+        });
+        
+        document.getElementById('startFocus').textContent = 'Start Focus';
     }
     
     openSettings() {

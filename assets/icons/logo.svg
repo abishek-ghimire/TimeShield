@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#logoGradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  
+  <!-- Clock face -->
+  <circle cx="64" cy="64" r="45" fill="none" stroke="white" stroke-width="3"/>
+  
+  <!-- Hour markers -->
+  <line x1="64" y1="24" x2="64" y2="32" stroke="white" stroke-width="3"/>
+  <line x1="64" y1="96" x2="64" y2="104" stroke="white" stroke-width="3"/>
+  <line x1="24" y1="64" x2="32" y2="64" stroke="white" stroke-width="3"/>
+  <line x1="96" y1="64" x2="104" y2="64" stroke="white" stroke-width="3"/>
+  
+  <!-- Clock hands -->
+  <line x1="64" y1="64" x2="64" y2="35" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="85" y2="64" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Center dot -->
+  <circle cx="64" cy="64" r="5" fill="white"/>
+  
+  <!-- Small decorative elements -->
+  <circle cx="20" cy="64" r="3" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="108" cy="64" r="3" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="64" cy="20" r="3" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="64" cy="108" r="3" fill="rgba(255,255,255,0.6)"/>
+</svg>
