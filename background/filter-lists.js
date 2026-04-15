@@ -1,152 +1,301 @@
-// Filter list management
+// Filter list management - comprehensive ad blocking
 export class FilterListManager {
   constructor() {
     this.lists = {
+      // Core Lists (highest quality, always enabled)
       easyList: {
         url: 'https://easylist.to/easylist/easylist.txt',
         enabled: true,
-        category: 'ads'
+        category: 'ads',
+        priority: 1
       },
       easyPrivacy: {
         url: 'https://easylist.to/easylist/easyprivacy.txt',
         enabled: true,
-        category: 'tracking'
+        category: 'tracking',
+        priority: 1
+      },
+
+      // uBlock Origin lists (very comprehensive)
+      uBlockBase: {
+        url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
+        enabled: true,
+        category: 'ads',
+        priority: 1
+      },
+      uBlockPrivacy: {
+        url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/privacy.txt',
+        enabled: true,
+        category: 'tracking',
+        priority: 1
       },
       uBlockAnnoyances: {
         url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/annoyances.txt',
         enabled: true,
-        category: 'annoyances'
+        category: 'annoyances',
+        priority: 2
       },
+      uBlockBadware: {
+        url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/badware.txt',
+        enabled: true,
+        category: 'security',
+        priority: 1
+      },
+      uBlockUnbreak: {
+        url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/unbreak.txt',
+        enabled: true,
+        category: 'unbreak',
+        priority: 3
+      },
+
+      // AdGuard lists (broad coverage)
+      adGuardBase: {
+        url: 'https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_2_Base/filter.txt',
+        enabled: true,
+        category: 'ads',
+        priority: 1
+      },
+      adGuardTracking: {
+        url: 'https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_3_Spyware/filter.txt',
+        enabled: true,
+        category: 'tracking',
+        priority: 1
+      },
+      adGuardSocial: {
+        url: 'https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_4_Social/filter.txt',
+        enabled: true,
+        category: 'annoyances',
+        priority: 2
+      },
+      adGuardAnnoyances: {
+        url: 'https://raw.githubusercontent.com/AdguardTeam/FiltersRegistry/master/filters/filter_14_Annoyances/filter.txt',
+        enabled: true,
+        category: 'annoyances',
+        priority: 2
+      },
+
+      // Specialty lists
       fanboysAnnoyances: {
         url: 'https://easylist.to/easylist/fanboy-annoyance.txt',
-        enabled: false,
-        category: 'annoyances'
+        enabled: true,
+        category: 'annoyances',
+        priority: 2
+      },
+      fanboySocial: {
+        url: 'https://easylist.to/easylist/fanboy-social.txt',
+        enabled: true,
+        category: 'annoyances',
+        priority: 2
+      },
+      peterLowe: {
+        url: 'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&showintro=1&mimetype=plaintext',
+        enabled: true,
+        category: 'ads',
+        priority: 1
       },
       malwareDomains: {
         url: 'https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareHosts.txt',
         enabled: true,
-        category: 'security'
+        category: 'security',
+        priority: 1
+      },
+      urlHaus: {
+        url: 'https://urlhaus-filter.pages.dev/urlhaus-filter-online.txt',
+        enabled: true,
+        category: 'security',
+        priority: 1
+      },
+
+      // Cookie consent banners (GDPR popups)
+      easyListCookies: {
+        url: 'https://secure.fanboy.co.nz/fanboy-cookiemonster.txt',
+        enabled: true,
+        category: 'annoyances',
+        priority: 2
+      },
+
+      // Anti-Coinminer
+      antiCoinMiner: {
+        url: 'https://raw.githubusercontent.com/nicehash/NiceHashQuickMiner/main/deploy/NiceHashQuickMiner@latest/blocklist.txt',
+        enabled: true,
+        category: 'security',
+        priority: 1
       }
     };
+
+    // Load saved settings
+    this.loadSettings();
   }
-  
+
   async loadAllLists() {
     let allFilters = [];
-    
-    for (const [name, list] of Object.entries(this.lists)) {
-      if (list.enabled) {
-        try {
-          const filters = await this.loadList(name, list.url);
-          allFilters = allFilters.concat(filters);
-          console.log(`✅ Loaded ${name}: ${filters.length} filters`);
-        } catch (error) {
-          console.error(`Failed to load ${name}:`, error);
-        }
+    const sortedLists = Object.entries(this.lists).sort((a, b) =>
+      (a[1].priority || 9) - (b[1].priority || 9)
+    );
+
+    for (const [name, list] of sortedLists) {
+      if (!list.enabled) continue;
+      try {
+        const filters = await this.loadList(name, list.url);
+        allFilters = allFilters.concat(filters);
+        console.log(`✅ [${list.category}] ${name}: ${filters.length} filters`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to load ${name}:`, error.message);
       }
     }
-    
-    // Add custom filters
+
+    // Add custom filters (always last)
     const customFilters = await this.loadCustomFilters();
     allFilters = allFilters.concat(customFilters);
-    
+    console.log(`📊 Total filters loaded: ${allFilters.length}`);
+
     return allFilters;
   }
-  
+
   async loadList(name, url) {
     try {
-      const response = await fetch(url);
+      // Check cache freshness (24h)
+      const cached = await this.loadFromCache(name);
+      if (cached && cached._cacheAge && (Date.now() - cached._cacheAge < 86400000)) {
+        return cached;
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const text = await response.text();
-      
-      // Parse filter list
       const filters = this.parseFilterList(text);
-      
-      // Cache locally
       await this.cacheList(name, text);
-      
       return filters;
     } catch (error) {
-      // Try loading from cache
-      return await this.loadFromCache(name);
+      // Try loading from cache as fallback
+      const cached = await this.loadFromCache(name);
+      if (cached && cached.length > 0) {
+        console.log(`📦 Using cache for ${name}`);
+        return cached;
+      }
+      throw error;
     }
   }
-  
+
   parseFilterList(text) {
     const lines = text.split('\n');
     const filters = [];
-    
+    let count = 0;
+
     for (const line of lines) {
       const trimmed = line.trim();
-      
-      // Skip comments and empty lines
-      if (trimmed === '' || trimmed.startsWith('!') || trimmed.startsWith('[Adblock')) {
+
+      // Skip comments, blank lines, and list headers
+      if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('[Adblock') ||
+        trimmed.startsWith('#') || trimmed.startsWith('%')) {
         continue;
       }
-      
-      // Separate network filters from cosmetic filters
-      if (trimmed.includes('##') || trimmed.includes('#@#')) {
-        // Cosmetic filter - handled by content script
+
+      // Cosmetic filter (##)
+      if (trimmed.includes('##') || trimmed.includes('#@#') ||
+        trimmed.includes('#?#') || trimmed.includes('#$#')) {
         filters.push({ type: 'cosmetic', rule: trimmed });
-      } else {
-        // Network filter - for DNR
+        count++;
+        continue;
+      }
+
+      // Exception rules (@@)
+      if (trimmed.startsWith('@@')) {
+        filters.push({ type: 'exception', rule: trimmed.slice(2) });
+        count++;
+        continue;
+      }
+
+      // Skip complex option rules that don't translate well to DNR
+      // (e.g. $redirect=, $rewrite=, $csp= etc.)
+      if (trimmed.includes('$redirect=') || trimmed.includes('$rewrite=') ||
+        trimmed.includes('$csp=') || trimmed.includes('$removeparam=')) {
+        continue;
+      }
+
+      // Network filter
+      if (trimmed.length > 3) {
         filters.push({ type: 'network', rule: trimmed });
+        count++;
       }
     }
-    
+
     return filters;
   }
-  
+
   async cacheList(name, content) {
-    const cache = {};
-    cache[`list_${name}`] = {
-      content: content,
-      timestamp: Date.now()
-    };
-    await chrome.storage.local.set(cache);
+    const key = `list_cache_${name}`;
+    await chrome.storage.local.set({
+      [key]: {
+        content,
+        timestamp: Date.now()
+      }
+    });
   }
-  
+
   async loadFromCache(name) {
-    const data = await chrome.storage.local.get(`list_${name}`);
-    if (data[`list_${name}`]) {
-      return this.parseFilterList(data[`list_${name}`].content);
+    const key = `list_cache_${name}`;
+    const data = await chrome.storage.local.get(key);
+    if (data[key]) {
+      const parsed = this.parseFilterList(data[key].content);
+      parsed._cacheAge = data[key].timestamp;
+      return parsed;
     }
-    return [];
+    return null;
   }
-  
+
   async loadCustomFilters() {
     const data = await chrome.storage.local.get('customFilters');
-    return (data.customFilters || []).map(rule => ({
-      type: 'network',
-      rule: rule.filter
-    }));
-  }
-  
-  async updateAllLists() {
-    for (const [name, list] of Object.entries(this.lists)) {
-      if (list.enabled) {
-        try {
-          await this.loadList(name, list.url);
-        } catch (error) {
-          console.error(`Failed to update ${name}:`, error);
-        }
+    const customRules = data.customFilters || [];
+
+    return customRules.map(rule => {
+      const ruleStr = typeof rule === 'string' ? rule : (rule.filter || '');
+      if (!ruleStr) return null;
+
+      // Support the ## selector format for cosmetic rules
+      if (ruleStr.includes('##')) {
+        return { type: 'cosmetic', rule: ruleStr };
       }
-    }
+      return { type: 'network', rule: ruleStr };
+    }).filter(r => r !== null);
   }
-  
+
+  async updateAllLists() {
+    // Clear cache so all lists are re-downloaded
+    const keys = Object.keys(this.lists).map(name => `list_cache_${name}`);
+    await chrome.storage.local.remove(keys);
+    return this.loadAllLists();
+  }
+
   async toggleList(name, enabled) {
     if (this.lists[name]) {
       this.lists[name].enabled = enabled;
       await this.saveSettings();
     }
   }
-  
+
   async saveSettings() {
-    await chrome.storage.local.set({ filterLists: this.lists });
+    const settings = {};
+    for (const [name, list] of Object.entries(this.lists)) {
+      settings[name] = { enabled: list.enabled };
+    }
+    await chrome.storage.local.set({ filterListSettings: settings });
   }
-  
+
   async loadSettings() {
-    const data = await chrome.storage.local.get('filterLists');
-    if (data.filterLists) {
-      this.lists = { ...this.lists, ...data.filterLists };
+    const data = await chrome.storage.local.get('filterListSettings');
+    if (data.filterListSettings) {
+      for (const [name, cfg] of Object.entries(data.filterListSettings)) {
+        if (this.lists[name]) {
+          this.lists[name].enabled = cfg.enabled;
+        }
+      }
     }
   }
 }

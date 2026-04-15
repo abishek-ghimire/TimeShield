@@ -1,27 +1,29 @@
 // Convert filters to DNR rules
 export class RuleCompiler {
   constructor() {
-    this.ruleId = 1;
+    this.ruleId = 2001;
     this.maxRules = 5000;
   }
-  
+
   async compile(filters) {
+    this.ruleId = 2001; // Reset ruleId for each compilation
     const rules = [];
-    
+
     // Process network filters
     for (const filter of filters) {
       if (filter.type === 'network' && rules.length < this.maxRules) {
         const rule = this.convertToDNR(filter.rule);
         if (rule) {
-          rule.id = this.ruleId++;
+          // NOTE: Do NOT assign rule.id here.
+          // IDs are assigned uniquely in optimizeRules() starting from 2001.
           rules.push(rule);
         }
       }
     }
-    
-    return rules;
+
+    return this.optimizeRules(rules);
   }
-  
+
   convertToDNR(filter) {
     try {
       // Handle different filter patterns
@@ -45,11 +47,11 @@ export class RuleCompiler {
       return null;
     }
   }
-  
+
   createDomainRule(domain) {
     // Remove trailing ^ if present
     domain = domain.replace(/\^$/, '');
-    
+
     return {
       priority: 1,
       action: { type: 'block' },
@@ -59,7 +61,7 @@ export class RuleCompiler {
       }
     };
   }
-  
+
   createExactRule(url) {
     return {
       priority: 1,
@@ -70,7 +72,7 @@ export class RuleCompiler {
       }
     };
   }
-  
+
   createExceptionRule(filter) {
     return {
       priority: 2, // Higher priority to override blocks
@@ -81,7 +83,7 @@ export class RuleCompiler {
       }
     };
   }
-  
+
   createWildcardRule(filter) {
     return {
       priority: 1,
@@ -92,7 +94,7 @@ export class RuleCompiler {
       }
     };
   }
-  
+
   createGenericRule(filter) {
     return {
       priority: 1,
@@ -103,36 +105,44 @@ export class RuleCompiler {
       }
     };
   }
-  
+
   // Group similar rules to save space
   optimizeRules(rules) {
     const optimized = [];
     const domainMap = new Map();
-    
+
+    // We start from the base ruleId for consistent ID mapping in the optimized set
+    let optimizedRuleId = 2001;
+
     // Group by domain
     for (const rule of rules) {
       if (rule.condition.urlFilter && rule.condition.urlFilter.startsWith('||')) {
-        const domain = rule.condition.urlFilter.slice(2);
+        // Correctly handle input like ||example.com^
+        const filterStr = rule.condition.urlFilter;
+        const domain = filterStr.slice(2, filterStr.endsWith('^') ? -1 : undefined);
         if (!domainMap.has(domain)) {
           domainMap.set(domain, []);
         }
         domainMap.get(domain).push(rule);
       } else {
+        rule.id = optimizedRuleId++;
         optimized.push(rule);
       }
     }
-    
+
     // Merge rules for same domain
     for (const [domain, domainRules] of domainMap) {
       if (domainRules.length > 1) {
         // Create single rule with multiple resource types
         const resourceTypes = new Set();
         for (const rule of domainRules) {
-          rule.condition.resourceTypes.forEach(rt => resourceTypes.add(rt));
+          if (rule.condition.resourceTypes) {
+            rule.condition.resourceTypes.forEach(rt => resourceTypes.add(rt));
+          }
         }
-        
+
         optimized.push({
-          id: this.ruleId++,
+          id: optimizedRuleId++,
           priority: 1,
           action: { type: 'block' },
           condition: {
@@ -141,10 +151,12 @@ export class RuleCompiler {
           }
         });
       } else {
-        optimized.push(domainRules[0]);
+        const rule = domainRules[0];
+        rule.id = optimizedRuleId++;
+        optimized.push(rule);
       }
     }
-    
+
     return optimized;
   }
 }

@@ -2,6 +2,8 @@
 import { AdBlockEngine } from './adblock-core.js';
 import { FilterListManager } from './filter-lists.js';
 import { RuleCompiler } from './adblock-rules.js';
+import { StorageManager } from '../lib/storage-manager.js';
+import { usageTracker } from './usage-tracker.js';
 
 class BackgroundService {
     constructor() {
@@ -11,66 +13,90 @@ class BackgroundService {
             duration: 0,
             type: null
         };
-        
+
         this.focusState = {
             isActive: false,
             startTime: null,
             duration: 0,
-            blockedSites: []
+            focusBlockedSites: []
         };
-        
+
+        this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
+
         // NEW: Ad blocker state
         this.adsBlocked = 0;
         this.bandwidthSaved = 0;
         this.timeSaved = 0;
-        
+
         // Initialize components
         this.filterManager = new FilterListManager();
         this.ruleCompiler = new RuleCompiler();
         this.adBlocker = new AdBlockEngine(this);
-        
-        this.init();
+
+        // Track initialization
+        this.initPromise = this.init();
     }
-    
-    init() {
+
+    async init() {
         this.setupMessageHandlers();
         this.setupAlarmHandlers();
-        this.initializeStorage();
-        this.restoreState();
-        this.initializeAdBlocking(); // NEW
+        await this.initializeStorage();
+        await this.restoreState();
+        await this.initializeAdBlocking();
+        await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
+        // Auto-start floating clock on browser launch if enabled in settings
+        try {
+            const settings = await this.getSettings();
+            if (settings.autoStartClock) {
+                await this.toggleFloatingClock(true);
+                await this.ensureContentScriptInjected();
+            }
+        } catch (e) {
+            console.warn('TimeShield: Failed to auto-start clock on launch', e);
+        }
+        console.log('🚀 Background Service fully initialized');
     }
-    
+
     // NEW: Initialize Ad Blocking
     async initializeAdBlocking() {
+        if (!this.adBlockEnabled) {
+            console.log('🚫 Ad blocker is disabled by user');
+            await this.adBlocker.clearRules();
+            chrome.action.setBadgeText({ text: '' });
+            return;
+        }
         try {
             console.log('🔄 Starting ad blocker initialization...');
-            
+
             // Check if components are properly initialized
             if (!this.filterManager || !this.ruleCompiler || !this.adBlocker) {
                 console.error('❌ Ad blocker components not properly initialized');
                 return;
             }
-            
+
             // Load and compile filter lists
             const filters = await this.filterManager.loadAllLists();
             console.log(`📋 Loaded ${filters.length} filters`);
-            
+
             const rules = await this.ruleCompiler.compile(filters);
             console.log(`⚙️ Compiled ${rules.length} DNR rules`);
-            
+
             // Apply DNR rules
             await this.adBlocker.applyRules(rules);
-            
+
             console.log(`✅ Ad blocker initialized successfully with ${rules.length} rules`);
-            
+
             // Setup rule tracking
             this.setupRuleTracking();
+
+            // Broadcast cosmetic rules to all tabs
+            await this.broadcastCosmeticRules();
         } catch (error) {
             console.error('❌ Failed to initialize ad blocker:', error);
             console.error('Stack trace:', error.stack);
         }
     }
-    
+
     // NEW: Setup rule tracking for stats
     setupRuleTracking() {
         // Track blocked requests for statistics
@@ -80,27 +106,27 @@ class BackgroundService {
             });
         }
     }
-    
+
     // NEW: Track blocked requests
     trackBlockedRequest(info) {
         this.adsBlocked++;
-        
+
         // Estimate bandwidth saved (average ad size: 300KB)
         const avgAdSize = 300 * 1024; // 300KB in bytes
         this.bandwidthSaved += avgAdSize;
-        
+
         // Estimate time saved (average ad load time: 0.5 seconds)
         this.timeSaved += 0.5;
-        
+
         // Save stats periodically
         if (this.adsBlocked % 10 === 0) {
             this.saveAdStats();
         }
-        
+
         // Update badge
         this.updateAdBlockBadge();
     }
-    
+
     // NEW: Save ad blocking statistics
     async saveAdStats() {
         const stats = {
@@ -109,17 +135,51 @@ class BackgroundService {
             timeSaved: this.timeSaved,
             lastUpdated: Date.now()
         };
-        
+
         await chrome.storage.local.set({ adBlockStats: stats });
     }
-    
+
     // NEW: Update badge with ad block count
     updateAdBlockBadge() {
-        const count = this.adsBlocked > 999 ? '999+' : this.adsBlocked.toString();
-        chrome.action.setBadgeText({ text: count });
+        // Hide numeric counts on the toolbar icon to keep the logo clean
+        chrome.action.setBadgeText({ text: '' });
         chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
     }
-    
+
+    // NEW: Broadcast cosmetic rules to all tabs
+    async broadcastCosmeticRules() {
+        try {
+            const allFilters = await this.filterManager.loadAllLists();
+            const cosmetic = allFilters
+                .filter(f => f.type === 'cosmetic')
+                .map(f => {
+                    const parts = f.rule.split('##');
+                    return { domain: parts[0], selector: parts[1] };
+                });
+
+            const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+            for (const tab of tabs) {
+                if (!tab.url) continue;
+
+                let hostname = '';
+                try {
+                    hostname = new URL(tab.url).hostname.replace(/^www\./, '');
+                } catch (e) { continue; }
+
+                // Only send rules that match the current hostname.
+                // Do NOT send generic rules (!r.domain) to avoid completely breaking sites like Instagram
+                const finalRules = tabRules.filter(r => r.domain);
+
+                chrome.tabs.sendMessage(tab.id, {
+                    action: 'applyCosmeticRules',
+                    rules: finalRules
+                }).catch(() => { });
+            }
+        } catch (error) {
+            console.error('❌ Failed to broadcast cosmetic rules:', error);
+        }
+    }
+
     // NEW: Format bytes for display
     formatBytes(bytes) {
         if (bytes === 0) return '0 B';
@@ -128,14 +188,14 @@ class BackgroundService {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
-    
+
     // NEW: Format time for display
     formatTime(seconds) {
         if (seconds < 60) return `${Math.round(seconds)} sec`;
         if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
         return `${(seconds / 3600).toFixed(1)} hours`;
     }
-    
+
     async restoreState() {
         // Restore timer state
         const timerResult = await chrome.storage.local.get(['timerState']);
@@ -145,68 +205,100 @@ class BackgroundService {
                 this.startTimerAlarm();
             }
         }
-        
+
         // Restore focus state
-        const focusResult = await chrome.storage.local.get(['focusState']);
+        const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
         if (focusResult.focusState) {
             this.focusState = focusResult.focusState;
             if (this.focusState.isActive) {
-                this.enableSiteBlocking(this.focusState.blockedSites);
+                // If focus was active, ensure site blocking is re-enabled with correct sites
+                const sites = focusResult.focusBlockedSites || [];
+                await this.enableSiteBlocking(sites, 101, 'focus');
+
+                // Set badge and color
                 chrome.action.setBadgeText({ text: '🎯' });
                 chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+
+                // Re-create the completion alarm if duration is still pending
+                const elapsed = Math.floor((Date.now() - this.focusState.startTime) / 60000);
+                const remaining = this.focusState.duration - (elapsed * 60);
+                if (remaining > 0) {
+                    chrome.alarms.create('focusMode', { delayInMinutes: remaining / 60 });
+                } else {
+                    // If time passed while extension was off, complete it now
+                    this.focusModeComplete();
+                }
             }
         }
-        
-        // NEW: Restore ad blocker stats
-        const adBlockResult = await chrome.storage.local.get(['adBlockStats']);
-        if (adBlockResult.adBlockStats) {
-            this.adsBlocked = adBlockResult.adBlockStats.adsBlocked || 0;
-            this.bandwidthSaved = adBlockResult.adBlockStats.bandwidthSaved || 0;
-            this.timeSaved = adBlockResult.adBlockStats.timeSaved || 0;
+
+        // Restore ad block state
+        const adResult = await chrome.storage.local.get(['adBlockStats', 'adBlockEnabled']);
+        if (adResult.adBlockStats) {
+            this.adsBlocked = adResult.adBlockStats.adsBlocked || 0;
+            this.bandwidthSaved = adResult.adBlockStats.bandwidthSaved || 0;
+            this.timeSaved = adResult.adBlockStats.timeSaved || 0;
             this.updateAdBlockBadge();
         }
+        if (adResult.adBlockEnabled === true) {
+            this.adBlockEnabled = true;
+        } else {
+            this.adBlockEnabled = false;
+        }
     }
-    
+
     setupMessageHandlers() {
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            this.handleMessage(message, sender, sendResponse);
+            this.initPromise.then(() => {
+                this.handleMessage(message, sender, sendResponse);
+            });
             return true;
         });
     }
-    
+
     setupAlarmHandlers() {
         chrome.alarms.onAlarm.addListener((alarm) => {
-            this.handleAlarm(alarm);
+            this.initPromise.then(() => {
+                this.handleAlarm(alarm);
+            });
         });
-        
+
         // NEW: Daily filter update alarm
         chrome.alarms.create('updateFilters', { periodInMinutes: 1440 }); // Every 24 hours
+
+        // Check and apply scheduled blocking every minute
+        chrome.alarms.create('scheduledBlockingCheck', { periodInMinutes: 1 });
+        // Also check immediately on startup
+        this.checkScheduledBlocking();
     }
-    
+
     async handleAlarm(alarm) {
         switch (alarm.name) {
             case 'timer':
                 await this.timerComplete();
                 break;
-                
+
             case 'focusMode':
                 await this.focusModeComplete();
                 break;
-                
+
             case 'breakReminder':
                 this.sendBreakReminder();
                 break;
-                
+
             // NEW: Handle filter update alarm
             case 'updateFilters':
                 await this.updateFilters();
                 break;
-                
+
+            case 'scheduledBlockingCheck':
+                await this.checkScheduledBlocking();
+                break;
+
             default:
                 console.log('Unknown alarm:', alarm.name);
         }
     }
-    
+
     // NEW: Update filter lists
     async updateFilters() {
         console.log('Updating filter lists...');
@@ -218,68 +310,100 @@ class BackgroundService {
             console.error('❌ Failed to update filter lists:', error);
         }
     }
-    
+
+    async getTodayStats() {
+        return {
+            focusTime: 0,
+            tasksCompleted: 0,
+            sessionsCompleted: 0,
+            blockedAttempts: 0,
+            date: new Date().toDateString()
+        };
+    }
+
     async handleMessage(message, sender, sendResponse) {
         switch (message.action) {
             case 'startTimer':
                 await this.startTimer(message.duration, 'custom');
                 sendResponse({ success: true });
                 break;
-                
             case 'stopTimer':
                 await this.stopTimer();
                 sendResponse({ success: true });
                 break;
-                
             case 'startFocusMode':
-                await this.startFocusMode(message.duration, message.blockedSites);
+                const focusBlockedResult = await chrome.storage.local.get(['focusBlockedSites']);
+                const fSites = focusBlockedResult.focusBlockedSites || [];
+                await this.startFocusMode(message.duration, fSites);
                 sendResponse({ success: true });
                 break;
-                
             case 'stopFocusMode':
-                await this.stopFocusMode();
-                sendResponse({ success: true });
+                {
+                    const allowed = await this.canRunProtectedDisable();
+                    if (!allowed) {
+                        sendResponse({ success: false, error: 'PROTECTION_LOCKED' });
+                        break;
+                    }
+                    await this.stopFocusMode();
+                    sendResponse({ success: true });
+                }
                 break;
-                
+            case 'authorizeDisableActions':
+                {
+                    const ttlMs = Math.max(10000, Math.min(120000, Number(message.ttlMs || 45000)));
+                    await chrome.storage.local.set({ disableAuthorizedUntil: Date.now() + ttlMs });
+                    sendResponse({ success: true });
+                }
+                break;
+            case 'getState':
+                const s = await chrome.storage.local.get(['timerState', 'focusState', 'todayStats', 'adBlockEnabled']);
+                sendResponse({
+                    timerState: s.timerState || this.timerState,
+                    focusState: s.focusState || this.focusState,
+                    todayStats: s.todayStats || { focusTime: 0, sessionsCompleted: 0, blockedAttempts: 0 },
+                    adBlockEnabled: s.adBlockEnabled !== undefined ? s.adBlockEnabled : this.adBlockEnabled
+                });
+                break;
             case 'toggleClock':
-                await this.toggleFloatingClock();
+                await this.toggleFloatingClock(message.visible);
+                // Ensure scripts are injected after toggle to make it work immediately everywhere
+                if (message.visible) await this.ensureContentScriptInjected();
                 sendResponse({ success: true });
                 break;
-                
+            case 'setTimeFormat':
+                const settings = await this.getSettings();
+                settings.timeFormat = message.format;
+                await chrome.storage.local.set({ settings });
+                sendResponse({ success: true });
+                break;
             case 'playSound':
                 this.playSound(message.sound);
                 sendResponse({ success: true });
                 break;
-                
-            case 'updateBlockList':
-                await this.updateBlockList(message.blockedSites, message.whitelist);
-                sendResponse({ success: true });
-                break;
-                
             case 'getTimerState':
                 sendResponse({ state: this.timerState });
                 break;
-                
             case 'getFocusState':
                 sendResponse({ state: this.focusState });
                 break;
-                
+            case 'toggleAdBlock':
+                this.adBlockEnabled = message.enabled;
+                await chrome.storage.local.set({ adBlockEnabled: this.adBlockEnabled });
+                await this.initializeAdBlocking();
+                sendResponse({ success: true });
+                break;
+            case 'getSettings':
+                const currentSettings = await this.getSettings();
+                sendResponse(currentSettings);
+                break;
             case 'updateStats':
                 await this.updateStats(message.stats);
                 sendResponse({ success: true });
                 break;
-                
             case 'checkScheduledBlocking':
                 await this.checkScheduledBlocking();
                 sendResponse({ active: await this.isScheduledBlockingActive() });
                 break;
-                
-            case 'checkTimeLimit':
-                await this.checkTimeLimit(message.site);
-                sendResponse({ allowed: await this.isTimeLimitAllowed(message.site), remaining: await this.getTimeLimitRemaining(message.site) });
-                break;
-                
-            // NEW: Ad blocker message handlers
             case 'getAdStats':
                 sendResponse({
                     adsBlocked: this.adsBlocked,
@@ -287,89 +411,148 @@ class BackgroundService {
                     timeSaved: this.formatTime(this.timeSaved)
                 });
                 break;
-                
-            case 'blockElement':
-                await this.adBlocker.addCustomRule({
-                    filter: message.selector,
-                    resourceTypes: ['script', 'image', 'stylesheet']
-                });
+            case 'trackEvent':
+                // Analytics disabled
                 sendResponse({ success: true });
                 break;
-                
+            case 'incrementBlockedAttempts':
+                // Blocked attempts tracking disabled
+                sendResponse({ success: true });
+                break;
+            case 'getCosmeticFilters':
+                const allFilters = await this.filterManager.loadAllLists();
+                const cosmetic = allFilters
+                    .filter(f => f.type === 'cosmetic')
+                    .map(f => {
+                        const parts = f.rule.split('##');
+                        return { domain: parts[0], selector: parts[1] };
+                    })
+                    .filter(f => !f.domain || message.domain.includes(f.domain));
+                sendResponse(cosmetic);
+                break;
+            case 'blockElement':
+                const customDomain = message.domain === '*' ? '' : message.domain;
+                const cosmeticRule = `${customDomain}##${message.selector}`;
+
+                // Add to customFilters in storage
+                const cfData = await chrome.storage.local.get('customFilters');
+                const customFilters = cfData.customFilters || [];
+                customFilters.push(cosmeticRule);
+                await chrome.storage.local.set({ customFilters });
+
+                // Track stats
+                this.adsBlocked++;
+                this.updateAdBlockBadge();
+
+                // Refresh filters in all tabs
+                const tabsList = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+                for (const tab of tabsList) {
+                    chrome.tabs.sendMessage(tab.id, { action: 'refreshFilters' }).catch(() => { });
+                }
+                sendResponse({ success: true });
+                break;
             case 'updateFilters':
                 await this.updateFilters();
                 sendResponse({ success: true });
                 break;
-                
-            case 'settingsUpdated':
-                await this.initializeAdBlocking();
+            case 'pauseBlocking':
+                await this.pauseBlocking(message.durationMs);
                 sendResponse({ success: true });
                 break;
-                
+            case 'resumeBlocking':
+                await this.resumeBlocking();
+                sendResponse({ success: true });
+                break;
+            case 'settingsUpdated':
+                await this.initializeAdBlocking();
+                await this.checkScheduledBlocking();
+                sendResponse({ success: true });
+                break;
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
         }
     }
-    
+
+    async isPaused() {
+        const result = await chrome.storage.local.get(['pauseBlockingUntil']);
+        const pb = result.pauseBlockingUntil;
+        if (!pb) return false;
+        if (pb === -1) return true;
+        if (Date.now() < pb) return true;
+        // Expired
+        await chrome.storage.local.remove('pauseBlockingUntil');
+        return false;
+    }
+
+    async pauseBlocking(durationMs) {
+        if (durationMs === -1) {
+            await chrome.storage.local.set({ pauseBlockingUntil: -1 });
+        } else {
+            const expire = Date.now() + durationMs;
+            await chrome.storage.local.set({ pauseBlockingUntil: expire });
+            chrome.alarms.create('pauseExpires', { when: expire });
+        }
+        // Remove active blocking rules immediately
+        await this.disableSiteBlockingRange(101, 300);
+        chrome.action.setBadgeText({ text: '' });
+        // Redirect tabs back that are currently on a block page
+        await this.redirectTabsBack('floating/focus-block.html');
+        await this.redirectTabsBack('floating/schedule-block.html');
+    }
+
+    async resumeBlocking() {
+        await chrome.storage.local.remove('pauseBlockingUntil');
+        chrome.alarms.clear('pauseExpires');
+
+        // Re-evaluate what should be active
+        await this.checkScheduledBlocking();
+
+        // Re-evaluate focus mode
+        const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
+        if (focusResult.focusState && focusResult.focusState.isActive) {
+            const sites = focusResult.focusBlockedSites || [];
+            await this.enableSiteBlocking(sites, 101, 'focus');
+            await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
+            chrome.action.setBadgeText({ text: '🎯' });
+            chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+        }
+    }
+
     async isScheduledBlockingActive() {
         const result = await chrome.storage.local.get(['scheduledBlocking']);
         const scheduled = result.scheduledBlocking;
-        
-        if (!scheduled || !scheduled.enabled) {
-            return false;
-        }
-        
+
+        // Handle both boolean and string "enabled" states from different UI versions
+        if (!scheduled || (scheduled.enabled !== true && scheduled.enabled !== 'enabled')) return false;
+
         const now = new Date();
         const currentTime = now.getHours() * 60 + now.getMinutes();
-        const startTime = this.timeToMinutes(scheduled.startTime);
-        const endTime = this.timeToMinutes(scheduled.endTime);
-        const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        
-        // Check if current time is within blocking window and current day is selected
-        return currentTime >= startTime && currentTime <= endTime && scheduled.days.includes(currentDay);
+        const startTime = this.timeToMinutes(scheduled.startTime || '00:00');
+        const endTime = this.timeToMinutes(scheduled.endTime || '23:59');
+        const currentDay = now.getDay();
+        const days = scheduled.days || [];
+
+        if (startTime <= endTime) {
+            // Normal schedule: e.g. 09:00 - 17:00
+            return currentTime >= startTime && currentTime <= endTime && days.includes(currentDay);
+        } else {
+            // Overnight schedule: e.g. 22:00 - 02:00
+            const isActiveTime = currentTime >= startTime || currentTime <= endTime;
+            if (!isActiveTime) return false;
+
+            // If it's early morning (before end time), it belongs to the previous day's schedule
+            const effectiveDay = currentTime <= endTime ? (currentDay - 1 + 7) % 7 : currentDay;
+            return days.includes(effectiveDay);
+        }
     }
-    
-    async isTimeLimitAllowed(site) {
-        const result = await chrome.storage.local.get(['timeLimits']);
-        const timeLimits = result.timeLimits || [];
-        
-        const limit = timeLimits.find(limit => limit.site === site);
-        if (!limit) {
-            return true; // No limit set
-        }
-        
-        const today = new Date().toDateString();
-        
-        // Reset daily usage at midnight
-        if (limit.lastReset !== today) {
-            limit.usedToday = 0;
-            limit.lastReset = today;
-        }
-        
-        return limit.usedToday < limit.minutes;
-    }
-    
-    async getTimeLimitRemaining(site) {
-        const result = await chrome.storage.local.get(['timeLimits']);
-        const timeLimits = result.timeLimits || [];
-        
-        const limit = timeLimits.find(limit => limit.site === site);
-        if (!limit) {
-            return null; // No limit set
-        }
-        
-        const today = new Date().toDateString();
-        
-        // Reset daily usage at midnight
-        if (limit.lastReset !== today) {
-            limit.usedToday = 0;
-            limit.lastReset = today;
-        }
-        
-        return Math.max(0, limit.minutes - limit.usedToday);
-    }
-    
+
     async checkScheduledBlocking() {
+        const paused = await this.isPaused();
+        if (paused) {
+            await this.disableScheduledBlocking();
+            return;
+        }
+
         const isActive = await this.isScheduledBlockingActive();
         if (isActive) {
             await this.enableScheduledBlocking();
@@ -377,315 +560,265 @@ class BackgroundService {
             await this.disableScheduledBlocking();
         }
     }
-    
+
     async enableScheduledBlocking() {
-        const result = await chrome.storage.local.get(['blockedSites']);
-        const blockedSites = result.blockedSites || StorageManager.getDefaultBlockedSites();
-        
-        await this.enableSiteBlocking(blockedSites);
-        
+        const result = await chrome.storage.local.get(['scheduledBlockedSites']);
+        const sites = result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites();
+        await this.enableSiteBlocking(sites, 201, 'schedule');
+        await this.redirectTabsOnBlock(sites, 'floating/schedule-block.html');
         chrome.action.setBadgeText({ text: '🚫' });
-        chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
     }
-    
+
     async disableScheduledBlocking() {
-        await this.disableSiteBlocking();
-        
+        await this.disableSiteBlockingRange(201, 300);
+        await this.redirectTabsBack('floating/schedule-block.html');
         chrome.action.setBadgeText({ text: '' });
-        chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
     }
-    
-    async checkTimeLimit(site) {
-        const allowed = await this.isTimeLimitAllowed(site);
-        const remaining = await this.getTimeLimitRemaining(site);
-        
-        if (!allowed && remaining !== null) {
-            // Block the site and show time limit message
-            await this.enableSiteBlocking([site]);
-            
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'showTimeLimitWarning',
-                        site: site,
-                        remaining: remaining
-                    });
-                }
+
+    async redirectTabsOnBlock(sites, blockPage) {
+        const extensionUrl = chrome.runtime.getURL(blockPage);
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs) {
+            if (!tab.url || tab.url.includes(blockPage)) continue;
+
+            const isBlocked = sites.some(site => {
+                const domain = site.replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0];
+                return tab.url.includes(domain);
             });
+
+            if (isBlocked) {
+                chrome.tabs.update(tab.id, {
+                    url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
+                }).catch(() => { });
+            }
         }
     }
-    
+
+    async redirectTabsBack(blockPage) {
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs) {
+            if (tab.url && tab.url.includes(blockPage)) {
+                const urlObj = new URL(tab.url);
+                const orig = urlObj.searchParams.get('orig');
+                if (orig) {
+                    chrome.tabs.update(tab.id, { url: decodeURIComponent(orig) }).catch(() => { });
+                } else {
+                    chrome.tabs.goBack(tab.id).catch(() => chrome.tabs.reload(tab.id).catch(() => { }));
+                }
+            }
+        }
+    }
     timeToMinutes(timeString) {
         const [hours, minutes] = timeString.split(':').map(Number);
         return hours * 60 + minutes;
     }
-    
-    async handleAlarm(alarm) {
-        switch (alarm.name) {
-            case 'timer':
-                await this.timerComplete();
-                break;
-                
-            case 'focusMode':
-                await this.focusModeComplete();
-                break;
-                
-            case 'breakReminder':
-                await this.sendBreakReminder();
-                break;
-        }
-    }
-    
+
     async startTimer(duration, type = 'custom') {
-        this.timerState = {
-            isRunning: true,
-            startTime: Date.now(),
-            duration: duration,
-            type: type
-        };
-        
-        chrome.alarms.create('timer', {
-            delayInMinutes: duration / 60
-        });
-        
+        const durSec = parseInt(duration);
+        this.timerState = { isRunning: true, startTime: Date.now(), duration: durSec, type };
+        chrome.alarms.create('timer', { delayInMinutes: durSec / 60 });
         await chrome.storage.local.set({ timerState: this.timerState });
-        
-        // Update extension icon
         chrome.action.setBadgeText({ text: '⏱️' });
         chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
-        chrome.action.setTitle({ title: 'Productivity Clock - Timer Running' });
+        // No popup window created here anymore as requested
     }
-    
+
     startTimerAlarm() {
         const remainingTime = (this.timerState.startTime + this.timerState.duration * 1000) - Date.now();
         if (remainingTime > 0) {
-            chrome.alarms.create('timer', {
-                delayInMinutes: remainingTime / 60000
-            });
+            chrome.alarms.create('timer', { delayInMinutes: remainingTime / 60000 });
         }
     }
-    
+
     async stopTimer() {
         this.timerState.isRunning = false;
-        
         chrome.alarms.clear('timer');
-        
         await chrome.storage.local.set({ timerState: this.timerState });
-        
-        // Update extension icon
         chrome.action.setBadgeText({ text: '' });
-        chrome.action.setTitle({ title: 'Productivity Clock - Focus & Time Manager' });
     }
-    
+
     async timerComplete() {
+        const type = this.timerState.type || 'timer';
+        const startTime = this.timerState.startTime || Date.now();
+        const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const minsRemaining = Math.max(1, Math.round(durationSeconds / 60));
+        const targetMins = Math.round(this.timerState.duration / 60);
+
         this.timerState.isRunning = false;
         await chrome.storage.local.set({ timerState: this.timerState });
-        
+
+        const notificationId = 'timer-complete-' + Date.now();
+        chrome.notifications.create(notificationId, {
+            type: 'basic',
+            iconUrl: 'assets/icons/icon128.png',
+            title: 'Timer complete',
+            message: `Great work — your ${targetMins} minute session is complete.`,
+            priority: 2
+        });
+        setTimeout(() => chrome.notifications.clear(notificationId), 8000);
+
+        // Update stats
+        await this.updateStats({ focusTime: type === 'focus' ? durationSeconds : 0, sessionsCompleted: 1 });
+
+        // Create completion window that auto-closes
+        chrome.windows.create({
+            url: chrome.runtime.getURL(`floating/timer-complete.html?type=${type}&mins=${minsRemaining}`),
+            type: 'popup',
+            width: 320,
+            height: 260,
+            focused: true
+        }).catch(() => { });
+
+        this.playSound('timer-complete');
+
         chrome.action.setBadgeText({ text: '' });
-        
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icons/icon48.png',
-            title: 'Timer Complete!',
-            message: 'Your timer has finished.'
-        });
-        
-        this.playSound('timer-complete');
     }
-    
-    async focusModeComplete() {
-        const focusTime = Math.floor((Date.now() - this.focusState.startTime) / 1000);
-        
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icons/icon48.png',
-            title: 'Focus Session Complete!',
-            message: `Great job! You focused for ${Math.floor(focusTime / 60)} minutes.`
-        });
-        
-        this.playSound('timer-complete');
-        await this.stopFocusMode();
+
+    async canRunProtectedDisable() {
+        const data = await chrome.storage.local.get(['disableAuthorizedUntil']);
+        return Number(data.disableAuthorizedUntil || 0) > Date.now();
     }
-    
-    async sendBreakReminder() {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icons/icon48.png',
-            title: 'Break Reminder',
-            message: 'Time to take a break and stretch!'
-        });
-        
-        this.playSound('break-time');
-    }
-    
-    async checkTimeLimit(site) {
-        const allowed = await this.isTimeLimitAllowed(site);
-        const remaining = await this.getTimeLimitRemaining(site);
-        
-        if (!allowed && remaining !== null) {
-            // Block the site and show time limit message
-            await this.enableSiteBlocking([site]);
-            
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'showTimeLimitWarning',
-                        site: site,
-                        remaining: remaining
-                    });
-                }
-            });
-        }
-    }
-    
-    timeToMinutes(timeString) {
-        const [hours, minutes] = timeString.split(':').map(Number);
-        return hours * 60 + minutes;
-    }
-    
-    async startFocusMode(duration, blockedSites = []) {
-        this.focusState = {
-            isActive: true,
-            startTime: Date.now(),
-            duration: duration,
-            blockedSites: blockedSites
-        };
-        
-        chrome.alarms.create('focusMode', {
-            delayInMinutes: duration / 60
-        });
-        
+
+    async startFocusMode(duration, focusBlockedSites = []) {
+        this.focusState = { isActive: true, startTime: Date.now(), duration };
+        chrome.alarms.create('focusMode', { delayInMinutes: duration / 60 });
+
         await chrome.storage.local.set({ focusState: this.focusState });
-        await this.enableSiteBlocking(blockedSites);
-        
-        // Update extension icon
-        chrome.action.setBadgeText({ text: '🎯' });
-        chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
-        chrome.action.setTitle({ title: 'Productivity Clock - Focus Mode Active' });
-        
-        chrome.tabs.query({}, (tabs) => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: 'focusModeStarted',
-                    duration: duration
-                });
-            });
-        });
+
+        const paused = await this.isPaused();
+        if (!paused) {
+            await this.disableSiteBlockingRange(101, 200);
+            await this.enableSiteBlocking(focusBlockedSites, 101, 'focus');
+            await this.redirectTabsOnBlock(focusBlockedSites, 'floating/focus-block.html');
+
+            chrome.action.setBadgeText({ text: '🎯' });
+            chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+        }
+
+        this.playSound('focus-start');
     }
-    
+
     async stopFocusMode() {
         this.focusState.isActive = false;
-        
-        chrome.alarms.clear('focusMode');
-        await this.disableSiteBlocking();
+        this.focusState.endTime = Date.now();
+
+        await chrome.alarms.clear('focusMode');
+        await this.disableSiteBlockingRange(101, 200);
         await chrome.storage.local.set({ focusState: this.focusState });
-        
-        // Update extension icon
+
+        await this.redirectTabsBack('floating/focus-block.html');
         chrome.action.setBadgeText({ text: '' });
-        chrome.action.setTitle({ title: 'Productivity Clock - Focus & Time Manager' });
-        
-        chrome.tabs.query({}, (tabs) => {
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: 'focusModeStopped'
-                });
-            });
-        });
     }
-    
+
     async focusModeComplete() {
-        const focusTime = Math.floor((Date.now() - this.focusState.startTime) / 1000);
-        
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icons/icon48.png',
-            title: 'Focus Session Complete!',
-            message: `Great job! You focused for ${Math.floor(focusTime / 60)} minutes.`
-        });
-        
-        await this.updateStats({
-            focusTime: focusTime,
-            sessionsCompleted: 1
-        });
-        
+        const result = await chrome.storage.local.get(['focusState']);
+        this.focusState = result.focusState || this.focusState;
+
+        const startTime = this.focusState.startTime || (Date.now() - (this.focusState.duration * 1000));
+        const focusSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const mins = Math.max(1, Math.floor(focusSeconds / 60));
+
+        // Create completion window that auto-closes
+        chrome.windows.create({
+            url: chrome.runtime.getURL(`floating/focus-complete.html?mins=${mins}`),
+            type: 'popup',
+            width: 320,
+            height: 260,
+            focused: true
+        }).catch(() => { });
+
+
+        await this.updateStats({ focusTime: focusSeconds, sessionsCompleted: 1 });
+
+        this.playSound('timer-complete');
         await this.stopFocusMode();
     }
-    
-    async enableSiteBlocking(blockedSites) {
-        const rules = blockedSites.map((site, index) => ({
-            id: index + 1,
-            priority: 1,
-            action: {
-                type: 'redirect',
-                redirect: {
-                    extensionPath: '/floating/focus-block.html'
-                }
-            },
-            condition: {
-                urlFilter: `*://*.${site}/*`,
-                resourceTypes: ['main_frame']
+
+    async ensureContentScriptInjected() {
+        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+        for (const tab of tabs) {
+            try {
+                // Check if already injected
+                await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+            } catch (e) {
+                // Not injected, do it now
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content/blocker.js', 'content/anti-antiblock.js']
+                }).catch(() => { });
+                chrome.scripting.insertCSS({
+                    target: { tabId: tab.id },
+                    files: ['content/adblock-styles.css']
+                }).catch(() => { });
             }
-        }));
-        
-        await chrome.declarativeNetRequest.updateDynamicRules({
-            addRules: rules
-        });
-    }
-    
-    async disableSiteBlocking() {
-        const rules = await chrome.declarativeNetRequest.getDynamicRules();
-        const ruleIds = rules.map(rule => rule.id);
-        
-        if (ruleIds.length > 0) {
-            await chrome.declarativeNetRequest.updateDynamicRules({
-                removeRuleIds: ruleIds
-            });
         }
     }
-    
-    async sendBreakReminder() {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icons/icon48.png',
-            title: 'Break Time!',
-            message: 'Time to take a break and stretch your legs.'
-        });
-    }
-    
-    async updateStats(stats) {
-        const result = await chrome.storage.local.get(['todayStats']);
-        let todayStats = result.todayStats || {
-            focusTime: 0,
-            tasksCompleted: 0,
-            sessionsCompleted: 0,
-            date: new Date().toDateString()
-        };
-        
-        const today = new Date().toDateString();
-        if (todayStats.date !== today) {
-            todayStats = {
-                focusTime: 0,
-                tasksCompleted: 0,
-                sessionsCompleted: 0,
-                date: today
+
+    async enableSiteBlocking(blockedSites, startId = 1, type = 'focus') {
+        const blockPage = type === 'schedule' ? 'floating/schedule-block.html' : 'floating/focus-block.html';
+        const extensionUrl = chrome.runtime.getURL(blockPage);
+
+        // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
+        await this.disableSiteBlockingRange(startId, startId + 99);
+
+        // Alias handling: if x.com is added, also block twitter.com and vice versa
+        const expandedSites = [...blockedSites];
+        if (blockedSites.some(s => s.includes('x.com'))) expandedSites.push('twitter.com');
+        if (blockedSites.some(s => s.includes('twitter.com'))) expandedSites.push('x.com');
+
+        const rules = [...new Set(expandedSites)].map((site, index) => {
+            // Normalize site: remove http/https/www
+            const domain = site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+            if (!domain) return null;
+
+            return {
+                id: startId + index,
+                priority: 2, // Increased priority to ensure it overrides other rules
+                action: {
+                    type: 'redirect',
+                    redirect: { url: `${extensionUrl}?orig=${encodeURIComponent('https://' + domain)}` }
+                },
+                condition: {
+                    // Use more inclusive filter to catch variants
+                    urlFilter: `||${domain}^`,
+                    resourceTypes: ['main_frame']
+                }
             };
-        }
-        
-        if (stats.focusTime) {
-            todayStats.focusTime += stats.focusTime;
-        }
-        
-        if (stats.tasksCompleted) {
-            todayStats.tasksCompleted += stats.tasksCompleted;
-        }
-        
-        if (stats.sessionsCompleted) {
-            todayStats.sessionsCompleted += stats.sessionsCompleted;
-        }
-        
-        await chrome.storage.local.set({ todayStats: todayStats });
+        }).filter(r => r !== null);
+        await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
     }
-    
+
+    async disableSiteBlockingRange(startId, endId) {
+        const rules = await chrome.declarativeNetRequest.getDynamicRules();
+        const ruleIds = rules.map(r => r.id).filter(id => id >= startId && id <= endId);
+        if (ruleIds.length > 0) {
+            await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: ruleIds });
+        }
+    }
+
+    async sendBreakReminder() {
+        const notificationId = 'break-reminder-' + Date.now();
+        chrome.notifications.create(notificationId, {
+            type: 'basic',
+            iconUrl: 'assets/icons/icon128.png',
+            title: 'Break Time!',
+            message: 'Time to take a break and stretch!',
+            priority: 2,
+            requireInteraction: true
+        });
+
+        // Auto-clear after 8 seconds
+        setTimeout(() => {
+            chrome.notifications.clear(notificationId);
+        }, 8000);
+
+        this.playSound('break-time');
+    }
+
+    async updateStats(newStats) {
+        // Statistics tracking disabled as per user request
+    }
+
     async getSettings() {
         const result = await chrome.storage.local.get(['settings']);
         return result.settings || {
@@ -695,49 +828,45 @@ class BackgroundService {
             breakReminders: true
         };
     }
-    
+
     async playSound(soundName) {
         const settings = await this.getSettings();
         if (!settings.soundEnabled) return;
-        
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) {
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    action: 'playSound',
-                    sound: soundName
-                });
-            }
+
+        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+        tabs.forEach(tab => {
+            chrome.tabs.sendMessage(tab.id, {
+                action: 'playSound',
+                sound: soundName
+            }).catch(() => { });
         });
     }
-    
-    async toggleFloatingClock() {
+
+    async toggleFloatingClock(forcedState) {
         const result = await chrome.storage.local.get(['clockVisible']);
         const isVisible = result.clockVisible || false;
-        
-        // Toggle the state
-        const newState = !isVisible;
+
+        // Use forced state if provided, otherwise toggle
+        const newState = (forcedState !== undefined) ? forcedState : !isVisible;
         await chrome.storage.local.set({ clockVisible: newState });
-        
-        // Send message to all tabs to toggle clock
+
+        // Send message to all tabs to update visibility
         const tabs = await chrome.tabs.query({});
         tabs.forEach(tab => {
             chrome.tabs.sendMessage(tab.id, {
                 action: 'toggleClock',
                 visible: newState
-            }).catch(() => {
-                // Ignore errors for tabs that don't have content script
-            });
+            }).catch(() => { });
         });
     }
-    
+
     async initializeStorage() {
         const defaults = {
             settings: {
-                theme: 'default',
+                theme: 'solar',
                 soundEnabled: true,
                 notificationsEnabled: true,
                 breakReminders: true,
-                clockStyle: 'digital',
                 clockPosition: { x: 20, y: 20 },
                 clockSize: 'medium'
             },
@@ -757,7 +886,7 @@ class BackgroundService {
                 date: new Date().toDateString()
             }
         };
-        
+
         for (const [key, value] of Object.entries(defaults)) {
             const result = await chrome.storage.local.get(key);
             if (!result[key]) {
@@ -765,6 +894,11 @@ class BackgroundService {
             }
         }
     }
+
+
+
+
+
 }
 
 new BackgroundService();
