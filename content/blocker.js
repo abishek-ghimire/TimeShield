@@ -1,573 +1,498 @@
+/**
+ * ContentBlocker — Injected into every tab.
+ * Manages: floating draggable+resizable clock widget, time-limit warning, sound.
+ */
 class ContentBlocker {
     constructor() {
-        this.isFocusModeActive = false;
-        this.blockedSites = [];
-        this.whitelist = [];
-        this.blockedAttempts = 0;
-        
+        this.isFullscreenFlip = false;
+        this.refs = {
+            widget: null,
+            header: null,
+            iframe: null,
+            grip: null
+        };
         this.init();
     }
-    
+
     async init() {
-        await this.loadSettings();
         this.setupMessageHandlers();
-        this.checkCurrentPage();
-        this.injectFloatingClock();
-        this.checkScheduledBlocking();
-        this.checkTimeLimit();
-        this.restoreClockVisibility();
+        this.setupStorageListeners();
+        await this.injectFloatingClock();
     }
-    
+
     setupMessageHandlers() {
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            this.handleMessage(message, sender, sendResponse);
+            switch (message.action) {
+                case 'ping':
+                    sendResponse({ pong: true });
+                    break;
+                case 'toggleClock':
+                    this.toggleFloatingClock(message.visible);
+                    sendResponse({ success: true });
+                    break;
+                case 'playSound':
+                    this.playSound(message.sound);
+                    sendResponse({ success: true });
+                    break;
+                case 'showTimeLimitWarning':
+                    this.showTimeLimitWarning(message.site, message.remaining);
+                    sendResponse({ success: true });
+                    break;
+                default:
+                    break;
+            }
             return true;
         });
     }
-    
-    async handleMessage(message, sender, sendResponse) {
-        switch (message.action) {
-            case 'focusModeStarted':
-                await this.startFocusMode(message.duration);
-                break;
-                
-            case 'focusModeStopped':
-                await this.stopFocusMode();
-                break;
-                
-            case 'toggleClock':
-                if (message.visible !== undefined) {
-                    // Set visibility to specific state
-                    this.setClockVisibility(message.visible);
-                } else {
-                    // Toggle current state
-                    this.toggleFloatingClock();
-                }
-                // Send response back to background
-                if (sendResponse) {
-                    sendResponse({ success: true });
-                }
-                break;
-                
-            case 'playSound':
-                this.playSound(message.sound);
-                break;
-                
-            case 'updateBlockList':
-                await this.updateBlockList(message.blockedSites, message.whitelist);
-                break;
-                
-            case 'showTimeLimitWarning':
-                this.showTimeLimitWarning(message.site, message.remaining);
-                break;
-        }
-    }
-    
-    async loadSettings() {
-        const result = await chrome.storage.local.get(['focusState', 'blockedSites', 'whitelist', 'scheduledBlocking', 'timeLimits']);
-        
-        if (result.focusState) {
-            this.isFocusModeActive = result.focusState.isActive;
-        }
-        
-        this.blockedSites = result.blockedSites || [];
-        this.whitelist = result.whitelist || [];
-        this.scheduledBlocking = result.scheduledBlocking || { enabled: false };
-        this.timeLimits = result.timeLimits || [];
-    }
-    
-    async checkScheduledBlocking() {
-        const result = await chrome.storage.local.get(['scheduledBlocking']);
-        const scheduled = result.scheduledBlocking || { enabled: false };
-        
-        if (scheduled.enabled && this.isInScheduledTime(scheduled)) {
-            await this.enableScheduledBlocking();
-        } else {
-            await this.disableScheduledBlocking();
-        }
-    }
-    
-    isInScheduledTime(scheduled) {
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        const dayOfWeek = now.getDay();
-        
-        // Check if current day is enabled
-        if (scheduled.days && !scheduled.days.includes(dayOfWeek)) {
-            return false;
-        }
-        
-        // Check if current time is within scheduled range
-        if (scheduled.startTime && scheduled.endTime) {
-            const [startHour, startMin] = scheduled.startTime.split(':').map(Number);
-            const [endHour, endMin] = scheduled.endTime.split(':').map(Number);
-            const startTime = startHour * 60 + startMin;
-            const endTime = endHour * 60 + endMin;
-            
-            return currentTime >= startTime && currentTime <= endTime;
-        }
-        
-        return false;
-    }
-    
-    async checkTimeLimit() {
-        const currentDomain = this.getCurrentDomain();
-        
-        // Check if time limits are enabled
-        const result = await chrome.storage.local.get(['timeLimits']);
-        const timeLimits = result.timeLimits || [];
-        
-        const limit = timeLimits.find(limit => limit.site === currentDomain);
-        if (!limit) {
-            return; // No limit set for this site
-        }
-        
-        const today = new Date().toDateString();
-        let usedToday = limit.usedToday || 0;
-        
-        // Reset daily usage at midnight
-        if (limit.lastReset !== today) {
-            usedToday = 0;
-            limit.lastReset = today;
-            limit.usedToday = 0;
-            await chrome.storage.local.set({ timeLimits });
-        }
-        
-        const remaining = Math.max(0, limit.minutes - usedToday);
-        
-        if (remaining <= 0) {
-            // Block site and show time limit message
-            await this.enableSiteBlocking([currentDomain]);
-            
-            this.showTimeLimitWarning(currentDomain, 0);
-        } else if (remaining <= 5) {
-            // Show warning when 5 minutes or less remaining
-            this.showTimeLimitWarning(currentDomain, remaining);
-        }
-    }
-    
-    checkCurrentPage() {
-        console.log('ContentBlocker: checkCurrentPage called');
-        console.log('ContentBlocker: Focus mode active:', this.isFocusModeActive);
-        console.log('ContentBlocker: Should block current site:', this.shouldBlockCurrentSite());
-        
-        // Check if focus mode is active and current site should be blocked
-        if (this.isFocusModeActive && this.shouldBlockCurrentSite()) {
-            console.log('ContentBlocker: Blocking current page due to focus mode');
-            this.blockCurrentPage();
-        }
-    }
-    
-    shouldBlockCurrentSite() {
-        const currentDomain = this.getCurrentDomain();
-        
-        if (this.whitelist.some(site => currentDomain.includes(site))) {
-            return false;
-        }
-        
-        return this.blockedSites.some(site => currentDomain.includes(site));
-    }
-    
-    getCurrentDomain() {
-        const hostname = window.location.hostname;
-        return hostname.replace('www.', '');
-    }
-    
-    blockCurrentPage() {
-        console.log('ContentBlocker: blockCurrentPage called');
-        
-        // Inject the focus block page
-        const iframe = document.createElement('iframe');
-        iframe.src = chrome.runtime.getURL('floating/focus-block.html');
-        iframe.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            z-index: 999999;
-            background: white;
-        `;
-        
-        document.body.innerHTML = '';
-        document.body.appendChild(iframe);
-        
-        this.blockedAttempts++;
-        this.logBlockedAttempt();
-    }
-    
-    async enableSiteBlocking(sites) {
-        console.log('ContentBlocker: enableSiteBlocking called with sites:', sites);
-        this.blockedSites = sites;
-        
-        if (this.shouldBlockCurrentSite()) {
-            this.blockCurrentPage();
-        }
-    }
-    
-    async emergencyOverride() {
-        const reason = prompt('Please enter the reason for breaking focus mode:');
-        if (reason && reason.trim()) {
-            await this.logEmergencyOverride(reason.trim());
-            chrome.runtime.sendMessage({
-                action: 'stopFocusMode'
-            });
-            
-            location.reload();
-        }
-    }
-    
-    async startFocusMode(duration) {
-        console.log('ContentBlocker: startFocusMode called with duration:', duration);
-        this.isFocusModeActive = true;
-        this.blockedAttempts = 0;
-        
-        // Get blocked sites from storage or use default
-        const result = await chrome.storage.local.get(['blockedSites']);
-        this.blockedSites = result.blockedSites || [
-            'facebook.com', 'twitter.com', 'instagram.com', 
-            'youtube.com', 'tiktok.com', 'reddit.com', 'netflix.com'
-        ];
-        
-        console.log('ContentBlocker: Blocked sites:', this.blockedSites);
-        
-        if (this.shouldBlockCurrentSite()) {
-            console.log('ContentBlocker: Blocking current site');
-            this.blockCurrentPage();
-        } else {
-            console.log('ContentBlocker: Current site not in blocklist');
-        }
-        
-        this.showFocusNotification();
-    }
-    
-    async stopFocusMode() {
-        console.log('ContentBlocker: stopFocusMode called');
-        this.isFocusModeActive = false;
-        
-        if (document.body.innerHTML.includes('Focus Mode Active')) {
-            location.reload();
-        }
-    }
-    
-    showFocusNotification() {
-        // Show notification that focus mode started
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            max-width: 300px;
-        `;
-        
-        notification.innerHTML = `
-            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
-                🎯 Focus Mode Active
-            </div>
-            <div style="font-size: 13px;">
-                Blocking distracting sites. Stay focused!
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
+
+    setupStorageListeners() {
+        chrome.storage.onChanged.addListener(async (changes) => {
+            if (!this.refs.widget) return;
+
+            if (changes.clockView) {
+                await this.applyClockMode(changes.clockView.newValue || 'standard');
             }
-        }, 5000);
+
+            if (changes.clockVisible) {
+                this.toggleFloatingClock(changes.clockVisible.newValue);
+            }
+
+            if (changes.clockMinimized && !this.isFullscreenFlip) {
+                this._applyMinimizeState(
+                    this.refs.widget,
+                    this.refs.iframe,
+                    this.refs.grip,
+                    changes.clockMinimized.newValue === true
+                );
+            }
+        });
     }
-    
-    injectFloatingClock() {
-        console.log('ContentBlocker: injectFloatingClock called');
-        
-        if (document.getElementById('floatingClockFrame')) {
-            console.log('ContentBlocker: Clock iframe already exists');
+
+    async injectFloatingClock() {
+        if (document.getElementById('ts-clock-widget')) return;
+
+        const widget = document.createElement('div');
+        widget.id = 'ts-clock-widget';
+        widget.style.cssText = `
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 160px;
+            min-width: 200px;
+            min-height: 110px;
+            z-index: 2147483647;
+            display: none;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+            user-select: none;
+            font-family: 'Inter', -apple-system, sans-serif;
+            will-change: transform;
+            transition: width 0.22s ease, height 0.22s ease, border-radius 0.22s ease;
+        `;
+
+        const header = document.createElement('div');
+        header.id = 'ts-clock-header';
+        header.style.cssText = `
+            height: 28px;
+            background: rgba(10, 15, 30, 0.98);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px 0 12px;
+            cursor: grab;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        `;
+        header.innerHTML = `
+            <span style="color:#6366f1;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
+                <span style="font-size:14px;">⏰</span> TimeShield
+            </span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button id="ts-minimize-btn" title="Minimize/Expand" style="background:none;border:none;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:color 0.2s;height:24px;width:24px;border-radius:4px;" onmouseover="this.style.background='rgba(255,255,255,0.05)';this.style.color='#f59e0b'" onmouseout="this.style.background='none';this.style.color='#94a3b8'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button id="ts-close-btn" title="Close clock" style="background:none;border:none;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:all 0.2s;height:24px;width:24px;border-radius:4px;" onmouseover="this.style.background='rgba(244,63,94,0.1)';this.style.color='#f43f5e'" onmouseout="this.style.background='none';this.style.color='#94a3b8'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        `;
+
+        const iframe = document.createElement('iframe');
+        iframe.id = 'ts-clock-iframe';
+        iframe.src = chrome.runtime.getURL('floating/clock.html');
+        iframe.allow = 'autoplay';
+        iframe.style.cssText = `
+            width: 100%;
+            height: calc(100% - 28px);
+            border: none;
+            display: block;
+            background: transparent;
+            transition: opacity 0.3s ease;
+        `;
+
+        const grip = document.createElement('div');
+        grip.id = 'ts-resize-grip';
+        grip.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 18px;
+            height: 18px;
+            cursor: se-resize;
+            z-index: 10;
+            background: linear-gradient(135deg, transparent 40%, rgba(99,102,241,0.5) 40%);
+            border-radius: 0 0 16px 0;
+        `;
+
+        widget.appendChild(header);
+        widget.appendChild(iframe);
+        widget.appendChild(grip);
+        document.body.appendChild(widget);
+
+        this.refs = { widget, header, iframe, grip };
+
+        this._makeDraggable(widget, header, iframe);
+        this._makeResizable(widget, grip, iframe);
+        this._setupControls(widget, iframe, grip);
+
+        await this._restorePositionAndSize(widget);
+        await this._restoreVisibility(widget);
+        await this._applyClockModeFromStorage();
+    }
+
+    _makeDraggable(widget, header, iframe) {
+        let dragging = false;
+        let offX = 0;
+        let offY = 0;
+        let frameId = null;
+
+        const move = (e) => {
+            if (!dragging || this.isFullscreenFlip) return;
+
+            const x = Math.max(0, Math.min(window.innerWidth - widget.offsetWidth, e.clientX - offX));
+            const y = Math.max(0, Math.min(window.innerHeight - widget.offsetHeight, e.clientY - offY));
+
+            if (frameId) cancelAnimationFrame(frameId);
+            frameId = requestAnimationFrame(() => {
+                widget.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (this.isFullscreenFlip) return;
+            if (e.target.closest('button')) return;
+
+            dragging = true;
+            const currentTransform = new DOMMatrix(getComputedStyle(widget).transform);
+            offX = e.clientX - currentTransform.e;
+            offY = e.clientY - currentTransform.f;
+
+            header.style.cursor = 'grabbing';
+            iframe.style.pointerEvents = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', move);
+
+        document.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false;
+            header.style.cursor = 'grab';
+            iframe.style.pointerEvents = 'auto';
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+                frameId = null;
+            }
+            this._savePosition(widget);
+        });
+    }
+
+    _makeResizable(widget, grip, iframe) {
+        let resizing = false;
+        let startW = 0;
+        let startH = 0;
+        let startX = 0;
+        let startY = 0;
+        let frameId = null;
+
+        grip.addEventListener('mousedown', (e) => {
+            if (this.isFullscreenFlip) return;
+            resizing = true;
+            startW = widget.offsetWidth;
+            startH = widget.offsetHeight;
+            startX = e.clientX;
+            startY = e.clientY;
+            iframe.style.pointerEvents = 'none';
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!resizing || this.isFullscreenFlip) return;
+
+            const newW = Math.max(220, startW + (e.clientX - startX));
+            const newH = Math.max(120, startH + (e.clientY - startY));
+
+            if (frameId) cancelAnimationFrame(frameId);
+            frameId = requestAnimationFrame(() => {
+                widget.style.width = `${newW}px`;
+                widget.style.height = `${newH}px`;
+                this._applyScale();
+            });
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!resizing) return;
+            resizing = false;
+            iframe.style.pointerEvents = 'auto';
+            if (frameId) {
+                cancelAnimationFrame(frameId);
+                frameId = null;
+            }
+            this._savePosition(widget);
+            this._applyScale();
+        });
+
+        iframe.addEventListener('load', () => this._applyScale());
+    }
+
+    _setupControls(widget, iframe, grip) {
+        document.getElementById('ts-minimize-btn').addEventListener('click', async () => {
+            if (this.isFullscreenFlip) return;
+            try {
+                const result = await chrome.storage.local.get(['clockMinimized']);
+                const newState = !result.clockMinimized;
+                await chrome.storage.local.set({ clockMinimized: newState });
+                this._applyMinimizeState(widget, iframe, grip, newState);
+            } catch (e) {
+                const currentState = widget.dataset.isMinimized === 'true';
+                this._applyMinimizeState(widget, iframe, grip, !currentState);
+            }
+        });
+
+        document.getElementById('ts-close-btn').addEventListener('click', async () => {
+            widget.style.display = 'none';
+            try {
+                await chrome.storage.local.set({ clockVisible: false });
+                chrome.runtime.sendMessage({ action: 'toggleClock', visible: false }).catch(() => { });
+            } catch (e) {
+                // no-op
+            }
+        });
+    }
+
+    _applyMinimizeState(widget, iframe, grip, minimized) {
+        if (this.isFullscreenFlip) return;
+
+        const btn = document.getElementById('ts-minimize-btn');
+        if (minimized) {
+            widget.dataset.prevH = widget.style.height || '160px';
+            iframe.style.opacity = '0';
+            setTimeout(() => {
+                if (widget.dataset.isMinimized === 'true') {
+                    iframe.style.display = 'none';
+                    widget.style.height = '28px';
+                    grip.style.display = 'none';
+                }
+            }, 220);
+            widget.dataset.isMinimized = 'true';
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+            btn.title = 'Expand';
+        } else {
+            widget.dataset.isMinimized = 'false';
+            iframe.style.display = 'block';
+            widget.style.height = widget.dataset.prevH || '160px';
+            grip.style.display = 'block';
+            setTimeout(() => {
+                iframe.style.opacity = '1';
+            }, 10);
+            btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            btn.title = 'Minimize';
+            this._applyScale();
+        }
+    }
+
+    async _applyClockModeFromStorage() {
+        const { clockView } = await chrome.storage.local.get(['clockView']);
+        await this.applyClockMode(clockView || 'standard');
+    }
+
+    async applyClockMode(mode) {
+        const { widget, header, iframe, grip } = this.refs;
+        if (!widget || !header || !iframe || !grip) return;
+
+        if (mode === 'flip') {
+            this.isFullscreenFlip = true;
+
+            widget.dataset.prevTransform = widget.style.transform || 'translate(0px, 0px)';
+            widget.dataset.prevWidth = widget.style.width || '280px';
+            widget.dataset.prevHeight = widget.style.height || '160px';
+            widget.dataset.prevRadius = widget.style.borderRadius || '16px';
+            widget.dataset.prevShadow = widget.style.boxShadow || '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)';
+
+            header.style.display = 'none';
+            grip.style.display = 'none';
+
+            widget.style.transform = 'translate(0px, 0px)';
+            widget.style.left = '0';
+            widget.style.top = '0';
+            widget.style.width = '100vw';
+            widget.style.height = '100vh';
+            widget.style.minWidth = '100vw';
+            widget.style.minHeight = '100vh';
+            widget.style.borderRadius = '0';
+            widget.style.boxShadow = 'none';
+            iframe.style.height = '100%';
+
+            if (widget.style.display === 'none') {
+                widget.style.display = 'block';
+            }
+
+            await chrome.storage.local.set({ clockMinimized: false, clockVisible: true });
+            this._applyScale(true);
             return;
         }
-        
-        const iframe = document.createElement('iframe');
-        iframe.id = 'floatingClockFrame';
-        iframe.src = chrome.runtime.getURL('floating/clock.html');
-        iframe.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 280px;
-            height: auto;
-            border: none;
-            z-index: 9999;
-            pointer-events: auto;
-            resize: both;
-            overflow: auto;
-            min-width: 200px;
-            min-height: 100px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        `;
-        
-        // Make draggable
-        this.makeDraggable(iframe);
-        
-        document.body.appendChild(iframe);
-        console.log('ContentBlocker: Clock iframe injected');
-        
-        // Set initial visibility based on stored state
-        this.restoreClockVisibility();
-    }
-    
-    makeDraggable(element) {
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
-        
-        const dragStart = (e) => {
-            if (e.target.closest('button') || e.target.closest('input')) {
-                return; // Don't drag when clicking buttons/inputs
-            }
-            
-            if (e.type === "touchstart") {
-                initialX = e.touches[0].clientX - xOffset;
-                initialY = e.touches[0].clientY - yOffset;
-            } else {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-            }
-            
-            if (e.target === element || element.contains(e.target)) {
-                isDragging = true;
-            }
-        };
-        
-        const dragEnd = () => {
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-        };
-        
-        const drag = (e) => {
-            if (isDragging) {
-                e.preventDefault();
-                
-                if (e.type === "touchmove") {
-                    currentX = e.touches[0].clientX - initialX;
-                    currentY = e.touches[0].clientY - initialY;
-                } else {
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                }
-                
-                xOffset = currentX;
-                yOffset = currentY;
-                
-                element.style.transform = `translate(${currentX}px, ${currentY}px)`;
-            }
-        };
-        
-        // Add event listeners
-        element.addEventListener('touchstart', dragStart, false);
-        element.addEventListener('touchend', dragEnd, false);
-        element.addEventListener('touchmove', drag, false);
-        
-        element.addEventListener('mousedown', dragStart, false);
-        element.addEventListener('mouseup', dragEnd, false);
-        element.addEventListener('mousemove', drag, false);
-    }
-    
-    async restoreClockVisibility() {
-        const result = await chrome.storage.local.get(['clockVisible']);
-        const isVisible = result.clockVisible || false;
-        
-        console.log('ContentBlocker: Restoring clock visibility:', isVisible);
-        
-        const iframe = document.getElementById('floatingClockFrame');
-        if (iframe) {
-            iframe.style.display = isVisible ? 'block' : 'none';
-            console.log('ContentBlocker: Set iframe display to:', iframe.style.display);
-        }
-    }
-    
-    toggleFloatingClock() {
-        console.log('ContentBlocker: toggleFloatingClock called');
-        
-        const iframe = document.getElementById('floatingClockFrame');
-        if (iframe) {
-            // Toggle visibility
-            const isVisible = iframe.style.display !== 'none';
-            iframe.style.display = isVisible ? 'none' : 'block';
-            
-            console.log('ContentBlocker: Toggled clock from', isVisible, 'to', !isVisible);
-            
-            // Update storage
-            chrome.storage.local.set({ clockVisible: !isVisible });
+
+        this.isFullscreenFlip = false;
+
+        header.style.display = 'flex';
+        iframe.style.height = 'calc(100% - 28px)';
+
+        widget.style.width = widget.dataset.prevWidth || '280px';
+        widget.style.height = widget.dataset.prevHeight || '160px';
+        widget.style.minWidth = '220px';
+        widget.style.minHeight = '120px';
+        widget.style.borderRadius = widget.dataset.prevRadius || '16px';
+        widget.style.boxShadow = widget.dataset.prevShadow || '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)';
+        widget.style.transform = widget.dataset.prevTransform || widget.style.transform || `translate(${Math.max(0, window.innerWidth - 300)}px, 20px)`;
+
+        const { clockMinimized } = await chrome.storage.local.get(['clockMinimized']);
+        if (clockMinimized) {
+            this._applyMinimizeState(widget, iframe, grip, true);
         } else {
-            console.log('ContentBlocker: No iframe found, injecting new clock');
-            // Inject clock if it doesn't exist
-            this.injectFloatingClock();
+            this._applyMinimizeState(widget, iframe, grip, false);
+        }
+
+        this._applyScale();
+    }
+
+    _applyScale(fullscreen = false) {
+        const { widget, iframe } = this.refs;
+        if (!widget || !iframe) return;
+
+        const innerDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!innerDoc) return;
+
+        const rect = widget.getBoundingClientRect();
+        const BASE_WIDTH = fullscreen ? window.innerWidth : 280;
+        const BASE_HEIGHT = fullscreen ? window.innerHeight : 160;
+        const scale = Math.max(0.65, Math.min(rect.width / BASE_WIDTH, rect.height / BASE_HEIGHT));
+
+        const clockFace = innerDoc.querySelector('.clock-face');
+        if (clockFace) clockFace.style.setProperty('--ts-scale', scale.toString());
+
+        const flipClock = innerDoc.querySelector('.flip-clock');
+        if (flipClock) flipClock.style.setProperty('--ts-scale', fullscreen ? '1.35' : scale.toString());
+    }
+
+    async _restoreVisibility(widget) {
+        const result = await chrome.storage.local.get(['clockVisible', 'clockMinimized']);
+        if (result.clockVisible) {
+            widget.style.display = 'block';
+        }
+
+        if (result.clockMinimized && !this.isFullscreenFlip) {
+            this._applyMinimizeState(this.refs.widget, this.refs.iframe, this.refs.grip, true);
         }
     }
-    
-    setClockVisibility(visible) {
-        console.log('ContentBlocker: setClockVisibility called with:', visible);
-        
-        const iframe = document.getElementById('floatingClockFrame');
-        if (iframe) {
-            iframe.style.display = visible ? 'block' : 'none';
-            console.log('ContentBlocker: Set clock visibility to:', visible);
-            
-            // Update storage
-            chrome.storage.local.set({ clockVisible: visible });
-        } else if (visible) {
-            // Inject clock if it doesn't exist and should be visible
-            this.injectFloatingClock();
+
+    toggleFloatingClock(visible) {
+        const widget = this.refs.widget || document.getElementById('ts-clock-widget');
+        if (!widget) return;
+
+        if (visible === undefined) {
+            widget.style.display = widget.style.display === 'none' ? 'block' : 'none';
+        } else {
+            widget.style.display = visible ? 'block' : 'none';
         }
     }
-    
-    async enableScheduledBlocking() {
-        console.log('ContentBlocker: enableScheduledBlocking called');
-        const result = await chrome.storage.local.get(['blockedSites']);
-        this.blockedSites = result.blockedSites || [];
-        
-        if (this.shouldBlockCurrentSite()) {
-            this.blockCurrentPage();
-        }
-    }
-    
-    async disableScheduledBlocking() {
-        console.log('ContentBlocker: disableScheduledBlocking called');
-        // Reload page if currently blocked by scheduled blocking
-        if (document.body.innerHTML.includes('Focus Mode Active')) {
-            location.reload();
-        }
-    }
-    
-    async showTimeLimitWarning(site, remaining) {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 300px;
-        `;
-        
-        notification.innerHTML = `
-            <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
-                ⏰ Time Limit Reached
-            </div>
-            <div style="font-size: 14px; margin-bottom: 15px;">
-                Site: <strong>${site}</strong><br>
-                Time remaining: <strong>${Math.floor(remaining / 60)}h ${remaining % 60}m</strong><br>
-                <small>This site will be unblocked at midnight or when time limit resets.</small>
-            </div>
-            <div style="margin-top: 15px;">
-                <button onclick="this.parentElement.remove()" style="
-                    background: rgba(255, 255, 255, 0.2);
-                    border: none;
-                    color: #333;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                ">Close</button>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-    }
-    
-    async logBlockedAttempt() {
-        const result = await chrome.storage.local.get(['blockedAttempts']);
-        const attempts = result.blockedAttempts || [];
-        
-        attempts.push({
-            url: window.location.href,
-            domain: this.getCurrentDomain(),
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
+
+    _savePosition(widget) {
+        if (this.isFullscreenFlip) return;
+        const rect = widget.getBoundingClientRect();
+        const transform = new DOMMatrix(getComputedStyle(widget).transform);
+        chrome.storage.local.set({
+            clockPos: { x: transform.e, y: transform.f, w: rect.width, h: rect.height }
         });
-        
-        await chrome.storage.local.set({ blockedAttempts: attempts });
     }
-    
-    async updateBlockedAttempts() {
-        const result = await chrome.storage.local.get(['todayStats']);
-        let stats = result.todayStats || {
-            tasksCompleted: 0,
-            sessionsCompleted: 0,
-            date: new Date().toDateString(),
-            blockedAttempts: 0
-        };
-        
-        const today = new Date().toDateString();
-        if (stats.date !== today) {
-            stats.blockedAttempts = 0;
-            stats.date = today;
+
+    async _restorePositionAndSize(widget) {
+        const result = await chrome.storage.local.get(['clockPos']);
+        const pos = result.clockPos;
+        if (pos) {
+            const x = Math.max(0, Math.min(window.innerWidth - (pos.w || 280), pos.x));
+            const y = Math.max(0, Math.min(window.innerHeight - (pos.h || 160), pos.y));
+            widget.style.transform = `translate(${x}px, ${y}px)`;
+            widget.style.width = `${pos.w || 280}px`;
+            widget.style.height = `${pos.h || 160}px`;
+            return;
         }
-        
-        stats.blockedAttempts++;
-        await chrome.storage.local.set({ todayStats: stats });
+
+        const defaultX = window.innerWidth - 280 - 20;
+        const defaultY = 20;
+        widget.style.transform = `translate(${defaultX}px, ${defaultY}px)`;
     }
-    
-    async logEmergencyOverride(reason) {
-        const result = await chrome.storage.local.get(['emergencyOverrides']);
-        const overrides = result.emergencyOverrides || [];
-        
-        overrides.push({
-            url: window.location.href,
-            domain: this.getCurrentDomain(),
-            reason: reason,
-            timestamp: new Date().toISOString()
-        });
-        
-        await chrome.storage.local.set({ emergencyOverrides: overrides });
-    }
-    
-    async updateBlockList(blockedSites, whitelist) {
-        this.blockedSites = blockedSites;
-        this.whitelist = whitelist;
-        
-        if (this.isFocusModeActive && this.shouldBlockCurrentSite()) {
-            this.blockCurrentPage();
+
+    showTimeLimitWarning(site, remaining) {
+        const existing = document.getElementById('ts-time-limit-warning');
+        if (existing) existing.remove();
+
+        if (!document.getElementById('ts-warning-style')) {
+            const style = document.createElement('style');
+            style.id = 'ts-warning-style';
+            style.textContent = `
+                @keyframes ts-slide-up { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+                #ts-time-limit-warning { animation: ts-slide-up 0.3s ease; }
+            `;
+            document.head.appendChild(style);
         }
-        
-        this.checkScheduledBlocking();
-        this.checkTimeLimit();
+
+        const div = document.createElement('div');
+        div.id = 'ts-time-limit-warning';
+        div.style.cssText = `
+            position: fixed; bottom: 24px; right: 24px;
+            background: rgba(10,15,30,0.97);
+            color: white; padding: 14px 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(244,63,94,0.3);
+            z-index: 2147483646;
+            font-family: 'Inter', -apple-system, sans-serif;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; font-weight: 500;
+            backdrop-filter: blur(12px);
+        `;
+        div.innerHTML = `<span style="font-size:18px;">⏰</span><span><strong style="color:#f43f5e;">${site}</strong>: ${remaining} min remaining today</span>`;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 5000);
     }
-    
-    // NEW: Play sound method
-    playSound(soundName) {
-        try {
-            const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${soundName}.mp3`));
-            audio.play().catch(error => {
-                console.log('Sound play failed:', error);
-            });
-        } catch (error) {
-            console.log('Sound creation failed:', error);
-        }
+
+    playSound(sound) {
+        const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${sound}.mp3`));
+        audio.play().catch(() => { });
     }
 }
 
-if (typeof window !== 'undefined' && window.location.protocol !== 'chrome-extension:') {
-    new ContentBlocker();
+if (
+    typeof window !== 'undefined' &&
+    !window.location.protocol.startsWith('chrome') &&
+    !window.location.protocol.startsWith('chrome-extension')
+) {
+    if (document.body) {
+        new ContentBlocker();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => new ContentBlocker());
+    }
 }
