@@ -1,12 +1,34 @@
 # 🛡️ TimeShield: The Ultimate Productivity Command Center
 
+![Visitors](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fabishekgh-6%2FTimeShield&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=Visitors&edge_flat=false)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Version](https://img.shields.io/badge/Version-1.0.0-green.svg)](https://github.com/abishekgh-6/TimeShield/releases/tag/v1.0.0)
+[![Latest Release](https://img.shields.io/badge/Release-v1.0.1-green.svg)](https://github.com/abishekgh-6/TimeShield/releases/tag/v1.0.1)
 
-**TimeShield** is a productivity extension for Chrome/Brave that combines high-performance ad blocking with a focused deep-work toolkit. It turns your browser into a dedicated workspace with a floating clock overlay, intelligent site blocking, and detailed usage analytics.
+**TimeShield** is a simple but powerful tool for Chrome, Brave, and other browsers. It helps you stay focused by blocking distracting sites, tracking your screen time, and giving you a floating clock that stays on top of your work.
 
-> 🔽 **Release builds**: Download the latest packaged extension (`TimeShield-*.zip`) from the GitHub **Releases** page and load it into Chrome/Brave via **Load unpacked**.
+---
+
+## 🚀 How to Install
+
+Since this is a custom productivity tool, you install it as a "developer" extension. It's very easy:
+
+### 1. Download the extension
+*   Go to the [**Releases**](https://github.com/abishekgh-6/TimeShield/releases) section of this repository.
+*   Download the latest zip file (e.g., `TimeShield-v1.0.1.zip`).
+*   Extract the zip file into a folder on your computer.
+
+### 2. Add it to your browser
+*   Open your browser and go to the **Extensions** page:
+    *   **Chrome:** `chrome://extensions/`
+    *   **Brave:** `brave://extensions/`
+*   Turn on **Developer Mode** (usually a toggle in the top-right corner).
+*   Click the **Load unpacked** button.
+*   Select the folder where you extracted the extension.
+
+### 3. Start Focused
+*   Click the **Puzzle piece** icon in your toolbar and **Pin** TimeShield.
+*   Click the Shield icon to open the menu and start your first focus session!
 
 ---
 
@@ -20,8 +42,8 @@
 
 ### 🛑 Challenge to turn off the block
 *   **Hard to stop:** If you want to pause your blocks, you have to go through a challenge first.
-*   **Real warnings:** It shows you a few popups to make sure you really want to stop working.
-*   **Type to unlock:** You have to type out two motivational lines exactly right to turn off the block.
+*   **Grace pauses:** You get 2 "free" 5-minute pauses every day without needing a password.
+*   **Type to unlock:** On the 3rd pause (or for long breaks), you must type a motivational line exactly right to unlock the block.
 *   **Pick your time:** Pause for 5 minutes, an hour, or the rest of the day.
 
 ### ⚡ Quick block buttons
@@ -35,68 +57,23 @@
 
 ### 🩹 A better ad blocker
 *   **Smart blocking:** Blocks ads and trackers but keeps the stuff you want to see.
-*   **Keep posts:** It won't hide social media posts, captions, or comments by mistake.
+*   **Keep posts:** It won't hide social media posts or comments by mistake.
 *   **Hide anything:** Use the element picker to right-click and hide anything annoying on a page.
 
 ### 📊 Track your screen time
 *   **See your habits:** Check exactly how much time you spend on each site every day.
-*   **Stats for the week:** Look back at the last 7 or 30 days to see your progress.
 *   **Simple graphs:** Click a site to see a basic bar chart of when you used it.
 *   **Go to stats:** If you try to open a blocked site, you can jump straight to your stats from there.
 
 ### ⏱️ Schedules & Time Limits
 *   **Set daily limits:** Cap how much time you can spend on sites like YouTube or Instagram.
+*   **Edit limits:** Easily change your site limits. Decreasing time is free, but increasing it requires the typing challenge!
 *   **Scheduled blocks:** Automatically block sites during certain hours of the day.
-*   **Shared budget:** Put multiple sites behind one shared time limit.
-*   **Whitelist:** Keep important sites unblocked even when other rules are on.
 
 ---
 
-## 🎨 Themes and Light Mode
-TimeShield includes multiple themes like Dark, Light, and Solar Ember. We fixed the colors so everything is easy to read even in light mode.
-
----
-
-## 🚀 Quick Start Guide
-
-### Installation from Source
-1.  **Clone** this repository to your local machine.
-2.  Open Chrome and go to `chrome://extensions/`.
-3.  Switch on **Developer Mode** (top-right toggle).
-4.  Click **Load unpacked** and select the extension folder.
-5.  **Pin** TimeShield to your toolbar for the best experience!
-
-### Installation from GitHub Releases
-1.  Go to the **Releases** tab of `abishekgh-6/FloatingClockExtension` on GitHub.
-2.  Download the latest `TimeShield-*.zip` file.
-3.  Extract the zip (optional, for inspection) or load it directly via **Load unpacked** pointing at the extracted folder.
-
-### Using Focus Mode
-1.  Open the TimeShield popup.
-2.  Add websites you want to block in the **Settings**.
-3.  Click **"Focus Mode"** and enter your desired duration.
-4.  Start your focus session; distracting sites will be automatically blocked for the duration.
-
----
-
-## 🛠️ Technical Stack & Architecture
-
-TimeShield is built on a modern Chrome extension stack:
-
-*   **Logic:** Modern asynchronous JavaScript with Service Worker (Manifest V3).
-*   **Blocking Engine:** `declarativeNetRequest` for native-speed ad and site filtering.
-*   **Storage:** `chrome.storage.local` for high-speed state persistence and consistency across reboots.
-*   **UI/UX:** Vanilla CSS with a focus on Glassmorphism, CSS Variables for theming, and smooth transitions.
-
-```text
-FloatingClockExtension/
-├── background/          # Persistent Background Service Worker
-├── content/             # DOM-injected Blocker & UI Widgets
-├── floating/            # The Floating Clock & Focus Screens
-├── popup/               # The Primary Control Panel
-├── options/             # Advanced Analytics & Personalization
-└── rules/               # Static DNR Filtering Sets
-```
+## 🎨 Themes
+TimeShield includes Dark, Light, and Solar Ember themes. We've optimized the colors so everything is easy to read no matter which mode you use.
 
 ---
 
@@ -110,16 +87,12 @@ Below are reference screenshots for the main views in TimeShield.
 
 ![Options – General](assets/screenshots/options-general.png)
 
-_File: assets/screenshots/options-general.png_
-
 </details>
 
 <details>
 <summary><strong>Clock Settings</strong> – View image</summary>
 
 ![Options – Clock](assets/screenshots/options-clock.png)
-
-_File: assets/screenshots/options-clock.png_
 
 </details>
 
@@ -128,16 +101,12 @@ _File: assets/screenshots/options-clock.png_
 
 ![Options – Focus Mode](assets/screenshots/options-focus.png)
 
-_File: assets/screenshots/options-focus.png_
-
 </details>
 
 <details>
 <summary><strong>Schedules & Time Limits</strong> – View image</summary>
 
 ![Options – Schedules & Limits](assets/screenshots/optins-schedules-limits.png)
-
-_File: assets/screenshots/optins-schedules-limits.png_
 
 </details>
 
@@ -146,34 +115,12 @@ _File: assets/screenshots/optins-schedules-limits.png_
 
 ![Options – Ad Blocker](assets/screenshots/options-adblock.png)
 
-_File: assets/screenshots/options-adblock.png_
-
 </details>
 
 <details>
 <summary><strong>Screen Time Overview</strong> – View image</summary>
 
 ![Options – Screen Time](assets/screenshots/options-screentime.png)
-
-_File: assets/screenshots/options-screentime.png_
-
-</details>
-
-<details>
-<summary><strong>Tasks</strong> – View image</summary>
-
-![Options – Tasks](assets/screenshots/options-tasks.png)
-
-_File: assets/screenshots/options-tasks.png_
-
-</details>
-
-<details>
-<summary><strong>Data Management</strong> – View image</summary>
-
-![Options – Data](assets/screenshots/options-data.png)
-
-_File: assets/screenshots/options-data.png_
 
 </details>
 
@@ -186,16 +133,12 @@ _File: assets/screenshots/options-data.png_
 
 ![Popup – Control Center](assets/screenshots/control-panel.png)
 
-_File: assets/screenshots/control-panel.png_
-
 </details>
 
 <details>
 <summary><strong>Floating Clock Overlay</strong> – View image</summary>
 
 ![Floating Clock Overlay](assets/screenshots/floating-clock.png)
-
-_File: assets/screenshots/floating-clock.png_
 
 </details>
 
@@ -208,8 +151,6 @@ _File: assets/screenshots/floating-clock.png_
 
 ![Focus Block Screen](assets/screenshots/focus-block.png)
 
-_File: assets/screenshots/focus-block.png_
-
 </details>
 
 <details>
@@ -217,41 +158,19 @@ _File: assets/screenshots/focus-block.png_
 
 ![Time Limit Screen](assets/screenshots/limit-block.png)
 
-_File: assets/screenshots/limit-block.png_
-
-</details>
-
-<details>
-<summary><strong>Timer / Focus Complete</strong> – View image</summary>
-
-![Timer / Focus Complete](assets/screenshots/timer-complete.png)
-
-_File: assets/screenshots/timer-complete.png_
-
 </details>
 
 ---
 
-## 🎨 Themes
-
-TimeShield includes multiple visual themes (Dark, Light and Solar Ember) so you can match the clock and options UI to your style.
-
-- Open the **Options** page and go to the **General / Appearance** section.
-- Use the **Theme** dropdown to switch between themes.
-- The floating clock, popup, and options page update instantly to reflect your chosen theme.
+## 📈 Privacy
+**Everything stays on your computer.** TimeShield does not track you, and your browsing data never leaves your machine. Your stats and settings are stored locally in your browser.
 
 ---
-
-## 📈 Privacy First
-TimeShield is private by design. **None of your browsing data, site usage, or task lists ever leave your computer.** All analytics are processed locally and stored within your Chrome profile's isolated storage.
-
----
-
-
 
 ## 📄 License
-Distributed under the Apache License 2.0. See `LICENSE` for full terms.
+This project is under the **Apache License 2.0**. Feel free to use it and make it your own!
 
 ---
 
-**Designed and engineered for sustained, distraction-free deep work.**
+**Built to help you get more done, one focus session at a time.**
+
