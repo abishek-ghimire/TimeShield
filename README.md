@@ -1,6 +1,6 @@
 # 🛡️ TimeShield: The Ultimate Productivity Command Center
 
-![Visitors](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fabishekgh-6%2FTimeShield&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=Visitors&edge_flat=false)
+[![Hits](https://hits.dwyl.com/abishekgh-6/TimeShield.svg?style=flat-square)](https://hits.dwyl.com/abishekgh-6/TimeShield)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Latest Release](https://img.shields.io/badge/Release-v1.0.1-green.svg)](https://github.com/abishekgh-6/TimeShield/releases/tag/v1.0.1)
@@ -139,6 +139,13 @@ Below are reference screenshots for the main views in TimeShield.
 <summary><strong>Floating Clock Overlay</strong> – View image</summary>
 
 ![Floating Clock Overlay](assets/screenshots/floating-clock.png)
+
+</details>
+
+<details>
+<summary><strong>3D Flip Clock (New!)</strong> – View image</summary>
+
+![3D Flip Clock](assets/screenshots/flip-clock.png)
 
 </details>
 
