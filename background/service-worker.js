@@ -244,6 +244,28 @@ class BackgroundService {
         } else {
             this.adBlockEnabled = false;
         }
+
+        // Restore grace pause state
+        const graceResult = await chrome.storage.local.get(['gracePauses']);
+        this.gracePauses = graceResult.gracePauses || { count: 0, lastResetDate: new Date().toDateString() };
+        await this.checkGracePauseReset();
+    }
+
+    async checkGracePauseReset() {
+        const today = new Date().toDateString();
+        if (this.gracePauses.lastResetDate !== today) {
+            this.gracePauses = {
+                count: 0,
+                lastResetDate: today
+            };
+            await chrome.storage.local.set({ gracePauses: this.gracePauses });
+        }
+    }
+
+    async incrementGracePause() {
+        await this.checkGracePauseReset();
+        this.gracePauses.count++;
+        await chrome.storage.local.set({ gracePauses: this.gracePauses });
     }
 
     setupMessageHandlers() {
@@ -410,6 +432,14 @@ class BackgroundService {
                     bandwidthSaved: this.formatBytes(this.bandwidthSaved),
                     timeSaved: this.formatTime(this.timeSaved)
                 });
+                break;
+            case 'getGracePauseStatus':
+                await this.checkGracePauseReset();
+                sendResponse(this.gracePauses);
+                break;
+            case 'incrementGracePause':
+                await this.incrementGracePause();
+                sendResponse({ success: true });
                 break;
             case 'trackEvent':
                 // Analytics disabled
@@ -878,6 +908,10 @@ class BackgroundService {
                 'reddit.com',
                 'netflix.com'
             ],
+            gracePauses: {
+                count: 0,
+                lastResetDate: new Date().toDateString()
+            },
             todos: [],
             todayStats: {
                 focusTime: 0,
