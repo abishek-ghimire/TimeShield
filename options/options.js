@@ -16,8 +16,8 @@ class OptionsManager {
 
     async loadData() {
         const result = await chrome.storage.local.get([
-            'settings', 'blockedSites', 'whitelist',
-            'scheduledBlocking', 'timeLimits', 'filterLists', 'customFilters', 'globalLimit'
+            'settings', 'focusBlockedSites', 'whitelist',
+            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit'
         ]);
 
         this.settings = result.settings || this.getDefaultSettings();
@@ -476,8 +476,15 @@ class OptionsManager {
             limitItem.innerHTML = `
                 <span class="site-url">${limit.site}</span>
                 <span class="site-url">${limit.minutes} minutes/day</span>
-                <button class="remove-site" data-site="${limit.site}" data-type="timelimit">Remove</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="edit-site btn-secondary" data-site="${limit.site}" style="padding: 4px 8px; font-size: 11px;">Edit</button>
+                    <button class="remove-site" data-site="${limit.site}" data-type="timelimit">Remove</button>
+                </div>
             `;
+
+            limitItem.querySelector('.edit-site').addEventListener('click', (e) => {
+                this.editTimeLimit(e.target.dataset.site);
+            });
 
             limitItem.querySelector('.remove-site').addEventListener('click', (e) => {
                 this.removeTimeLimit(e.target.dataset.site);
@@ -578,22 +585,22 @@ class OptionsManager {
     async removeSite(site, type) {
         if (type === 'focus') {
             const allowed = await this.runProtectionSequence(`Remove ${site} from Focus blocklist`);
-            if (!allowed) {
-                return;
-            }
+            if (!allowed) return;
             this.focusBlockedSites = this.focusBlockedSites.filter(s => s !== site);
         } else if (type === 'scheduled') {
             const allowed = await this.runProtectionSequence(`Remove ${site} from Scheduled blocking`);
-            if (!allowed) {
-                return;
-            }
+            if (!allowed) return;
             this.scheduledBlockedSites = this.scheduledBlockedSites.filter(s => s !== site);
         } else {
             this.whitelist = this.whitelist.filter(s => s !== site);
         }
 
-        await this.saveSiteLists();
-        this.updateSiteLists();
+        // Parallel update and refresh
+        await Promise.all([
+            this.saveSiteLists(),
+            this.updateSiteLists()
+        ]);
+
         this.showNotification('Protection relaxed for this site.', 'warning');
     }
 
@@ -873,12 +880,49 @@ class OptionsManager {
 
             this.saveTimeLimits();
             this.populateTimeLimits();
-
             document.getElementById('limitSite').value = '';
             document.getElementById('limitMinutes').value = '';
 
             this.showNotification('Time limit added successfully', 'success');
         }
+    }
+
+    async editTimeLimit(site) {
+        const limit = this.timeLimits.find(l => l.site === site);
+        if (!limit) return;
+
+        const newMinsStr = prompt(`Change daily limit for ${site} (currently ${limit.minutes} mins):`, limit.minutes);
+        if (newMinsStr === null) return;
+
+        const newMins = parseInt(newMinsStr);
+        if (isNaN(newMins) || newMins <= 0) {
+            this.showNotification('Please enter a valid number of minutes.', 'error');
+            return;
+        }
+
+        if (newMins === limit.minutes) return;
+
+        if (newMins < limit.minutes) {
+            // Decreasing is good!
+            this.showNotification('Awesome! Reducing your distractible time. Keep it up!', 'success');
+        } else {
+            // Increasing requires protection
+            const allowed = await this.runProtectionSequence(`Increase time limit for ${site} to ${newMins} mins`);
+            if (!allowed) return;
+
+            // MANDATORY EXTRA CHALLENGE for increasing limits as requested
+            const challenge = "I will respect my boundaries and focus on my work.";
+            const typed = prompt(`FINAL CONFIRMATION: To increase the limit to ${newMins} minutes, type this exactly:\n\n"${challenge}"`, "");
+            if (typed !== challenge) {
+                this.showNotification('Limit increase cancelled. Challenge failed.', 'error');
+                return;
+            }
+        }
+
+        limit.minutes = newMins;
+        await this.saveTimeLimits();
+        this.populateTimeLimits();
+        this.showNotification(`Limit updated for ${site}.`, 'success');
     }
 
     async removeTimeLimit(site) {
@@ -1009,10 +1053,12 @@ class OptionsManager {
         notification.textContent = message;
 
         if (type === 'error') {
-            notification.style.background = '#dc3545';
+            notification.style.background = '#e11d48'; // Rose 600
         } else if (type === 'warning') {
-            notification.style.background = '#f59e0b';
+            notification.style.background = '#f59e0b'; // Amber 500
             notification.style.color = '#111827';
+        } else if (type === 'success') {
+            notification.style.background = '#10b981'; // Emerald 500
         }
 
         document.body.appendChild(notification);

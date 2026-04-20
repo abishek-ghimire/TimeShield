@@ -15,9 +15,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let selectedDurationMs = 0;
 
+    // 0. Grace Pause Check
+    const graceStatus = await chrome.runtime.sendMessage({ action: 'getGracePauseStatus' });
+    const graceCount = graceStatus?.count || 0;
+
     // 1. Show Auth or Skip
     const needPass = settings.challengePasswordEnabled && settings.challengePasswordValue;
     const needText = settings.challengeTextEnabled && settings.challengeTextValue;
+
+    authView.dataset.initialRequired = (needPass || needText) ? 'true' : 'false';
 
     if (!needPass && !needText) {
         // Skip directly to duration
@@ -84,6 +90,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 selectedDurationMs = parseInt(dur) * 60000;
             }
 
+            // Determine if we need motivation challenge
+            const isFiveMin = dur === '5';
+            const isGrace = isFiveMin && graceCount < 2;
+
+            if (isGrace) {
+                // Skip motivation view for grace pauses
+                chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: selectedDurationMs });
+                chrome.runtime.sendMessage({ action: 'incrementGracePause' });
+                window.close();
+                return;
+            }
+
             // Show warnings as requested
             alert("Warning: Pausing protection will let distractions in. Productivity will decrease.");
             alert("Remember: Time is your most valuable asset. Once spent, you can never get it back.");
@@ -106,6 +124,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mInput2 = cleanText(document.getElementById('motivationInput2').value);
 
             if (mInput1 === mText1 && mInput2 === mText2) {
+                if (parseInt(selectedDurationMs) === 5 * 60000) {
+                    await chrome.runtime.sendMessage({ action: 'incrementGracePause' });
+                }
                 await chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: selectedDurationMs });
                 window.close();
             } else {
