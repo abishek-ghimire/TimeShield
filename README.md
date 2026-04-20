@@ -124,6 +124,20 @@ Below are reference screenshots for the main views in TimeShield.
 
 </details>
 
+<details>
+<summary><strong>Tasks</strong> – View image</summary>
+
+![Options – Tasks](assets/screenshots/options-tasks.png)
+
+</details>
+
+<details>
+<summary><strong>Data Management</strong> – View image</summary>
+
+![Options – Data](assets/screenshots/options-data.png)
+
+</details>
+
 ---
 
 ### Popup & Floating Clock
