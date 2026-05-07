@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeShield - Sleep Time</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --accent: #6366f1;
+            --slate-50: #f8fafc;
+            --slate-400: #94a3b8;
+            --slate-900: #0f172a;
+            --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--slate-50);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow-x: hidden;
+        }
+
+        /* Premium Glass Container */
+        .glass-container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 60px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 100px;
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(to bottom right, #fff 30%, var(--slate-400));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1.5px;
+        }
+
+        .message {
+            font-size: 1.25rem;
+            color: var(--slate-400);
+            margin-bottom: 40px;
+            line-height: 1.5;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .sleep-icon {
+            font-size: 4rem;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .quote-box {
+            margin-top: 60px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: var(--slate-400);
+            position: relative;
+            padding: 0 40px;
+        }
+
+        .footer-note {
+            font-size: 0.9rem;
+            color: var(--slate-400);
+            margin-top: 30px;
+            opacity: 0.7;
+        }
+
+        .time-display {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-top: 20px;
+            font-weight: 600;
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 640px) {
+            .glass-container {
+                padding: 40px 20px;
+                border-radius: 0;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .sleep-icon {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="glass-container">
+        <div class="brand-badge">😴 TimeShield Sleep Mode</div>
+        <div class="sleep-icon">🌙</div>
+        <h1>Time to Sleep</h1>
+        <p class="message" id="sleepMessage">All websites are blocked during sleep time. It's important to get proper rest for better health and productivity tomorrow.</p>
+
+        <div class="time-display" id="currentTime"></div>
+
+        <div class="quote-box" id="sleepQuote">
+            "Sleep is the golden chain that ties health and our bodies together." — Thomas Dekker
+        </div>
+
+        <p class="footer-note">This blocking will end when your sleep time is over. Sweet dreams!</p>
+    </div>
+
+    <script>
+        class SleepBlockPage {
+            constructor() {
+                this.quotes = [
+                    "Sleep is the golden chain that ties health and our bodies together. — Thomas Dekker",
+                    "Sleep is the best meditation. — Dalai Lama",
+                    "A good laugh and a long sleep are the two best cures for anything. — Irish Proverb",
+                    "Sleep is that golden chain that ties health and our bodies together. — Thomas Dekker",
+                    "The bridge between despair and hope is a good night's sleep. — E. Joseph Cossman",
+                    "Sleep is the cousin of death. — Homer",
+                    "Your future depends on your dreams, so go to sleep. — Mesut Barzani",
+                    "A day without a nap is like a day without sunshine. — Unknown",
+                    "Sleep is an investment in the energy you need to be effective tomorrow. — Tom Roth",
+                    "The best bridge between despair and hope is a good night's sleep. — E. Joseph Cossman",
+                    "Sleep makes you more attractive, healthier, and sharper. — Matthew Walker",
+                    "Dreams are the touchstones of our characters. — Henry David Thoreau",
+                    "Sleep is the sovereign cure for the weariness of the soul. — Sir Walter Scott",
+                    "A well-spent day brings happy sleep. — Leonardo da Vinci",
+                    "Sleep is the interest we have to pay on the capital which is called in at death. — Arthur Schopenhauer",
+                    "The time just before sleep is the most creative time of all. — Joyce Brothers",
+                    "Sleep is the most important thing you can do for your brain and body. — Matthew Walker",
+                    "Good sleep is the cornerstone of good health. — Unknown",
+                    "Sleep is the best meditation for a peaceful mind. — Unknown",
+                    "Early to bed and early to rise makes a man healthy, wealthy, and wise. — Benjamin Franklin"
+                ];
+                this.sleepMessages = [
+                    "All websites are blocked during sleep time. It's important to get proper rest for better health and productivity tomorrow.",
+                    "Sleep time is protected! Your body and mind need rest to perform at their best tomorrow.",
+                    "The internet can wait. Your sleep cannot. Time to recharge for a better tomorrow.",
+                    "All distractions are blocked. Focus on getting the quality sleep you deserve.",
+                    "Sleep mode activated! This is your time to rest, recover, and prepare for tomorrow's challenges."
+                ];
+                this.init();
+            }
+
+            async init() {
+                this.updateTime();
+                this.startQuoteRotation();
+                this.startMessageRotation();
+                setInterval(() => this.updateTime(), 1000);
+            }
+
+            updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const timeElement = document.getElementById('currentTime');
+                if (timeElement) {
+                    timeElement.textContent = `Current Time: ${timeString}`;
+                }
+            }
+
+            startQuoteRotation() {
+                const el = document.getElementById('sleepQuote');
+                // Initial jump to a random quote
+                el.textContent = `"${this.quotes[Math.floor(Math.random() * this.quotes.length)]}"`;
+
+                setInterval(() => {
+                    el.style.opacity = 0;
+                    setTimeout(() => {
+                        el.textContent = `"${this.quotes[Math.floor(Math.random() * this.quotes.length)]}"`;
+                        el.style.opacity = 0.6;
+                    }, 500);
+                }, 20000);
+            }
+
+            startMessageRotation() {
+                const el = document.getElementById('sleepMessage');
+                // Initial jump to a random message
+                el.textContent = this.sleepMessages[Math.floor(Math.random() * this.sleepMessages.length)];
+
+                setInterval(() => {
+                    el.style.opacity = 0;
+                    setTimeout(() => {
+                        el.textContent = this.sleepMessages[Math.floor(Math.random() * this.sleepMessages.length)];
+                        el.style.opacity = 1;
+                    }, 500);
+                }, 25000);
+            }
+        }
+
+        new SleepBlockPage();
+    </script>
+</body>
+
+</html>

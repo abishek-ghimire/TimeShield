@@ -255,7 +255,17 @@ class ContentBlocker {
             this._applyScale();
         });
 
-        iframe.addEventListener('load', () => this._applyScale());
+        iframe.addEventListener('load', () => {
+            try {
+                this._applyScale();
+            } catch (error) {
+                if (error.name === 'SecurityError') {
+                    console.log('TimeShield: Cross-origin iframe access blocked on load (expected behavior)');
+                    return;
+                }
+                console.warn('TimeShield: Error in iframe load:', error);
+            }
+        });
     }
 
     _setupControls(widget, iframe, grip) {
@@ -382,19 +392,28 @@ class ContentBlocker {
         const { widget, iframe } = this.refs;
         if (!widget || !iframe) return;
 
-        const innerDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (!innerDoc) return;
+        try {
+            const innerDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!innerDoc) return;
 
-        const rect = widget.getBoundingClientRect();
-        const BASE_WIDTH = fullscreen ? window.innerWidth : 280;
-        const BASE_HEIGHT = fullscreen ? window.innerHeight : 160;
-        const scale = Math.max(0.65, Math.min(rect.width / BASE_WIDTH, rect.height / BASE_HEIGHT));
+            const rect = widget.getBoundingClientRect();
+            const BASE_WIDTH = fullscreen ? window.innerWidth : 280;
+            const BASE_HEIGHT = fullscreen ? window.innerHeight : 160;
+            const scale = Math.max(0.65, Math.min(rect.width / BASE_WIDTH, rect.height / BASE_HEIGHT));
 
-        const clockFace = innerDoc.querySelector('.clock-face');
-        if (clockFace) clockFace.style.setProperty('--ts-scale', scale.toString());
+            const clockFace = innerDoc.querySelector('.clock-face');
+            if (clockFace) clockFace.style.setProperty('--ts-scale', scale.toString());
 
-        const flipClock = innerDoc.querySelector('.flip-clock');
-        if (flipClock) flipClock.style.setProperty('--ts-scale', fullscreen ? '1.35' : scale.toString());
+            const flipClock = innerDoc.querySelector('.flip-clock');
+            if (flipClock) flipClock.style.setProperty('--ts-scale', fullscreen ? '1.35' : scale.toString());
+        } catch (error) {
+            // Ignore cross-origin security errors when accessing iframe content
+            if (error.name === 'SecurityError') {
+                console.log('TimeShield: Cross-origin iframe access blocked (expected behavior)');
+                return;
+            }
+            console.warn('TimeShield: Error accessing iframe content:', error);
+        }
     }
 
     async _restoreVisibility(widget) {
