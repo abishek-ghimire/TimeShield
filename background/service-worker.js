@@ -701,7 +701,7 @@ async checkScheduledBlocking() {
         for (const tab of tabs) {
             if (!tab.url || tab.url.includes(blockPage) || tab.url.startsWith('chrome-extension://')) continue;
             
-            // Redirect all tabs to sleep block page
+            // Redirect all tabs to block page with original URL
             chrome.tabs.update(tab.id, {
                 url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
             }).catch(() => { });

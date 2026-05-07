@@ -176,11 +176,11 @@ class UsageTracker {
                         (pauseResult.pauseBlockingUntil === -1 || pauseResult.pauseBlockingUntil > Date.now());
 
         if (shouldBlock && !isPaused) {
-            // Time's up! Redirect the active tab.
+            // Time's up! Redirect to active tab.
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs && tabs[0] && !tabs[0].url.includes('limit-block.html')) {
                     chrome.tabs.update(tabs[0].id, {
-                        url: chrome.runtime.getURL('floating/limit-block.html?site=' + encodeURIComponent(domain))
+                        url: chrome.runtime.getURL('floating/limit-block.html?site=' + encodeURIComponent(domain) + '&orig=' + encodeURIComponent(tabs[0].url))
                     });
                 }
             });
