@@ -209,7 +209,31 @@
                 this.updateTime();
                 this.startQuoteRotation();
                 this.startMessageRotation();
+                this.addGoBackButton();
                 setInterval(() => this.updateTime(), 1000);
+            }
+
+            addGoBackButton() {
+                const params = new URLSearchParams(window.location.search);
+                const originalUrl = params.get('orig');
+                
+                if (originalUrl) {
+                    const goBackBtn = document.createElement('a');
+                    goBackBtn.href = '#';
+                    goBackBtn.className = 'action';
+                    goBackBtn.textContent = '← Go Back to Previous Page';
+                    goBackBtn.style.marginTop = '20px';
+                    goBackBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        window.location.href = decodeURIComponent(originalUrl);
+                    });
+                    
+                    // Add to the container
+                    const container = document.querySelector('.glass-container');
+                    if (container) {
+                        container.appendChild(goBackBtn);
+                    }
+                }
             }
 
             updateTime() {
