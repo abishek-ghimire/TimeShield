@@ -550,21 +550,25 @@ class BackgroundService {
             await chrome.storage.local.set({ pauseBlockingUntil: expire });
             chrome.alarms.create('pauseExpires', { when: expire });
         }
-        // Remove active blocking rules immediately
-        await this.disableSiteBlockingRange(101, 300);
+        // Remove ALL active blocking rules immediately (focus: 101-200, scheduled: 201-300, sleep: 301-400, time limits: 401-500)
+        await this.disableSiteBlockingRange(101, 500);
         chrome.action.setBadgeText({ text: '' });
-        // Redirect tabs back that are currently on a block page
+        // Redirect tabs back from ALL block pages
         await this.redirectTabsBack('floating/focus-block.html');
         await this.redirectTabsBack('floating/schedule-block.html');
+        await this.redirectTabsBack('floating/sleep-block.html');
+        await this.redirectTabsBack('floating/limit-block.html');
     }
 
     async resumeBlocking() {
         await chrome.storage.local.remove('pauseBlockingUntil');
         chrome.alarms.clear('pauseExpires');
 
-        // Re-evaluate what should be active
+        // Re-evaluate ALL blocking features
         await this.checkScheduledBlocking();
         await this.checkSleepBlocking();
+        await this.checkTimeLimits(); // Re-evaluate time limits
+        await this.checkGlobalLimits(); // Re-evaluate global limits
 
         // Re-evaluate focus mode
         const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
@@ -605,7 +609,7 @@ class BackgroundService {
         }
     }
 
-    async checkScheduledBlocking() {
+async checkScheduledBlocking() {
         const paused = await this.isPaused();
         if (paused) {
             await this.disableScheduledBlocking();
@@ -702,6 +706,28 @@ class BackgroundService {
                 url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
             }).catch(() => { });
         }
+    }
+
+    async checkTimeLimits() {
+        // Time limits are handled by UsageTracker class
+        // This method ensures time limit checking continues when not paused
+        const paused = await this.isPaused();
+        if (paused) {
+            // If paused, redirect any tabs on limit block pages back
+            await this.redirectTabsBack('floating/limit-block.html');
+        }
+        // UsageTracker will handle the actual time limit checking
+    }
+
+    async checkGlobalLimits() {
+        // Global limits are handled by UsageTracker class
+        // This method ensures global limit checking continues when not paused
+        const paused = await this.isPaused();
+        if (paused) {
+            // If paused, redirect any tabs on limit block pages back
+            await this.redirectTabsBack('floating/limit-block.html');
+        }
+        // UsageTracker will handle the actual global limit checking
     }
 
     async redirectTabsOnBlock(sites, blockPage) {
