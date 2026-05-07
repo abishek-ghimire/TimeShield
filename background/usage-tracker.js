@@ -170,7 +170,12 @@ class UsageTracker {
             }
         }
 
-        if (shouldBlock) {
+        // Check if blocking is paused
+        const pauseResult = await chrome.storage.local.get(['pauseBlockingUntil']);
+        const isPaused = pauseResult.pauseBlockingUntil && 
+                        (pauseResult.pauseBlockingUntil === -1 || pauseResult.pauseBlockingUntil > Date.now());
+
+        if (shouldBlock && !isPaused) {
             // Time's up! Redirect the active tab.
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs && tabs[0] && !tabs[0].url.includes('limit-block.html')) {
