@@ -17,7 +17,7 @@ class OptionsManager {
     async loadData() {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites', 'whitelist',
-            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit'
+            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking'
         ]);
 
         this.settings = result.settings || this.getDefaultSettings();
@@ -31,6 +31,7 @@ class OptionsManager {
         this.customFilters = result.customFilters || [];
         this.globalLimit = result.globalLimit || { enabled: false, minutes: 60, domains: [] };
         this.adBlockStats = result.adBlockStats || { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
+        this.sleepBlocking = result.sleepBlocking || this.getDefaultSleepBlocking();
     }
 
     setupEventListeners() {
@@ -236,6 +237,21 @@ class OptionsManager {
             document.getElementById(day).addEventListener('change', () => this.saveScheduledBlocking());
         });
 
+        // Sleep blocking
+        document.getElementById('sleepBlocking').addEventListener('change', (e) => {
+            this.toggleSleepBlocking(e.target.value);
+        });
+
+        document.getElementById('sleepStartTime').addEventListener('change', () => this.saveSleepBlocking());
+        document.getElementById('sleepEndTime').addEventListener('change', () => this.saveSleepBlocking());
+
+        // Sleep blocking day checkboxes
+        ['sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday', 'sleepSunday'].forEach(day => {
+            document.getElementById(day).addEventListener('change', () => this.saveSleepBlocking());
+        });
+
+        document.getElementById('sleepBlockAll').addEventListener('change', () => this.saveSleepBlocking());
+
         // Time limits
         document.getElementById('timeLimits').addEventListener('change', (e) => {
             this.toggleTimeLimits(e.target.value);
@@ -290,6 +306,7 @@ class OptionsManager {
 
         this.updateSiteLists();
         this.populateScheduledBlocking();
+        this.populateSleepBlocking();
         this.populateTimeLimits();
         this.populateGlobalLimit(); // NEW
         this.populateAdBlockSettings(); // NEW
@@ -454,6 +471,33 @@ class OptionsManager {
         days.forEach(day => {
             document.getElementById(day).checked = this.scheduledBlocking.days && this.scheduledBlocking.days.includes(parseInt(day === 'sunday' ? 0 : day === 'monday' ? 1 : day === 'tuesday' ? 2 : day === 'wednesday' ? 3 : day === 'thursday' ? 4 : day === 'friday' ? 5 : 6));
         });
+    }
+
+    populateSleepBlocking() {
+        const sleepBlockingSelect = document.getElementById('sleepBlocking');
+        const sleepSettings = document.getElementById('sleepBlockingSettings');
+
+        if (this.sleepBlocking.enabled) {
+            sleepBlockingSelect.value = 'enabled';
+            sleepSettings.style.display = 'block';
+        } else {
+            sleepBlockingSelect.value = 'disabled';
+            sleepSettings.style.display = 'none';
+        }
+
+        // Populate time inputs
+        document.getElementById('sleepStartTime').value = this.sleepBlocking.startTime || '22:00';
+        document.getElementById('sleepEndTime').value = this.sleepBlocking.endTime || '06:00';
+
+        // Populate day checkboxes
+        const days = ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday'];
+        days.forEach(day => {
+            const dayValue = parseInt(day.replace('sleep', '').replace('sunday', '0').replace('monday', '1').replace('tuesday', '2').replace('wednesday', '3').replace('thursday', '4').replace('friday', '5').replace('saturday', '6'));
+            document.getElementById(day).checked = this.sleepBlocking.days && this.sleepBlocking.days.includes(dayValue);
+        });
+
+        // Populate block all checkbox
+        document.getElementById('sleepBlockAll').checked = this.sleepBlocking.blockAll !== false; // Default to true
     }
 
     populateTimeLimits() {
@@ -825,6 +869,16 @@ class OptionsManager {
         };
     }
 
+    getDefaultSleepBlocking() {
+        return {
+            enabled: false,
+            startTime: '22:00', // 10 PM
+            endTime: '06:00', // 6 AM
+            days: [0, 1, 2, 3, 4, 5, 6], // All days
+            blockAll: true // Block all websites by default
+        };
+    }
+
     async toggleScheduledBlocking(value) {
         const wantsEnable = value === 'enabled';
         if (!wantsEnable) {
@@ -859,6 +913,48 @@ class OptionsManager {
         this.timeLimitsEnabled = wantsEnable;
         chrome.storage.local.set({ timeLimitsEnabled: this.timeLimitsEnabled });
         this.populateTimeLimits();
+    }
+
+    async toggleSleepBlocking(value) {
+        const wantsEnable = value === 'enabled';
+        if (!wantsEnable) {
+            const allowed = await this.runProtectionSequence('Disable Sleep Time Blocking');
+            if (!allowed) {
+                document.getElementById('sleepBlocking').value = 'enabled';
+                return;
+            }
+            this.showNotification('Sleep blocking disabled. Remember to maintain healthy sleep habits.', 'warning');
+        } else {
+            this.showNotification('Sleep blocking enabled — sweet dreams and better rest!', 'success');
+        }
+
+        this.sleepBlocking.enabled = wantsEnable;
+        this.saveSleepBlocking();
+        this.populateSleepBlocking();
+        
+        // Trigger immediate check in background
+        chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
+    }
+
+    async saveSleepBlocking() {
+        this.sleepBlocking.startTime = document.getElementById('sleepStartTime').value;
+        this.sleepBlocking.endTime = document.getElementById('sleepEndTime').value;
+        this.sleepBlocking.blockAll = document.getElementById('sleepBlockAll').checked;
+
+        // Get selected days
+        const days = [];
+        ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday'].forEach(day => {
+            if (document.getElementById(day).checked) {
+                const dayValue = parseInt(day.replace('sleep', '').replace('sunday', '0').replace('monday', '1').replace('tuesday', '2').replace('wednesday', '3').replace('thursday', '4').replace('friday', '5').replace('saturday', '6'));
+                days.push(dayValue);
+            }
+        });
+        this.sleepBlocking.days = days;
+
+        await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking });
+        
+        // Trigger immediate check in background
+        chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
     }
 
     addTimeLimit() {

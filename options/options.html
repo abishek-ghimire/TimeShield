@@ -1616,6 +1616,69 @@
                     </div>
                 </div>
 
+                <h3 style="margin-top: 30px;">😴 Sleep Time Blocking</h3>
+                <p class="hint">Block ALL websites during your sleep hours to ensure proper rest and prevent late-night browsing.</p>
+                <div class="form-group">
+                    <label for="sleepBlocking">Enable Sleep Time Blocking</label>
+                    <select id="sleepBlocking">
+                        <option value="disabled">Disabled</option>
+                        <option value="enabled">Enabled</option>
+                    </select>
+                </div>
+
+                <div id="sleepBlockingSettings" style="display: none;">
+                    <div class="form-group">
+                        <label for="sleepStartTime">Bedtime Start</label>
+                        <input type="time" id="sleepStartTime" value="22:00">
+                        <small class="hint">When sleep blocking should begin</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sleepEndTime">Wake Time End</label>
+                        <input type="time" id="sleepEndTime" value="06:00">
+                        <small class="hint">When sleep blocking should end</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sleepBlockingDays">Sleep Blocking Days</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepMonday" value="1">
+                                Monday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepTuesday" value="2">
+                                Tuesday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepWednesday" value="3">
+                                Wednesday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepThursday" value="4">
+                                Thursday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepFriday" value="5">
+                                Friday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepSaturday" value="6">
+                                Saturday
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="sleepSunday" value="0">
+                                Sunday
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group" style="margin-top: 20px;">
+                        <input type="checkbox" id="sleepBlockAll" checked>
+                        <label for="sleepBlockAll">Block ALL websites (including work and productive sites)</label>
+                    </div>
+                </div>
+
                 <h3 style="margin-top: 30px;">Time Limits</h3>
                 <div class="form-group">
                     <label for="timeLimits">Enable Daily Time Limits</label>

@@ -21,6 +21,12 @@ class BackgroundService {
             focusBlockedSites: []
         };
 
+        this.sleepBlockingState = {
+            isActive: false,
+            startTime: null,
+            endTime: null
+        };
+
         this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
 
         // NEW: Ad blocker state
@@ -44,6 +50,7 @@ class BackgroundService {
         await this.restoreState();
         await this.initializeAdBlocking();
         await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
+        await this.checkSleepBlocking(); // Ensure sleep blocking is enforced on startup
         // Auto-start floating clock on browser launch if enabled in settings
         try {
             const settings = await this.getSettings();
@@ -249,6 +256,12 @@ class BackgroundService {
         const graceResult = await chrome.storage.local.get(['gracePauses']);
         this.gracePauses = graceResult.gracePauses || { count: 0, lastResetDate: new Date().toDateString() };
         await this.checkGracePauseReset();
+
+        // Restore sleep blocking state
+        const sleepResult = await chrome.storage.local.get(['sleepBlockingState']);
+        if (sleepResult.sleepBlockingState) {
+            this.sleepBlockingState = sleepResult.sleepBlockingState;
+        }
     }
 
     async checkGracePauseReset() {
@@ -289,8 +302,11 @@ class BackgroundService {
 
         // Check and apply scheduled blocking every minute
         chrome.alarms.create('scheduledBlockingCheck', { periodInMinutes: 1 });
+        // Check and apply sleep blocking every minute
+        chrome.alarms.create('sleepBlockingCheck', { periodInMinutes: 1 });
         // Also check immediately on startup
         this.checkScheduledBlocking();
+        this.checkSleepBlocking();
     }
 
     async handleAlarm(alarm) {
@@ -314,6 +330,10 @@ class BackgroundService {
 
             case 'scheduledBlockingCheck':
                 await this.checkScheduledBlocking();
+                break;
+
+            case 'sleepBlockingCheck':
+                await this.checkSleepBlocking();
                 break;
 
             default:
@@ -496,7 +516,15 @@ class BackgroundService {
             case 'settingsUpdated':
                 await this.initializeAdBlocking();
                 await this.checkScheduledBlocking();
+                await this.checkSleepBlocking();
                 sendResponse({ success: true });
+                break;
+            case 'checkSleepBlocking':
+                await this.checkSleepBlocking();
+                sendResponse({ active: await this.isSleepBlockingActive() });
+                break;
+            case 'getSleepBlockingState':
+                sendResponse({ state: this.sleepBlockingState });
                 break;
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
@@ -536,6 +564,7 @@ class BackgroundService {
 
         // Re-evaluate what should be active
         await this.checkScheduledBlocking();
+        await this.checkSleepBlocking();
 
         // Re-evaluate focus mode
         const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
@@ -603,6 +632,76 @@ class BackgroundService {
         await this.disableSiteBlockingRange(201, 300);
         await this.redirectTabsBack('floating/schedule-block.html');
         chrome.action.setBadgeText({ text: '' });
+    }
+
+    async isSleepBlockingActive() {
+        const result = await chrome.storage.local.get(['sleepBlocking']);
+        const sleepConfig = result.sleepBlocking;
+
+        if (!sleepConfig || !sleepConfig.enabled) return false;
+
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const startTime = this.timeToMinutes(sleepConfig.startTime || '22:00');
+        const endTime = this.timeToMinutes(sleepConfig.endTime || '06:00');
+
+        if (startTime <= endTime) {
+            // Normal schedule: e.g. 22:00 - 06:00 (same day)
+            return currentTime >= startTime && currentTime <= endTime;
+        } else {
+            // Overnight schedule: e.g. 22:00 - 06:00 (next day)
+            return currentTime >= startTime || currentTime <= endTime;
+        }
+    }
+
+    async checkSleepBlocking() {
+        const paused = await this.isPaused();
+        if (paused) {
+            await this.disableSleepBlocking();
+            return;
+        }
+
+        const isActive = await this.isSleepBlockingActive();
+        if (isActive) {
+            await this.enableSleepBlocking();
+        } else {
+            await this.disableSleepBlocking();
+        }
+    }
+
+    async enableSleepBlocking() {
+        // Block ALL websites during sleep time
+        const allSitesPattern = ['*']; // This will block all domains
+        await this.enableSiteBlocking(allSitesPattern, 301, 'sleep');
+        await this.redirectAllTabs('floating/sleep-block.html');
+        chrome.action.setBadgeText({ text: '😴' });
+        chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' });
+        
+        this.sleepBlockingState.isActive = true;
+        this.sleepBlockingState.startTime = Date.now();
+        await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
+    }
+
+    async disableSleepBlocking() {
+        await this.disableSiteBlockingRange(301, 400);
+        await this.redirectTabsBack('floating/sleep-block.html');
+        chrome.action.setBadgeText({ text: '' });
+        
+        this.sleepBlockingState.isActive = false;
+        await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
+    }
+
+    async redirectAllTabs(blockPage) {
+        const extensionUrl = chrome.runtime.getURL(blockPage);
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs) {
+            if (!tab.url || tab.url.includes(blockPage) || tab.url.startsWith('chrome-extension://')) continue;
+            
+            // Redirect all tabs to sleep block page
+            chrome.tabs.update(tab.id, {
+                url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
+            }).catch(() => { });
+        }
     }
 
     async redirectTabsOnBlock(sites, blockPage) {
@@ -785,11 +884,31 @@ class BackgroundService {
     }
 
     async enableSiteBlocking(blockedSites, startId = 1, type = 'focus') {
-        const blockPage = type === 'schedule' ? 'floating/schedule-block.html' : 'floating/focus-block.html';
+        const blockPage = type === 'schedule' ? 'floating/schedule-block.html' : 
+                        type === 'sleep' ? 'floating/sleep-block.html' : 'floating/focus-block.html';
         const extensionUrl = chrome.runtime.getURL(blockPage);
 
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
         await this.disableSiteBlockingRange(startId, startId + 99);
+
+        // Special handling for sleep blocking - block all sites
+        if (type === 'sleep' && blockedSites.includes('*')) {
+            const rules = [{
+                id: startId,
+                priority: 3, // Highest priority for sleep blocking
+                action: {
+                    type: 'redirect',
+                    redirect: { url: extensionUrl }
+                },
+                condition: {
+                    urlFilter: '*',
+                    resourceTypes: ['main_frame'],
+                    excludedInitiatorDomains: [chrome.runtime.id] // Don't redirect extension pages
+                }
+            }];
+            await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
+            return;
+        }
 
         // Alias handling: if x.com is added, also block twitter.com and vice versa
         const expandedSites = [...blockedSites];

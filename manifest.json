@@ -70,6 +70,7 @@
         "floating/schedule-block.html",
         "floating/limit-block.html",
         "floating/limit-block.js",
+        "floating/sleep-block.html",
         "floating/timer-complete.html",
         "floating/focus-complete.html",
         "floating/limit-block.html",

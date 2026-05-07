@@ -34,41 +34,101 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 
 ## ✨ Features
 
-### 🕐 Two types of clocks
-*   **Always on top:** A simple clock you can drag around that stays on top of other websites.
-*   **3D Flip Clock:** A cool retro clock that opens in its own tab with nice animations.
-*   **Resize it:** You can makes the clock small like a pill or big like a box.
-*   **Hide it:** Minimize the clock into the title bar when you need more space.
+### 🕐 Floating Clock System
+*   **Always-on-top Clock:** A draggable clock widget that stays on top of all websites
+*   **3D Flip Clock:** Beautiful retro flip clock with smooth animations in fullscreen mode
+*   **Fully Customizable:** Resize from small pill to large box, minimize to title bar
+*   **Smart Positioning:** Remembers your preferred position and size across sessions
+*   **Multiple Views:** Standard digital clock and immersive flip clock modes
+*   **Theme Integration:** Matches your selected theme (Dark, Light, Solar Ember)
 
-### 🛑 Challenge to turn off the block
-*   **Hard to stop:** If you want to pause your blocks, you have to go through a challenge first.
-*   **Grace pauses:** You get 2 "free" 5-minute pauses every day without needing a password.
-*   **Type to unlock:** On the 3rd pause (or for long breaks), you must type a motivational line exactly right to unlock the block.
-*   **Pick your time:** Pause for 5 minutes, an hour, or the rest of the day.
+### 🛑 Advanced Blocking System
+*   **Challenge-based Unblocking:** Type motivational quotes to disable blocks (prevents easy bypass)
+*   **Grace Pauses:** 2 free 5-minute pauses daily, then challenges required
+*   **Flexible Pause Options:** 5 minutes, 1 hour, or rest of day
+*   **Visual Indicators:** Badge shows current blocking status (🎯 focus, 🚫 scheduled, 😴 sleep)
+*   **Priority System:** Sleep blocking overrides all other blocking types
 
-### ⚡ Quick block buttons
-*   **Block sites fast:** Add the site you're on to your blocklist right from the popup.
-*   **Toggle ads:** Quickly turn the ad blocker on or off from the main menu.
+### 🎯 Focus Mode
+*   **Deep Work Sessions:** Block all distracting sites during focus periods
+*   **Smart Redirects:** Blocked sites redirect to motivational focus screens
+*   **Live Countdown:** Real-time timer display on block screens
+*   **Session Management:** Start, pause, and extend focus sessions
+*   **Motivational Content:** Rotating quotes and productivity tips
 
-### 🎯 Focus sessions
-*   **Pure focus:** Block all distracting sites while you work.
-*   **Redirects:** If you try to visit a blocked site, it sends you to a focus screen instead.
-*   **Live timers:** See exactly how much time you have left on the block screen and the clock.
+### 😴 Sleep Time Blocking (NEW!)
+*   **Complete Site Blocking:** Blocks ALL websites during sleep hours
+*   **Flexible Scheduling:** Set custom bedtime and wake time
+*   **Day Selection:** Choose which days sleep blocking applies to
+*   **Overnight Support:** Handles time ranges that span midnight (e.g., 10 PM - 6 AM)
+*   **Sleep-themed Interface:** Calming block page with sleep-related motivational quotes
+*   **Automatic Enforcement:** Checks every minute and activates/deactivates seamlessly
 
-### 🩹 A better ad blocker
-*   **Smart blocking:** Blocks ads and trackers but keeps the stuff you want to see.
-*   **Keep posts:** It won't hide social media posts or comments by mistake.
-*   **Hide anything:** Use the element picker to right-click and hide anything annoying on a page.
+### ⏰ Scheduled Blocking
+*   **Time-based Rules:** Automatically block sites during work hours
+*   **Day-specific Settings:** Different schedules for weekdays vs weekends
+*   **Site-specific Lists:** Choose which sites to block during scheduled times
+*   **Smart Time Handling:** Handles normal and overnight time ranges
 
-### 📊 Track your screen time
-*   **See your habits:** Check exactly how much time you spend on each site every day.
-*   **Simple graphs:** Click a site to see a basic bar chart of when you used it.
-*   **Go to stats:** If you try to open a blocked site, you can jump straight to your stats from there.
+### ⏱️ Daily Time Limits
+*   **Per-site Limits:** Set daily time caps for specific websites
+*   **Real-time Tracking:** Shows remaining time on limit screens
+*   **Challenge Protection:** Increasing limits requires motivational typing challenge
+*   **Visual Warnings:** Countdown displays when approaching time limits
+*   **Automatic Blocking:** Sites redirect when daily limit is reached
 
-### ⏱️ Schedules & Time Limits
-*   **Set daily limits:** Cap how much time you can spend on sites like YouTube or Instagram.
-*   **Edit limits:** Easily change your site limits. Decreasing time is free, but increasing it requires the typing challenge!
-*   **Scheduled blocks:** Automatically block sites during certain hours of the day.
+### 🌍 Global Shared Limits
+*   **Combined Time Tracking:** Single time limit across multiple distracting sites
+*   **Smart Grouping:** YouTube, Instagram, TikTok, etc. share one time budget
+*   **Flexible Configuration:** Choose which sites count toward global limit
+*   **Unified Blocking:** All sites in group blocked when limit is reached
+
+### 🩹 Advanced Ad Blocker
+*   **Smart Filtering:** Blocks ads and trackers while preserving functionality
+*   **Content-safe:** Won't hide important content like social media posts
+*   **Element Picker:** Right-click to hide any annoying page element
+*   **Custom Filters:** Add your own filter rules
+*   **Performance Stats:** Track ads blocked and bandwidth saved
+*   **Whitelist Support:** Allow ads on trusted sites
+
+### 📊 Screen Time Analytics
+*   **Detailed Tracking:** Monitor time spent on each website daily
+*   **Visual Graphs:** Bar charts showing usage patterns throughout the day
+*   **Site Categorization:** Automatic categorization of websites
+*   **Trend Analysis:** See how your digital habits change over time
+*   **Quick Access:** Jump to stats directly from block screens
+
+### ⚡ Quick Actions & Controls
+*   **One-click Blocking:** Add current site to blocklist from popup
+*   **Ad Blocker Toggle:** Quick enable/disable from main menu
+*   **Focus Mode Start:** Instantly begin focus sessions
+*   **Clock Controls:** Show/hide, resize, and switch clock modes
+*   **Settings Access:** Quick links to all configuration options
+
+### ✅ Task Management
+*   **Todo List:** Built-in task manager for productivity goals
+*   **Daily Tasks:** Create and track daily objectives
+*   **Focus Integration:** Tasks visible during focus sessions
+*   **Progress Tracking:** Mark tasks complete and monitor progress
+
+### 🎨 Themes & Customization
+*   **Multiple Themes:** Dark Mode, Light Mode, Solar Ember
+*   **Responsive Design:** Optimized for all screen sizes
+*   **Animation Speed:** Control transition and animation timing
+*   **Clock Customization:** Choose time format (12h/24h) and size
+*   **Personalization:** Extensive customization options for all features
+
+### 🔒 Privacy & Security
+*   **100% Local Storage:** All data stays on your device
+*   **No Tracking:** No analytics or data collection
+*   **Secure Blocking:** Challenge system prevents easy bypass
+*   **Encrypted Settings:** Local storage encryption for sensitive data
+
+### 📱 Cross-platform Support
+*   **Chrome Extension:** Full support for Chrome and Chromium browsers
+*   **Brave Compatible:** Optimized for Brave browser
+*   **Edge Support:** Works with Microsoft Edge
+*   **Manifest V3:** Latest extension standards for security and performance
 
 ---
 
@@ -178,6 +238,13 @@ Below are reference screenshots for the main views in TimeShield.
 <summary><strong>Time Limit Screen</strong> – View image</summary>
 
 ![Time Limit Screen](assets/screenshots/limit-block.png)
+
+</details>
+
+<details>
+<summary><strong>Sleep Blocking Screen (NEW!)</strong> – View image</summary>
+
+![Sleep Blocking Screen](assets/screenshots/sleep-block.png)
 
 </details>
 
