@@ -46,6 +46,8 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 *   **Challenge-based Unblocking:** Type motivational quotes to disable blocks (prevents easy bypass)
 *   **Grace Pauses:** 2 free 5-minute pauses daily, then challenges required
 *   **Flexible Pause Options:** 5 minutes, 1 hour, or rest of day
+*   **Universal Pause Access:** Pause protection button available on all blocking screens
+*   **Verification System:** Multi-step verification with password and typing challenges
 *   **Visual Indicators:** Badge shows current blocking status (🎯 focus, 🚫 scheduled, 😴 sleep)
 *   **Priority System:** Sleep blocking overrides all other blocking types
 

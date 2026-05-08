@@ -136,6 +136,32 @@
             font-weight: 600;
         }
 
+        /* Pause Block Button */
+        .pause-block-btn {
+            position: fixed;
+            left: 50%;
+            top: 20px;
+            transform: translateX(-50%);
+            background: rgba(244, 63, 94, 0.9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pause-block-btn:hover {
+            background: rgba(244, 63, 94, 1);
+            transform: translateX(-50%) translateY(-2px);
+        }
+
         /* Mobile Optimization */
         @media (max-width: 640px) {
             .glass-container {
@@ -169,6 +195,11 @@
 
         <p class="footer-note">This blocking will end when your sleep time is over. Sweet dreams!</p>
     </div>
+
+    <!-- Pause Block Button -->
+    <button class="pause-block-btn" id="pauseBlockBtn">
+        ⏸️ Pause Protection
+    </button>
 
     <script>
         class SleepBlockPage {
@@ -210,6 +241,7 @@
                 this.startQuoteRotation();
                 this.startMessageRotation();
                 this.addGoBackButton();
+                this.addPauseBlockButton();
                 setInterval(() => this.updateTime(), 1000);
             }
 
@@ -233,6 +265,16 @@
                     if (container) {
                         container.appendChild(goBackBtn);
                     }
+                }
+            }
+
+            addPauseBlockButton() {
+                const pauseBtn = document.getElementById('pauseBlockBtn');
+                if (pauseBtn) {
+                    pauseBtn.addEventListener('click', () => {
+                        // Open pause overlay
+                        window.open(chrome.runtime.getURL('floating/pause-overlay.html'), '_blank', 'width=600,height=700,scrollbars=no,resizable=no');
+                    });
                 }
             }
 
