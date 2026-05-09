@@ -550,16 +550,16 @@ class BackgroundService {
                 }
                 break;
             case 'pauseBlockingWithPassword':
-                // Get user settings to verify password
+                // Get user settings to verify text challenge
                 const pauseSettingsResult = await chrome.storage.local.get(['settings']);
                 const pauseSettings = pauseSettingsResult.settings || {};
-                const userPassword = pauseSettings.pausePassword || '';
+                const userChallengeText = pauseSettings.challengeTextValue || '';
                 
-                if (message.password === userPassword) {
+                if (message.password === userChallengeText) {
                     await this.pauseBlocking(message.durationMs);
                     sendResponse({ success: true });
                 } else {
-                    sendResponse({ success: false, error: 'Incorrect password' });
+                    sendResponse({ success: false, error: 'Incorrect text' });
                 }
                 break;
             case 'resumeBlocking':
