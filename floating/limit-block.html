@@ -81,6 +81,83 @@
             background: rgba(244, 63, 94, 1);
             transform: translateX(-50%) translateY(-2px);
         }
+
+        /* Pause Duration Section */
+        .pause-duration-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            margin: 30px auto;
+            max-width: 500px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .pause-duration-section h3 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #f43f5e;
+        }
+
+        .pause-message {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .duration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .duration-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .duration-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #f43f5e;
+            transform: translateY(-2px);
+        }
+
+        .cancel-pause-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-pause-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #f8fafc;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -91,24 +168,27 @@
     <!-- href is set dynamically via chrome.runtime.getURL to avoid invalid placeholder URLs -->
     <a href="#" class="action" id="optionsLink">Review Screen Time</a>
 
+    <!-- Pause Duration Selection (Hidden by default) -->
+    <div id="pauseDurationSection" class="pause-duration-section" style="display: none;">
+        <h3>⏸️ Select Pause Duration</h3>
+        <p class="pause-message">How long would you like to pause blocking?</p>
+        <div class="duration-grid">
+            <button class="duration-btn" data-minutes="5">5 minutes</button>
+            <button class="duration-btn" data-minutes="15">15 minutes</button>
+            <button class="duration-btn" data-minutes="30">30 minutes</button>
+            <button class="duration-btn" data-minutes="60">1 hour</button>
+            <button class="duration-btn" data-minutes="eod">Rest of Day</button>
+            <button class="duration-btn" data-minutes="-1">Until I Turn Off</button>
+        </div>
+        <button class="cancel-pause-btn" id="cancelPauseBtn">Cancel</button>
+    </div>
+
     <!-- Pause Block Button -->
     <button class="pause-block-btn" id="pauseBlockBtn">
-        ⏸️ Pause Protection
+        ⏸️ Pause Blocks
     </button>
 
-    <script>
-        // Add pause block functionality
-        document.addEventListener('DOMContentLoaded', () => {
-            const pauseBtn = document.getElementById('pauseBlockBtn');
-            if (pauseBtn) {
-                pauseBtn.addEventListener('click', () => {
-                    // Open pause overlay
-                    window.open(chrome.runtime.getURL('floating/pause-overlay.html'), '_blank', 'width=600,height=700,scrollbars=no,resizable=no');
-                });
-            }
-        });
-    </script>
-    <script src="limit-block.js"></script>
+        <script src="limit-block.js"></script>
 </body>
 
 </html>
