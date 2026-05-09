@@ -1432,6 +1432,14 @@
                     <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
                 </div>
 
+                <h3 style="margin-top: 30px;">⏸️ Pause Protection</h3>
+                <p class="hint">Configure password requirements for pausing blocking. Free 5-minute pauses are limited to 2 per day.</p>
+                <div class="form-group">
+                    <label for="pausePasswordValue">Password for extended pauses</label>
+                    <input type="password" id="pausePasswordValue" placeholder="Enter password for extended pauses">
+                    <small class="hint">This password is required for pauses longer than 5 minutes or after using 2 free 5-minute pauses.</small>
+                </div>
+
                 <h3 style="margin-top: 30px;">Focus Mode Blocklist</h3>
                 <p class="hint">Sites listed here will be blocked only during an active Focus Session.</p>
                 <div class="site-list" id="focusSitesList">
@@ -1676,6 +1684,17 @@
                     <div class="checkbox-group" style="margin-top: 20px;">
                         <input type="checkbox" id="sleepBlockAll" checked>
                         <label for="sleepBlockAll">Block ALL websites (including work and productive sites)</label>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label>📚 Productive Sites Whitelist</label>
+                        <p class="hint">Add sites that should remain accessible during sleep time for studying and work productivity.</p>
+                        <div class="site-list" id="sleepWhitelistList">
+                        </div>
+                        <div class="add-site-form">
+                            <input type="text" id="sleepWhitelistSite" placeholder="Site domain (e.g., wikipedia.org, github.com)">
+                            <button class="btn btn-primary" id="addSleepWhitelist">Add to Whitelist</button>
+                        </div>
                     </div>
                 </div>
 
