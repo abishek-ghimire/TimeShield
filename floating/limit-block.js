@@ -72,23 +72,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.close();
                     }, 2000);
                 } else if (response.requiresPassword) {
-                    // Show password challenge
+                    // Show text challenge
                     pauseSection.innerHTML = `
-                        <h3>🔒 Password Required</h3>
-                        <p class="pause-message">You've used your free short pauses today or requested a longer pause. Please enter your password to continue.</p>
+                        <h3>✍️ Text Challenge Required</h3>
+                        <p class="pause-message">You've used your free short pauses today or requested a longer pause. Please type the challenge text to continue.</p>
                         <p class="pause-message" style="color: #f43f5e;">Remaining free 5-min pauses today: ${response.remainingShortPauses}</p>
                         <div style="margin-top: 20px;">
-                            <input type="password" id="pausePassword" placeholder="Enter password" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 200px; margin-right: 10px;">
-                            <button class="duration-btn" id="submitPassword">Submit</button>
-                            <button class="cancel-pause-btn" id="cancelPassword">Cancel</button>
+                            <input type="text" id="pauseChallenge" placeholder="Type the challenge text" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 300px; margin-right: 10px;">
+                            <button class="duration-btn" id="submitChallenge">Submit</button>
+                            <button class="cancel-pause-btn" id="cancelChallenge">Cancel</button>
                         </div>
                     `;
                     
-                    // Add event listeners for password form
-                    document.getElementById('submitPassword').addEventListener('click', () => {
-                        const password = document.getElementById('pausePassword').value;
-                        if (password) {
-                            chrome.runtime.sendMessage({ action: 'pauseBlockingWithPassword', durationMs: durationMs, password: password }, (response) => {
+                    // Add event listeners for text challenge form
+                    document.getElementById('submitChallenge').addEventListener('click', () => {
+                        const challenge = document.getElementById('pauseChallenge').value;
+                        if (challenge) {
+                            chrome.runtime.sendMessage({ action: 'pauseBlockingWithPassword', durationMs: durationMs, password: challenge }, (response) => {
                                 if (response.success) {
                                     pauseSection.innerHTML = `
                                         <h3>✅ Blocking Paused</h3>
@@ -96,14 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     `;
                                     setTimeout(() => window.close(), 2000);
                                 } else {
-                                    pauseSection.querySelector('.pause-message').textContent = 'Incorrect password. Please try again.';
-                                    document.getElementById('pausePassword').value = '';
+                                    pauseSection.querySelector('.pause-message').textContent = 'Incorrect text. Please try again.';
+                                    document.getElementById('pauseChallenge').value = '';
                                 }
                             });
                         }
                     });
                     
-                    document.getElementById('cancelPassword').addEventListener('click', () => {
+                    document.getElementById('cancelChallenge').addEventListener('click', () => {
                         pauseSection.style.display = 'none';
                         pauseBtn.style.display = 'flex';
                     });
