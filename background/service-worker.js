@@ -27,6 +27,12 @@ class BackgroundService {
             endTime: null
         };
 
+        // Track short pause usage (5 min, max 2 per day)
+        this.shortPauseUsage = {
+            count: 0,
+            lastResetDate: new Date().toDateString()
+        };
+
         this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
 
         // NEW: Ad blocker state
@@ -262,6 +268,30 @@ class BackgroundService {
         if (sleepResult.sleepBlockingState) {
             this.sleepBlockingState = sleepResult.sleepBlockingState;
         }
+
+        // Restore short pause usage
+        const shortPauseResult = await chrome.storage.local.get(['shortPauseUsage']);
+        if (shortPauseResult.shortPauseUsage) {
+            this.shortPauseUsage = shortPauseResult.shortPauseUsage;
+        }
+        await this.checkShortPauseReset();
+    }
+
+    async checkShortPauseReset() {
+        const today = new Date().toDateString();
+        if (this.shortPauseUsage.lastResetDate !== today) {
+            this.shortPauseUsage = {
+                count: 0,
+                lastResetDate: today
+            };
+            await chrome.storage.local.set({ shortPauseUsage: this.shortPauseUsage });
+        }
+    }
+
+    async incrementShortPause() {
+        await this.checkShortPauseReset();
+        this.shortPauseUsage.count++;
+        await chrome.storage.local.set({ shortPauseUsage: this.shortPauseUsage });
     }
 
     async checkGracePauseReset() {
@@ -506,8 +536,31 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             case 'pauseBlocking':
-                await this.pauseBlocking(message.durationMs);
-                sendResponse({ success: true });
+                console.log('🔍 Pause request received:', { durationMs: message.durationMs, currentCount: this.shortPauseUsage.count });
+                const isShortPause = message.durationMs === 300000; // 5 minutes = 300000ms
+                const requiresPassword = !isShortPause || this.shortPauseUsage.count >= 2;
+                console.log('🔍 Pause logic:', { isShortPause, requiresPassword, durationCheck: message.durationMs === 300000 });
+                
+                if (!requiresPassword) {
+                    await this.incrementShortPause();
+                    await this.pauseBlocking(message.durationMs);
+                    sendResponse({ success: true, requiresPassword: false });
+                } else {
+                    sendResponse({ success: false, requiresPassword: true, remainingShortPauses: Math.max(0, 2 - this.shortPauseUsage.count) });
+                }
+                break;
+            case 'pauseBlockingWithPassword':
+                // Get user settings to verify password
+                const pauseSettingsResult = await chrome.storage.local.get(['settings']);
+                const pauseSettings = pauseSettingsResult.settings || {};
+                const userPassword = pauseSettings.pausePassword || '';
+                
+                if (message.password === userPassword) {
+                    await this.pauseBlocking(message.durationMs);
+                    sendResponse({ success: true });
+                } else {
+                    sendResponse({ success: false, error: 'Incorrect password' });
+                }
                 break;
             case 'resumeBlocking':
                 await this.resumeBlocking();
@@ -674,10 +727,15 @@ async checkScheduledBlocking() {
     }
 
     async enableSleepBlocking() {
-        // Block ALL websites during sleep time
+        // Get sleep blocking settings including whitelist
+        const result = await chrome.storage.local.get(['sleepBlocking']);
+        const sleepConfig = result.sleepBlocking || {};
+        const whitelist = sleepConfig.whitelist || [];
+        
+        // Block ALL websites during sleep time, but exclude whitelisted sites
         const allSitesPattern = ['*']; // This will block all domains
-        await this.enableSiteBlocking(allSitesPattern, 301, 'sleep');
-        await this.redirectAllTabs('floating/sleep-block.html');
+        await this.enableSiteBlocking(allSitesPattern, 301, 'sleep', whitelist);
+        await this.redirectAllTabs('floating/sleep-block.html', whitelist);
         chrome.action.setBadgeText({ text: '😴' });
         chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' });
         
@@ -695,16 +753,28 @@ async checkScheduledBlocking() {
         await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
     }
 
-    async redirectAllTabs(blockPage) {
+    async redirectAllTabs(blockPage, whitelist = []) {
         const extensionUrl = chrome.runtime.getURL(blockPage);
+        const normalizedWhitelist = whitelist.map(site => {
+            return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+        }).filter(domain => domain);
+        
         const tabs = await chrome.tabs.query({});
         for (const tab of tabs) {
             if (!tab.url || tab.url.includes(blockPage) || tab.url.startsWith('chrome-extension://')) continue;
             
-            // Redirect all tabs to block page with original URL
-            chrome.tabs.update(tab.id, {
-                url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
-            }).catch(() => { });
+            // Check if current tab is whitelisted
+            const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+            const isWhitelisted = normalizedWhitelist.some(whitelistedDomain => 
+                tabDomain === whitelistedDomain || tabDomain.endsWith('.' + whitelistedDomain)
+            );
+            
+            // Only redirect non-whitelisted tabs
+            if (!isWhitelisted) {
+                chrome.tabs.update(tab.id, {
+                    url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
+                }).catch(() => { });
+            }
         }
     }
 
@@ -909,7 +979,7 @@ async checkScheduledBlocking() {
         }
     }
 
-    async enableSiteBlocking(blockedSites, startId = 1, type = 'focus') {
+    async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = []) {
         const blockPage = type === 'schedule' ? 'floating/schedule-block.html' : 
                         type === 'sleep' ? 'floating/sleep-block.html' : 'floating/focus-block.html';
         const extensionUrl = chrome.runtime.getURL(blockPage);
@@ -917,8 +987,13 @@ async checkScheduledBlocking() {
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
         await this.disableSiteBlockingRange(startId, startId + 99);
 
-        // Special handling for sleep blocking - block all sites
+        // Special handling for sleep blocking - block all sites except whitelist
         if (type === 'sleep' && blockedSites.includes('*')) {
+            // Normalize whitelist domains
+            const normalizedWhitelist = whitelist.map(site => {
+                return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+            }).filter(domain => domain);
+
             const rules = [{
                 id: startId,
                 priority: 3, // Highest priority for sleep blocking
@@ -929,7 +1004,7 @@ async checkScheduledBlocking() {
                 condition: {
                     urlFilter: '*',
                     resourceTypes: ['main_frame'],
-                    excludedInitiatorDomains: [chrome.runtime.id] // Don't redirect extension pages
+                    excludedInitiatorDomains: [chrome.runtime.id, ...normalizedWhitelist] // Exclude extension pages and whitelisted sites
                 }
             }];
             await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });

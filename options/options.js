@@ -252,6 +252,9 @@ class OptionsManager {
 
         document.getElementById('sleepBlockAll').addEventListener('change', () => this.saveSleepBlocking());
 
+        // Sleep whitelist
+        document.getElementById('addSleepWhitelist').addEventListener('click', () => this.addSleepWhitelist());
+
         // Time limits
         document.getElementById('timeLimits').addEventListener('change', (e) => {
             this.toggleTimeLimits(e.target.value);
@@ -498,6 +501,9 @@ class OptionsManager {
 
         // Populate block all checkbox
         document.getElementById('sleepBlockAll').checked = this.sleepBlocking.blockAll !== false; // Default to true
+
+        // Populate whitelist
+        this.populateSleepWhitelist();
     }
 
     populateTimeLimits() {
@@ -874,27 +880,19 @@ class OptionsManager {
             enabled: false,
             startTime: '22:00', // 10 PM
             endTime: '06:00', // 6 AM
-            days: [0, 1, 2, 3, 4, 5, 6], // All days
-            blockAll: true // Block all websites by default
+            days: [1, 2, 3, 4, 5], // Monday to Friday
+            blockAll: true, // Block all sites by default
+            whitelist: [] // Whitelist for productive sites during sleep time
         };
     }
 
-    async toggleScheduledBlocking(value) {
-        const wantsEnable = value === 'enabled';
-        if (!wantsEnable) {
-            const allowed = await this.runProtectionSequence('Disable Scheduled Blocking');
-            if (!allowed) {
-                document.getElementById('scheduledBlocking').value = 'enabled';
-                return;
-            }
-            this.showNotification('Scheduled blocking disabled. Consider re-enabling after your break.', 'warning');
-        } else {
-            this.showNotification('Scheduled blocking enabled — your deep-work hours are protected.', 'success');
+    async resetSettings() {
+        if (confirm('Are you sure you want to reset all settings to defaults?')) {
+            await chrome.storage.local.remove(['settings']);
+            this.settings = this.getDefaultSettings();
+            this.populateForm();
+            this.showNotification('Settings reset to defaults', 'success');
         }
-
-        this.scheduledBlocking.enabled = wantsEnable;
-        this.saveScheduledBlocking();
-        this.populateScheduledBlocking();
     }
 
     async toggleTimeLimits(value) {
@@ -955,6 +953,58 @@ class OptionsManager {
         
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
+    }
+
+    addSleepWhitelist() {
+        const site = document.getElementById('sleepWhitelistSite').value.trim();
+        
+        if (site) {
+            // Normalize the domain
+            const normalizedSite = site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+            
+            if (!this.sleepBlocking.whitelist) {
+                this.sleepBlocking.whitelist = [];
+            }
+            
+            // Check if already exists
+            if (!this.sleepBlocking.whitelist.includes(normalizedSite)) {
+                this.sleepBlocking.whitelist.push(normalizedSite);
+                this.saveSleepBlocking();
+                this.populateSleepWhitelist();
+                document.getElementById('sleepWhitelistSite').value = '';
+                this.showNotification(`${normalizedSite} added to sleep whitelist`, 'success');
+            } else {
+                this.showNotification(`${normalizedSite} is already in the whitelist`, 'warning');
+            }
+        }
+    }
+
+    removeSleepWhitelist(site) {
+        if (confirm(`Remove ${site} from sleep whitelist?`)) {
+            this.sleepBlocking.whitelist = this.sleepBlocking.whitelist.filter(s => s !== site);
+            this.saveSleepBlocking();
+            this.populateSleepWhitelist();
+            this.showNotification(`${site} removed from sleep whitelist`, 'success');
+        }
+    }
+
+    populateSleepWhitelist() {
+        const whitelistList = document.getElementById('sleepWhitelistList');
+        whitelistList.innerHTML = '';
+        
+        if (this.sleepBlocking.whitelist && this.sleepBlocking.whitelist.length > 0) {
+            this.sleepBlocking.whitelist.forEach(site => {
+                const siteItem = document.createElement('div');
+                siteItem.className = 'site-item';
+                siteItem.innerHTML = `
+                    <span class="site-name">${site}</span>
+                    <button class="btn-remove" onclick="optionsManager.removeSleepWhitelist('${site}')">×</button>
+                `;
+                whitelistList.appendChild(siteItem);
+            });
+        } else {
+            whitelistList.innerHTML = '<p class="no-sites">No whitelisted sites. Add productive sites above.</p>';
+        }
     }
 
     addTimeLimit() {
