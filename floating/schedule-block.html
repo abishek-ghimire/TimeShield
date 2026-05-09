@@ -244,6 +244,71 @@
             background: rgba(244, 63, 94, 1);
             transform: translateX(-50%) translateY(-2px);
         }
+
+        /* Pause Duration Section */
+        .pause-duration-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            margin-top: 30px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .pause-duration-section h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #f43f5e;
+        }
+
+        .pause-message {
+            font-size: 1rem;
+            color: var(--slate-400);
+            margin-bottom: 20px;
+        }
+
+        .duration-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .duration-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--slate-50);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .duration-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #f43f5e;
+            transform: translateY(-2px);
+        }
+
+        .cancel-pause-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--slate-400);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-pause-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--slate-50);
+        }
     </style>
 </head>
 
@@ -258,109 +323,30 @@
             "Discipline is the bridge between goals and accomplishment." — Jim Rohn
         </div>
 
+        <!-- Pause Duration Selection (Hidden by default) -->
+        <div id="pauseDurationSection" class="pause-duration-section" style="display: none;">
+            <h3>⏸️ Select Pause Duration</h3>
+            <p class="pause-message">How long would you like to pause blocking?</p>
+            <div class="duration-grid">
+                <button class="duration-btn" data-minutes="5">5 minutes</button>
+                <button class="duration-btn" data-minutes="15">15 minutes</button>
+                <button class="duration-btn" data-minutes="30">30 minutes</button>
+                <button class="duration-btn" data-minutes="60">1 hour</button>
+                <button class="duration-btn" data-minutes="eod">Rest of Day</button>
+                <button class="duration-btn" data-minutes="-1">Until I Turn Off</button>
+            </div>
+            <button class="cancel-pause-btn" id="cancelPauseBtn">Cancel</button>
+        </div>
+
         <p class="footer-note">This site will become available automatically once the schedule ends.</p>
     </div>
 
     <!-- Pause Block Button -->
     <button class="pause-block-btn" id="pauseBlockBtn">
-        ⏸️ Pause Protection
+        ⏸️ Pause Blocks
     </button>
 
-    <script>
-        class ScheduleBlockPage {
-            constructor() {
-                this.quotes = [
-                    "Your focus determines your reality. — Qui-Gon Jinn",
-                    "The successful warrior is the average man, with laser-like focus. — Bruce Lee",
-                    "Deep work is the superpower of the 21st century. — Cal Newport",
-                    "Focus is more important than intelligence. — Unknown",
-                    "What you focus on expands. — Tony Robbins",
-                    "Focus on being productive instead of busy. — Tim Ferriss",
-                    "Discipline is the bridge between goals and accomplishment. — Jim Rohn",
-                    "Starve your distractions, feed your focus. — Unknown",
-                    "It is during our darkest moments that we must focus to see the light. — Aristotle",
-                    "Success is the product of daily habits—not once-in-a-lifetime transformations. — James Clear",
-                    "Concentrate all your thoughts upon the work at hand. The sun's rays do not burn until brought to a focus. — Alexander Graham Bell",
-                    "The key to success is to focus on goals, not obstacles. — Unknown",
-                    "Focus is a matter of deciding what things you're not going to do. — John Carmack",
-                    "Lack of direction, not lack of time, is the problem. We all have twenty-four hour days. — Zig Ziglar",
-                    "Successful people have focus. They don't get sidetracked by what's not important. — Unknown",
-                    "Your life is controlled by what you focus on. — Tony Robbins",
-                    "The secret of change is to focus all of your energy, not on fighting the old, but on building the new. — Socrates",
-                    "Don't decrease the goal. Increase the effort. — Unknown",
-                    "Focus like a laser, not a flashlight. — Unknown",
-                    "Simplicity is the ultimate sophistication, and focus is the key to simplicity. — Unknown",
-                    "Where focus goes, energy flows. — Tony Robbins",
-                    "Great things are done by a series of small things brought together. — Vincent Van Gogh"
-                ];
-                this.init();
-            }
-
-            async init() {
-                this.startQuoteRotation();
-                this.addGoBackButton();
-                this.addPauseBlockButton();
-                await this.incrementBlocked();
-            }
-
-            addGoBackButton() {
-                const params = new URLSearchParams(window.location.search);
-                const originalUrl = params.get('orig');
-                
-                if (originalUrl) {
-                    const goBackBtn = document.createElement('a');
-                    goBackBtn.href = '#';
-                    goBackBtn.className = 'action';
-                    goBackBtn.textContent = '← Go Back to Previous Page';
-                    goBackBtn.style.marginTop = '20px';
-                    goBackBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        window.location.href = decodeURIComponent(originalUrl);
-                    });
-                    
-                    // Add to the container
-                    const container = document.querySelector('.glass-container');
-                    if (container) {
-                        container.appendChild(goBackBtn);
-                    }
-                }
-            }
-
-            addPauseBlockButton() {
-                const pauseBtn = document.getElementById('pauseBlockBtn');
-                if (pauseBtn) {
-                    pauseBtn.addEventListener('click', () => {
-                        // Open pause overlay
-                        window.open(chrome.runtime.getURL('floating/pause-overlay.html'), '_blank', 'width=600,height=700,scrollbars=no,resizable=no');
-                    });
-                }
-            }
-
-            async incrementBlocked() {
-                // Increment blocked count via background
-                try {
-                    await chrome.runtime.sendMessage({ action: 'incrementBlockedAttempts' });
-                } catch (e) {
-                    console.warn('Failed to increment stats:', e);
-                }
-            }
-
-            startQuoteRotation() {
-                const el = document.getElementById('motivationalQuote');
-                el.textContent = `"${this.quotes[Math.floor(Math.random() * this.quotes.length)]}"`;
-
-                setInterval(() => {
-                    el.style.opacity = 0;
-                    setTimeout(() => {
-                        el.textContent = `"${this.quotes[Math.floor(Math.random() * this.quotes.length)]}"`;
-                        el.style.opacity = 0.6;
-                    }, 500);
-                }, 15000);
-            }
-        }
-
-        new ScheduleBlockPage();
-    </script>
+    <script src="schedule-block.js"></script>
 </body>
 
 </html>

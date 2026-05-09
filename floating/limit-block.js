@@ -7,25 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('siteName').textContent = site;
     }
 
-    // Add "Go Back" button if original URL is available
-    if (originalUrl) {
-        const goBackBtn = document.createElement('a');
-        goBackBtn.href = '#';
-        goBackBtn.className = 'action';
-        goBackBtn.textContent = '← Go Back to Previous Page';
-        goBackBtn.style.marginRight = '10px';
-        goBackBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = decodeURIComponent(originalUrl);
-        });
-        
-        // Insert before the options link
-        const optionsLink = document.getElementById('optionsLink');
-        if (optionsLink) {
-            optionsLink.parentNode.insertBefore(goBackBtn, optionsLink);
-        }
-    }
-
+    
     // Redirect cleanly to options page screen time tab
     const optionsLink = document.getElementById('optionsLink');
     if (optionsLink) {
@@ -36,4 +18,59 @@ document.addEventListener('DOMContentLoaded', () => {
             // A full tab create ensures it works smoothly from an iframe or redirect page.
         });
     }
+
+    // Add pause block functionality
+    const pauseBtn = document.getElementById('pauseBlockBtn');
+    const pauseSection = document.getElementById('pauseDurationSection');
+    const cancelBtn = document.getElementById('cancelPauseBtn');
+    
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+            // Show pause duration section
+            pauseSection.style.display = 'block';
+            pauseBtn.style.display = 'none';
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            // Hide pause duration section
+            pauseSection.style.display = 'none';
+            pauseBtn.style.display = 'flex';
+        });
+    }
+
+    // Add click handlers to duration buttons
+    document.querySelectorAll('.duration-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const duration = btn.dataset.minutes;
+            let durationMs = 0;
+
+            if (duration === 'eod') {
+                // End of day
+                const now = new Date();
+                const eod = new Date();
+                eod.setHours(23, 59, 59, 999);
+                durationMs = eod.getTime() - now.getTime();
+            } else if (duration === '-1') {
+                durationMs = -1;
+            } else {
+                durationMs = parseInt(duration) * 60000;
+            }
+
+            // Send pause message to background script
+            chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs });
+            
+            // Show success message briefly
+            pauseSection.innerHTML = `
+                <h3>✅ Blocking Paused</h3>
+                <p class="pause-message">Protection has been temporarily paused.</p>
+            `;
+            
+            // Close the page after a short delay
+            setTimeout(() => {
+                window.close();
+            }, 2000);
+        });
+    });
 });
