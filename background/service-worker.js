@@ -732,6 +732,8 @@ async checkScheduledBlocking() {
         const sleepConfig = result.sleepBlocking || {};
         const whitelist = sleepConfig.whitelist || [];
         
+        console.log('🔍 Sleep blocking enabled:', { sleepConfig, whitelist });
+        
         // Block ALL websites during sleep time, but exclude whitelisted sites
         const allSitesPattern = ['*']; // This will block all domains
         await this.enableSiteBlocking(allSitesPattern, 301, 'sleep', whitelist);
@@ -993,6 +995,8 @@ async checkScheduledBlocking() {
             const normalizedWhitelist = whitelist.map(site => {
                 return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
             }).filter(domain => domain);
+
+            console.log('🔍 Sleep blocking rules:', { originalWhitelist: whitelist, normalizedWhitelist });
 
             const rules = [{
                 id: startId,

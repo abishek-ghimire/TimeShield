@@ -553,24 +553,84 @@
 
         .screen-time-graph-value {
             width: 56px;
-            text-align: right;
-            color: var(--text-soft);
-        }
 
-        .screen-time-graph-empty {
-            font-size: 12px;
-            color: var(--text-soft);
-            text-align: center;
-            padding: 6px 0;
-        }
+.screen-time-graph-empty {
+    font-size: 12px;
+    color: var(--text-soft);
+    text-align: center;
+    padding: 6px 0;
+}
 
-        /* Data Management Tab Styles */
-        .export-import {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
-        }
+.no-sites {
+    color: var(--text-soft);
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+    }
+
+    /* Collapsible Sections */
+    .collapsible-section {
+        margin-bottom: 20px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+        background: var(--surface-strong);
+    }
+
+    .section-header:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .toggle-icon {
+        font-size: 0.9rem;
+        transition: transform 0.3s;
+        color: var(--text-soft);
+    }
+
+    .toggle-icon.collapsed {
+        transform: rotate(-90deg);
+    }
+
+    .section-content {
+        padding: 0 20px;
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    }
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding: 0 20px;
+    }
+
+    .section-content > * {
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+
+    .section-content > *:first-child {
+        margin-top: 20px;
+    }
+
+    .section-content > *:last-child {
+        margin-bottom: 20px;
+    }
 
         .export-import>div {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -1392,62 +1452,83 @@
                     <label for="autoStartBreaks">Auto-start breaks</label>
                 </div>
 
-                <h3 style="margin-top: 30px;">Challenge-Based Unlock</h3>
-                <p class="hint">Critical disable actions require progressive confirmation and all enabled challenges.
-                </p>
+                <!-- Collapsible Protection Challenges Section -->
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('protectionChallenges')">
+                        <h3>🛡️ Protection Challenges</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div id="protectionChallenges" class="section-content">
+                        <p class="hint">Set up challenges to make it harder to disable protection when willpower is low.</p>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="challengeTextEnabled">
+                            <label for="challengeTextEnabled">Enable text challenge</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="challengeTextValue">Text challenge sentence</label>
+                            <input type="text" id="challengeTextValue" placeholder="I choose focus over distraction.">
+                        </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengeTextEnabled">
-                    <label for="challengeTextEnabled">Enable text challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengeTextValue">Text challenge sentence</label>
-                    <input type="text" id="challengeTextValue" placeholder="I choose focus over distraction.">
-                </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="challengePinEnabled">
+                            <label for="challengePinEnabled">Enable PIN challenge</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="challengePinValue">PIN (4-6 digits)</label>
+                            <input type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
+                        </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengePinEnabled">
-                    <label for="challengePinEnabled">Enable PIN challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengePinValue">PIN (4-6 digits)</label>
-                    <input type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
-                </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="challengePasswordEnabled">
+                            <label for="challengePasswordEnabled">Enable password challenge</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="challengePasswordValue">Password</label>
+                            <input type="text" id="challengePasswordValue" placeholder="focus">
+                        </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengePasswordEnabled">
-                    <label for="challengePasswordEnabled">Enable password challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengePasswordValue">Password</label>
-                    <input type="text" id="challengePasswordValue" placeholder="focus">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengeDelayEnabled">
-                    <label for="challengeDelayEnabled">Enable forced delay challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengeDelaySeconds">Delay seconds (3-60)</label>
-                    <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
-                </div>
-
-                <h3 style="margin-top: 30px;">⏸️ Pause Protection</h3>
-                <p class="hint">Configure password requirements for pausing blocking. Free 5-minute pauses are limited to 2 per day.</p>
-                <div class="form-group">
-                    <label for="pausePasswordValue">Password for extended pauses</label>
-                    <input type="password" id="pausePasswordValue" placeholder="Enter password for extended pauses">
-                    <small class="hint">This password is required for pauses longer than 5 minutes or after using 2 free 5-minute pauses.</small>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="challengeDelayEnabled">
+                            <label for="challengeDelayEnabled">Enable forced delay challenge</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="challengeDelaySeconds">Delay seconds (3-60)</label>
+                            <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
+                        </div>
+                    </div>
                 </div>
 
-                <h3 style="margin-top: 30px;">Focus Mode Blocklist</h3>
-                <p class="hint">Sites listed here will be blocked only during an active Focus Session.</p>
-                <div class="site-list" id="focusSitesList">
+                <!-- Collapsible Pause Protection Section -->
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('pauseProtection')">
+                        <h3>⏸️ Pause Protection</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div id="pauseProtection" class="section-content">
+                        <p class="hint">Configure text challenge requirements for pausing blocking. Free 5-minute pauses are limited to 2 per day.</p>
+                        <div class="form-group">
+                            <label for="pausePasswordValue">Text challenge for extended pauses</label>
+                            <input type="text" id="pausePasswordValue" placeholder="Enter text challenge for extended pauses">
+                            <small class="hint">This text is required for pauses longer than 5 minutes or after using 2 free 5-minute pauses.</small>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="add-site-form">
-                    <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
-                    <button class="btn btn-primary" id="addFocusSite">Add Site</button>
+                <!-- Collapsible Focus Mode Section -->
+                <div class="collapsible-section">
+                    <div class="section-header" onclick="toggleSection('focusMode')">
+                        <h3>🎯 Focus Mode Blocklist</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div id="focusMode" class="section-content">
+                        <p class="hint">Sites listed here will be blocked only during an active Focus Session.</p>
+                        <div class="site-list" id="focusSitesList">
+                        </div>
+                        <div class="add-site-form">
+                            <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
+                            <button class="btn btn-primary" id="addFocusSite">Add Site</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1877,6 +1958,36 @@
         </div>
     </footer>
 
+    <script>
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = section.previousElementSibling.querySelector('.toggle-icon');
+            
+            if (section.classList.contains('collapsed')) {
+                section.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            } else {
+                section.classList.add('collapsed');
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            }
+        }
+
+        // Initialize all sections as collapsed by default
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = ['protectionChallenges', 'pauseProtection', 'focusMode'];
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                const icon = section.previousElementSibling.querySelector('.toggle-icon');
+                if (section && icon) {
+                    section.classList.add('collapsed');
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                }
+            });
+        });
+    </script>
     <script src="options.js"></script>
 </body>
 
