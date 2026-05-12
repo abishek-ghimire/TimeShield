@@ -90,10 +90,10 @@ class FocusBlockPage {
                         // Show text challenge
                         pauseSection.innerHTML = `
                             <h3>✍️ Text Challenge Required</h3>
-                            <p class="pause-message">You've used your free short pauses today or requested a longer pause. Please type the challenge text to continue.</p>
+                            <p class="pause-message">I choose discipline over distraction, for my dreams are worth more than temporary comfort.</p>
                             <p class="pause-message" style="color: #f43f5e;">Remaining free 5-min pauses today: ${response.remainingShortPauses}</p>
                             <div style="margin-top: 20px;">
-                                <input type="text" id="pauseChallenge" placeholder="Type the challenge text" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 300px; margin-right: 10px;">
+                                <input type="text" id="pauseChallenge" placeholder="Type the sentence above" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 300px; margin-right: 10px;">
                                 <button class="duration-btn" id="submitChallenge">Submit</button>
                                 <button class="cancel-pause-btn" id="cancelChallenge">Cancel</button>
                             </div>
