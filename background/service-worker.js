@@ -907,7 +907,8 @@ async checkScheduledBlocking() {
     }
 
     async startFocusMode(duration, focusBlockedSites = []) {
-        this.focusState = { isActive: true, startTime: Date.now(), duration };
+        const endTime = Date.now() + duration;
+        this.focusState = { isActive: true, startTime: Date.now(), duration, endTime };
         chrome.alarms.create('focusMode', { delayInMinutes: duration / 60 });
 
         await chrome.storage.local.set({ focusState: this.focusState });
@@ -922,6 +923,9 @@ async checkScheduledBlocking() {
             chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
         }
 
+        // Show focus timer
+        await this.showFocusTimer();
+
         this.playSound('focus-start');
     }
 
@@ -935,6 +939,51 @@ async checkScheduledBlocking() {
 
         await this.redirectTabsBack('floating/focus-block.html');
         chrome.action.setBadgeText({ text: '' });
+
+        // Hide focus timer
+        await this.hideFocusTimer();
+    }
+
+    async showFocusTimer() {
+        try {
+            // Check if clock view is open
+            const tabs = await chrome.tabs.query({});
+            const clockTab = tabs.find(tab => tab.url && tab.url.includes('flip-clock.html'));
+            
+            if (clockTab) {
+                // Send message to clock view to show focus timer
+                chrome.tabs.sendMessage(clockTab.id, {
+                    action: 'showFocusTimer',
+                    focusEndTime: this.focusState.endTime
+                });
+            } else {
+                // Open focus timer in new window
+                await chrome.windows.create({
+                    url: chrome.runtime.getURL('floating/focus-timer.html'),
+                    type: 'popup',
+                    width: 250,
+                    height: 60,
+                    top: 100,
+                    left: screen.width - 350
+                });
+            }
+        } catch (error) {
+            console.error('Error showing focus timer:', error);
+        }
+    }
+
+    async hideFocusTimer() {
+        try {
+            // Send message to all tabs to hide focus timer
+            const tabs = await chrome.tabs.query({});
+            for (const tab of tabs) {
+                if (tab.url && (tab.url.includes('focus-timer.html') || tab.url.includes('flip-clock.html'))) {
+                    chrome.tabs.sendMessage(tab.id, { action: 'hideFocusTimer' }).catch(() => {});
+                }
+            }
+        } catch (error) {
+            console.error('Error hiding focus timer:', error);
+        }
     }
 
     async focusModeComplete() {
@@ -998,7 +1047,11 @@ async checkScheduledBlocking() {
 
             console.log('🔍 Sleep blocking rules:', { originalWhitelist: whitelist, normalizedWhitelist });
 
-            const rules = [{
+            // Create individual rules for each whitelist domain
+            const rules = [];
+            
+            // Main blocking rule for all sites
+            rules.push({
                 id: startId,
                 priority: 3, // Highest priority for sleep blocking
                 action: {
@@ -1008,9 +1061,27 @@ async checkScheduledBlocking() {
                 condition: {
                     urlFilter: '*',
                     resourceTypes: ['main_frame'],
-                    excludedInitiatorDomains: [chrome.runtime.id, ...normalizedWhitelist] // Exclude extension pages and whitelisted sites
+                    excludedInitiatorDomains: [chrome.runtime.id] // Only exclude extension pages
                 }
-            }];
+            });
+
+            // Create separate rules to allow whitelisted domains
+            normalizedWhitelist.forEach((domain, index) => {
+                if (domain) {
+                    rules.push({
+                        id: startId + 1 + index,
+                        priority: 4, // Higher priority to override blocking
+                        action: {
+                            type: 'allow'
+                        },
+                        condition: {
+                            urlFilter: `||${domain}^`,
+                            resourceTypes: ['main_frame']
+                        }
+                    });
+                }
+            });
+
             await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
             return;
         }
