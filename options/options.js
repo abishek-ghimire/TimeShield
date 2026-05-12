@@ -788,7 +788,7 @@ class OptionsManager {
             showTimezone: true,
             timezone: 'Asia/Kathmandu',
             challengeTextEnabled: true,
-            challengeTextValue: 'I choose focus over distraction.',
+            challengeTextValue: 'I choose discipline over distraction, for my dreams are worth more than temporary comfort.',
             challengePinEnabled: false,
             challengePinValue: '1234',
             challengePasswordEnabled: false,
