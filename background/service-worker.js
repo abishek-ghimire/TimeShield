@@ -1038,7 +1038,7 @@ async checkScheduledBlocking() {
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
         await this.disableSiteBlockingRange(startId, startId + 99);
 
-        // Special handling for sleep blocking - block all sites except whitelist
+        // Special handling for sleep blocking - block all sites except whitelist, localhost, and PDFs
         if (type === 'sleep' && blockedSites.includes('*')) {
             // Normalize whitelist domains
             const normalizedWhitelist = whitelist.map(site => {
@@ -1050,7 +1050,7 @@ async checkScheduledBlocking() {
             // Create individual rules for each whitelist domain
             const rules = [];
             
-            // Main blocking rule for all sites
+            // Main blocking rule for all sites (excluding PDFs)
             rules.push({
                 id: startId,
                 priority: 3, // Highest priority for sleep blocking
@@ -1065,11 +1065,24 @@ async checkScheduledBlocking() {
                 }
             });
 
+            // Allow PDF documents to open normally
+            rules.push({
+                id: startId + 1,
+                priority: 5,
+                action: {
+                    type: 'allow'
+                },
+                condition: {
+                    regexFilter: '^(https?|file)://.*\\.pdf($|[?#])',
+                    resourceTypes: ['main_frame']
+                }
+            });
+
             // Create separate rules to allow whitelisted domains
             normalizedWhitelist.forEach((domain, index) => {
                 if (domain) {
                     rules.push({
-                        id: startId + 1 + index,
+                        id: startId + 2 + index,
                         priority: 4, // Higher priority to override blocking
                         action: {
                             type: 'allow'
@@ -1079,6 +1092,48 @@ async checkScheduledBlocking() {
                             resourceTypes: ['main_frame']
                         }
                     });
+                }
+            });
+
+            // Add rule for localhost (127.0.0.1 and localhost variants)
+            const localhostRuleId = startId + normalizedWhitelist.length + 2;
+            rules.push({
+                id: localhostRuleId,
+                priority: 4, // Higher priority to override blocking
+                action: {
+                    type: 'allow'
+                },
+                condition: {
+                    urlFilter: '||localhost^',
+                    resourceTypes: ['main_frame']
+                }
+            });
+
+            // Add rule for 127.0.0.1
+            const ipRuleId = startId + normalizedWhitelist.length + 3;
+            rules.push({
+                id: ipRuleId,
+                priority: 4, // Higher priority to override blocking
+                action: {
+                    type: 'allow'
+                },
+                condition: {
+                    urlFilter: '||127.0.0.1^',
+                    resourceTypes: ['main_frame']
+                }
+            });
+
+            // Add rule for local development ports (localhost:3000, localhost:8080, etc.)
+            const localDevRuleId = startId + normalizedWhitelist.length + 4;
+            rules.push({
+                id: localDevRuleId,
+                priority: 4, // Higher priority to override blocking
+                action: {
+                    type: 'allow'
+                },
+                condition: {
+                    regexFilter: '^https?://(localhost|127\\.0\\.0\\.1):\\d+',
+                    resourceTypes: ['main_frame']
                 }
             });
 
