@@ -143,6 +143,82 @@
         }, 80);
     }
 
+    // Focus Timer Integration
+    let focusEndTime = null;
+    let focusTimerInterval = null;
+
+    function showFocusTimer(endTime) {
+        focusEndTime = endTime;
+        const container = document.getElementById('focusTimerContainer');
+        if (container) {
+            container.style.display = 'block';
+            startFocusTimerUpdate();
+        }
+    }
+
+    function hideFocusTimer() {
+        const container = document.getElementById('focusTimerContainer');
+        if (container) {
+            container.style.display = 'none';
+        }
+        if (focusTimerInterval) {
+            clearInterval(focusTimerInterval);
+            focusTimerInterval = null;
+        }
+        focusEndTime = null;
+    }
+
+    function startFocusTimerUpdate() {
+        if (focusTimerInterval) {
+            clearInterval(focusTimerInterval);
+        }
+
+        updateFocusTimerDisplay();
+        focusTimerInterval = setInterval(updateFocusTimerDisplay, 1000);
+    }
+
+    function updateFocusTimerDisplay() {
+        if (!focusEndTime) return;
+
+        const now = Date.now();
+        const remaining = Math.max(0, focusEndTime - now);
+
+        if (remaining === 0) {
+            hideFocusTimer();
+            return;
+        }
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        const timeString = `Focus: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        const timerText = document.getElementById('focusTimerText');
+        if (timerText) {
+            timerText.textContent = timeString;
+        }
+    }
+
+    // Handle focus timer close button
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeBtn = document.getElementById('focusTimerClose');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', hideFocusTimer);
+        }
+    });
+
+    // Listen for messages from background script
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.action === 'showFocusTimer') {
+                showFocusTimer(message.focusEndTime);
+            } else if (message.action === 'hideFocusTimer') {
+                hideFocusTimer();
+            } else if (message.action === 'mergeFocusTimer') {
+                showFocusTimer(message.focusEndTime);
+            }
+        });
+    }
+
     init();
     setInterval(updateClock, 1000);
     setInterval(updateDate, 60000);
