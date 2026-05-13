@@ -42,14 +42,17 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 *   **Multiple Views:** Standard digital clock and immersive flip clock modes
 *   **Theme Integration:** Matches your selected theme (Dark, Light, Solar Ember)
 
-### 🛑 Advanced Blocking System
-*   **Challenge-based Unblocking:** Type motivational quotes to disable blocks (prevents easy bypass)
-*   **Grace Pauses:** 2 free 5-minute pauses daily, then challenges required
-*   **Flexible Pause Options:** 5 minutes, 1 hour, or rest of day
-*   **Universal Pause Access:** Pause protection button available on all blocking screens
-*   **Verification System:** Multi-step verification with password and typing challenges
-*   **Visual Indicators:** Badge shows current blocking status (🎯 focus, 🚫 scheduled, 😴 sleep)
-*   **Priority System:** Sleep blocking overrides all other blocking types
+### 🛑 Advanced Blocking System (REFINED!)
+*   **Accordion Organization:** All settings now use a beautiful, collapsible accordion interface with status badges.
+*   **Custom Challenge Text:** Use your own motivational sentences instead of defaults for typing challenges.
+*   **Challenge-based Unblocking:** Type motivational quotes to disable blocks (prevents easy bypass).
+*   **Grace Pauses:** 2 free 5-minute pauses daily, then challenges required.
+*   **Flexible Pause Options:** 5 minutes, 1 hour, or rest of day.
+*   **Universal Pause Access:** Pause protection button available on all blocking screens.
+*   **Verification System:** Multi-step verification with password and typing challenges.
+*   **Visual Indicators:** Badge shows current blocking status (🎯 focus, 🚫 scheduled, 😴 sleep).
+*   **Priority System:** Sleep blocking overrides all other blocking types.
+*   **Dev-Friendly Sleep:** Intelligently ignores `localhost`, `127.0.0.1`, and local `.pdf` files.
 
 ### 🎯 Focus Mode
 *   **Deep Work Sessions:** Block all distracting sites during focus periods
@@ -93,12 +96,13 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 *   **Performance Stats:** Track ads blocked and bandwidth saved
 *   **Whitelist Support:** Allow ads on trusted sites
 
-### 📊 Screen Time Analytics
-*   **Detailed Tracking:** Monitor time spent on each website daily
-*   **Visual Graphs:** Bar charts showing usage patterns throughout the day
-*   **Site Categorization:** Automatic categorization of websites
-*   **Trend Analysis:** See how your digital habits change over time
-*   **Quick Access:** Jump to stats directly from block screens
+### 📊 Screen Time Analytics (UPGRADED!)
+*   **Historical Navigation:** Navigate back through past days and weeks using a new interactive date-picker.
+*   **Flexible Ranges:** Daily, Weekly, and Monthly views with historical shifting.
+*   **Detailed Tracking:** Monitor time spent on each website with 24-hour timelines.
+*   **Visual Graphs:** Donut charts and bar charts for intuitive usage insights.
+*   **Site Favicons:** High-quality icons for quick identification of visited domains.
+*   **Quick Access:** Jump to stats directly from block screens.
 
 ### ⚡ Quick Actions & Controls
 *   **One-click Blocking:** Add current site to blocklist from popup

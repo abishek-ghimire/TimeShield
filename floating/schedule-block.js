@@ -37,7 +37,7 @@ class ScheduleBlockPage {
         const pauseBtn = document.getElementById('pauseBlockBtn');
         const pauseSection = document.getElementById('pauseDurationSection');
         const cancelBtn = document.getElementById('cancelPauseBtn');
-        
+
         if (pauseBtn) {
             pauseBtn.addEventListener('click', () => {
                 // Show pause duration section
@@ -80,16 +80,21 @@ class ScheduleBlockPage {
                             <h3>✅ Blocking Paused</h3>
                             <p class="pause-message">Protection has been temporarily paused.</p>
                         `;
-                        
+
                         // Close the page after a short delay
                         setTimeout(() => {
                             window.close();
                         }, 2000);
                     } else if (response.requiresPassword) {
-                        // Show text challenge
-                        pauseSection.innerHTML = `
+                        // Load the user's custom challenge text from settings
+                        chrome.storage.local.get(['settings'], (data) => {
+                            const challengeText = (data.settings && data.settings.challengeTextValue)
+                                ? data.settings.challengeTextValue
+                                : 'My goals matter more than this momentary urge.';
+                            // Show text challenge
+                            pauseSection.innerHTML = `
                             <h3>✍️ Text Challenge Required</h3>
-                            <p class="pause-message">I choose discipline over distraction, for my dreams are worth more than temporary comfort.</p>
+                            <p class="pause-message">${challengeText}</p>
                             <p class="pause-message" style="color: #f43f5e;">Remaining free 5-min pauses today: ${response.remainingShortPauses}</p>
                             <div style="margin-top: 20px;">
                                 <input type="text" id="pauseChallenge" placeholder="Type the sentence above" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 300px; margin-right: 10px;">
@@ -97,30 +102,30 @@ class ScheduleBlockPage {
                                 <button class="cancel-pause-btn" id="cancelChallenge">Cancel</button>
                             </div>
                         `;
-                        
-                        // Add event listeners for text challenge form
-                        document.getElementById('submitChallenge').addEventListener('click', () => {
-                            const challenge = document.getElementById('pauseChallenge').value;
-                            if (challenge) {
-                                chrome.runtime.sendMessage({ action: 'pauseBlockingWithPassword', durationMs: durationMs, password: challenge }, (response) => {
-                                    if (response.success) {
-                                        pauseSection.innerHTML = `
+
+                            document.getElementById('submitChallenge').addEventListener('click', () => {
+                                const challenge = document.getElementById('pauseChallenge').value;
+                                if (challenge) {
+                                    chrome.runtime.sendMessage({ action: 'pauseBlockingWithPassword', durationMs: durationMs, password: challenge }, (response) => {
+                                        if (response.success) {
+                                            pauseSection.innerHTML = `
                                             <h3>✅ Blocking Paused</h3>
                                             <p class="pause-message">Protection has been temporarily paused.</p>
                                         `;
-                                        setTimeout(() => window.close(), 2000);
-                                    } else {
-                                        pauseSection.querySelector('.pause-message').textContent = 'Incorrect text. Please try again.';
-                                        document.getElementById('pauseChallenge').value = '';
-                                    }
-                                });
-                            }
-                        });
-                        
-                        document.getElementById('cancelChallenge').addEventListener('click', () => {
-                            pauseSection.style.display = 'none';
-                            pauseBtn.style.display = 'flex';
-                        });
+                                            setTimeout(() => window.close(), 2000);
+                                        } else {
+                                            pauseSection.querySelector('.pause-message').textContent = 'Incorrect text. Please try again.';
+                                            document.getElementById('pauseChallenge').value = '';
+                                        }
+                                    });
+                                }
+                            });
+
+                            document.getElementById('cancelChallenge').addEventListener('click', () => {
+                                pauseSection.style.display = 'none';
+                                pauseBtn.style.display = 'flex';
+                            });
+                        }); // end chrome.storage.local.get
                     }
                 });
             });

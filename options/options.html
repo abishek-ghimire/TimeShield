@@ -553,652 +553,832 @@
 
         .screen-time-graph-value {
             width: 56px;
-
-.screen-time-graph-empty {
-    font-size: 12px;
-    color: var(--text-soft);
-    text-align: center;
-    padding: 6px 0;
-}
-
-.no-sites {
-    color: var(--text-soft);
-    font-style: italic;
-    text-align: center;
-    padding: 20px;
-    }
-
-    .export-import>div {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 30px;
-        border-radius: 12px;
-        border: 1px solid #dee2e6;
-        transition: all 0.3s ease;
-    }
-
-    .export-import>div:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-
-    .export-import h3 {
-        color: #495057;
-        margin-bottom: 10px;
-        font-size: 1.3rem;
-        font-weight: 600;
-    }
-
-    .export-import p {
-        color: #6c757d;
-        margin-bottom: 20px;
-        line-height: 1.5;
-    }
-
-    .file-input-wrapper {
-        position: relative;
-        margin-bottom: 15px;
-    }
-
-    .file-input-wrapper input[type="file"] {
-        position: absolute;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-    }
-
-    .file-input-label {
-        display: inline-block;
-        padding: 10px 20px;
-        background: #6c757d;
-        color: white;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 14px;
-    }
-
-    .file-input-label:hover {
-        background: #5a6268;
-        transform: translateY(-1px);
-    }
-
-    .file-input-wrapper input[type="file"]:focus+.file-input-label {
-        outline: 2px solid #667eea;
-        outline-offset: 2px;
-    }
-
-        .danger-zone {
-        background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
-        border: 2px solid #feb2b2;
-        border-radius: 12px;
-        padding: 30px;
-        margin-top: 40px;
-    }
-
-    .danger-zone h3 {
-        color: #dc3545;
-        margin-bottom: 10px;
-        font-size: 1.3rem;
-        font-weight: 600;
-    }
-
-    .danger-zone p {
-        color: #721c24;
-        margin-bottom: 25px;
-        font-weight: 500;
-    }
-
-    .btn-group {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .btn {
-        padding: 12px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 120px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-
-    .btn-secondary:hover {
-        background: #5a6268;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
-    }
-
-    .btn-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        color: white;
-    }
-
-        .btn-danger:hover {
-        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-    }
-
-    /* Filter lists: dark-first, only light styles in light-theme */
-    .filter-list {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 8px;
-        padding: 15px;
-        background: rgba(15, 23, 42, 0.9);
-    }
-
-        .light-theme .filter-list {
-        background: #f8f9fa;
-        border-color: #dee2e6;
-    }
-
-    .filter-list .checkbox-group {
-        margin-bottom: 10px;
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.04);
-        border-radius: 4px;
-        border: 1px solid rgba(148, 163, 184, 0.15);
-        color: var(--text-main);
-    }
-
-    .light-theme .filter-list .checkbox-group {
-        background: #ffffff;
-        border-color: #e9ecef;
-        color: #1f2937;
-    }
-
-        .filter-list .checkbox-group:hover {
-        background: rgba(255, 255, 255, 0.08);
-    }
-
-    .light-theme .filter-list .checkbox-group:hover {
-        background: #e9ecef;
-    }
-
-    #customFilters,
-    #whitelist {
-        font-family: 'Courier New', monospace;
-        font-size: 0.9rem;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 12px;
-        width: 100%;
-        resize: vertical;
-    }
-
-        #customFilters:focus,
-    #whitelist:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .hint {
-        font-size: 0.85rem;
-        color: #6c757d;
-        margin-top: 5px;
-        font-style: italic;
-    }
-
-    #lastUpdate {
-        margin-left: 10px;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-
-        .btn:active {
-        transform: translateY(0);
-    }
-
-    /* Theme-specific data management styles */
-    .dark-theme .export-import>div {
-        background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-        border-color: #4a4a4a;
-    }
-
-        .dark-theme .export-import h3 {
-        color: #e0e0e0;
-    }
-
-    .dark-theme .export-import p {
-        color: #b0b0b0;
-    }
-
-    .dark-theme .danger-zone {
-        background: linear-gradient(135deg, #2a1a1a 0%, #3a2a2a 100%);
-        border-color: #dc3545;
-    }
-
-    .dark-theme .file-input-label {
-        background: #4a4a4a;
-        color: white;
-    }
-
-    .blue-theme .export-import>div {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .blue-theme .export-import h3 {
-        color: #e0e7ff;
-    }
-
-    .blue-theme .export-import p {
-        color: #c7d2fe;
-    }
-
-    .gradient-theme .export-import>div {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .gradient-theme .export-import h3 {
-        color: #e0e7ff;
-    }
-
-    .gradient-theme .export-import p {
-        color: #c7d2fe;
-    }
-
-    .neon-theme .export-import>div {
-        background: rgba(0, 255, 136, 0.1);
-        border: 1px solid #00ff88;
-    }
-
-    .neon-theme .export-import h3 {
-        color: #00ff88;
-        text-shadow: 0 0 5px #00ff88;
-    }
-
-        .neon-theme .export-import p {
-        color: #00cc6a;
-    }
-
-    .neon-theme .danger-zone {
-        background: rgba(255, 0, 68, 0.1);
-        border: 1px solid #ff0044;
-    }
-
-        .neon-theme .danger-zone h3 {
-        color: #ff0044;
-        text-shadow: 0 0 5px #ff0044;
-    }
-
-    .neon-theme .danger-zone p {
-        color: #ff0066;
-    }
-
-        .form-group {
-        margin-bottom: 16px;
-    }
-
-    label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: 500;
-        color: var(--text-main);
-        font-size: 0.92rem;
-    }
-
-    input[type="text"],
-    input[type="number"],
-    input[type="color"],
-    select,
-    textarea {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        background: var(--input-bg);
-        color: var(--input-text);
-        border-radius: 10px;
-        font-size: 0.95rem;
-        transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
-    }
-
-    input:focus,
-    select:focus,
-        textarea:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 2px var(--ring);
-    }
-
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        margin-right: 10px;
-    }
-
-    .range-group {
-        margin-bottom: 20px;
-    }
-
-    .range-group label {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .range-value {
-        background: #667eea;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.9rem;
-    }
-
-    input[type="range"] {
-        width: 100%;
-        margin-top: 10px;
-    }
-
-        .btn {
-        padding: 10px 18px;
-        border: none;
-        border-radius: 10px;
-        font-size: 0.92rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-        .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-
-        .btn-danger {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-        .btn-group {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
-    }
-
-    .site-list {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 2px solid #e1e8ed;
-        border-radius: 8px;
-        padding: 10px;
-    }
-
-    .site-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 12px;
-        border-bottom: 1px solid #f1f3f4;
-    }
-
-    .site-item:last-child {
-        border-bottom: none;
-    }
-
-    .site-url {
-        flex: 1;
-        font-family: 'Courier New', monospace;
-    }
-
-    .remove-site {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 4px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.8rem;
-    }
-
-    .add-site-form {
-        display: flex;
-        gap: 10px;
-        margin-top: 15px;
-    }
-
-    .add-site-form input {
-        flex: 1;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .stat-card {
-        background: rgba(102, 126, 234, 0.1);
-        padding: 20px;
-        border-radius: 8px;
-        text-align: center;
-    }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 600;
-        color: #667eea;
-        margin-bottom: 5px;
-    }
-
-    .stat-label {
-        color: #666;
-        font-size: 0.9rem;
-    }
-
-    .export-import {
-        display: flex;
-        gap: 20px;
-        margin-top: 30px;
-    }
-
-    .file-input-wrapper {
-        position: relative;
-        overflow: hidden;
-        display: inline-block;
-    }
-
-        .file-input-wrapper input[type=file] {
-        position: absolute;
-        left: -9999px;
-    }
-
-    .file-input-label {
-        display: inline-block;
-        padding: 12px 24px;
-        background: #17a2b8;
-        color: white;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .file-input-label:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-         .notification {
-        position: fixed;
-        top: 24px;
-        right: 24px;
-        background: #22c55e;
-        color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        z-index: 100000;
-        font-weight: 600;
-        max-width: 400px;
-        line-height: 1.5;
-        word-wrap: break-word;
-        animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        border-left: 5px solid rgba(255,255,255,0.3);
-    }
-
-    /* Footer Styles */
-        .app-footer {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 40px 20px 20px;
-        margin-top: 60px;
-        border-radius: 12px 12px 0 0;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    .footer-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 30px;
-    }
-
-    .footer-text p {
-        margin: 5px 0;
-        font-size: 14px;
-    }
-
-    .footer-text strong {
-        color: #ffd700;
-        font-weight: 600;
-    }
-
-    .footer-tagline {
-        opacity: 0.9;
-        font-style: italic;
-        font-size: 13px !important;
-    }
-
-    .footer-links {
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-    }
-
-        .footer-link {
-        color: white;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        font-size: 14px;
-    }
-
-    .footer-link:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-    }
-
-    .link-icon {
-        font-size: 16px;
-    }
-
-    .footer-bottom {
-        text-align: center;
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        font-size: 12px;
-        opacity: 0.8;
-    }
-
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
+            text-align: right;
+            font-size: 11px;
+            color: var(--text-soft);
         }
 
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    .color-picker-group {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
-        .color-preview {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        border: 2px solid #e1e8ed;
-    }
-
-    @media (max-width: 768px) {
-        .container {
-            padding: 10px;
+        .screen-time-graph-empty {
+            font-size: 12px;
+            color: var(--text-soft);
+            text-align: center;
+            padding: 6px 0;
         }
 
-        .tabs {
-            flex-direction: column;
-        }
-
-        .tab-content {
+        .no-sites {
+            color: var(--text-soft);
+            font-style: italic;
+            text-align: center;
             padding: 20px;
         }
 
-            .stats-grid {
-            grid-template-columns: 1fr;
+        .action-btn-circle:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: var(--text-main) !important;
+            transform: scale(1.1);
+        }
+
+        .action-btn-circle:active {
+            transform: scale(0.9);
+        }
+
+        .light-theme .action-btn-circle:hover {
+            background: rgba(0, 0, 0, 0.05) !important;
+            color: var(--text-main) !important;
+        }
+
+        #jumpToToday:hover {
+            background: rgba(129, 140, 248, 0.1) !important;
+            color: #a5b4fc !important;
+        }
+
+        .light-theme #jumpToToday:hover {
+            background: rgba(99, 102, 241, 0.08) !important;
+            color: #4f46e5 !important;
+        }
+
+        .export-import>div {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .export-import>div:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .export-import h3 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .export-import p {
+            color: #6c757d;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .file-input-label:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .file-input-wrapper input[type="file"]:focus+.file-input-label {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .danger-zone {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+            border: 2px solid #feb2b2;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .danger-zone h3 {
+            color: #dc3545;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .danger-zone p {
+            color: #721c24;
+            margin-bottom: 25px;
+            font-weight: 500;
         }
 
         .btn-group {
-            flex-direction: column;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
         }
-    }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        /* Filter lists: dark-first, only light styles in light-theme */
+        .filter-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .light-theme .filter-list {
+            background: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
+        .filter-list .checkbox-group {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 4px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            color: var(--text-main);
+        }
+
+        .light-theme .filter-list .checkbox-group {
+            background: #ffffff;
+            border-color: #e9ecef;
+            color: #1f2937;
+        }
+
+        .filter-list .checkbox-group:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .light-theme .filter-list .checkbox-group:hover {
+            background: #e9ecef;
+        }
+
+        #customFilters,
+        #whitelist {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            width: 100%;
+            resize: vertical;
+        }
+
+        #customFilters:focus,
+        #whitelist:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        #lastUpdate {
+            margin-left: 10px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Theme-specific data management styles */
+        .dark-theme .export-import>div {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+            border-color: #4a4a4a;
+        }
+
+        .dark-theme .export-import h3 {
+            color: #e0e0e0;
+        }
+
+        .dark-theme .export-import p {
+            color: #b0b0b0;
+        }
+
+        .dark-theme .danger-zone {
+            background: linear-gradient(135deg, #2a1a1a 0%, #3a2a2a 100%);
+            border-color: #dc3545;
+        }
+
+        .dark-theme .file-input-label {
+            background: #4a4a4a;
+            color: white;
+        }
+
+        .blue-theme .export-import>div {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .blue-theme .export-import h3 {
+            color: #e0e7ff;
+        }
+
+        .blue-theme .export-import p {
+            color: #c7d2fe;
+        }
+
+        .gradient-theme .export-import>div {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .gradient-theme .export-import h3 {
+            color: #e0e7ff;
+        }
+
+        .gradient-theme .export-import p {
+            color: #c7d2fe;
+        }
+
+        .neon-theme .export-import>div {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+        }
+
+        .neon-theme .export-import h3 {
+            color: #00ff88;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        .neon-theme .export-import p {
+            color: #00cc6a;
+        }
+
+        .neon-theme .danger-zone {
+            background: rgba(255, 0, 68, 0.1);
+            border: 1px solid #ff0044;
+        }
+
+        .neon-theme .danger-zone h3 {
+            color: #ff0044;
+            text-shadow: 0 0 5px #ff0044;
+        }
+
+        .neon-theme .danger-zone p {
+            color: #ff0066;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--text-main);
+            font-size: 0.92rem;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="color"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--input-text);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px var(--ring);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .range-group {
+            margin-bottom: 20px;
+        }
+
+        .range-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .range-value {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .site-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .site-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .site-item:last-child {
+            border-bottom: none;
+        }
+
+        .site-url {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+        }
+
+        .remove-site {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .add-site-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .add-site-form input {
+            flex: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .export-import {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #17a2b8;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .notification {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #22c55e;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            z-index: 100000;
+            font-weight: 600;
+            max-width: 400px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-left: 5px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Footer Styles */
+        .app-footer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px 20px;
+            margin-top: 60px;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        .footer-text p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .footer-text strong {
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .footer-tagline {
+            opacity: 0.9;
+            font-style: italic;
+            font-size: 13px !important;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .link-icon {
+            font-size: 16px;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .color-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #e1e8ed;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-content {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+
+        /* ── ACCORDION ───────────────────────────────────────────────────────────── */
+        .accordion {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .accordion-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .accordion-item:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.4);
+        }
+
+        .accordion-item.open {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.12);
+        }
+
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 22px;
+            cursor: pointer;
+            user-select: none;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            transition: background 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            background: var(--surface-muted);
+        }
+
+        .accordion-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(99, 102, 241, 0.12);
+            border-radius: 9px;
+        }
+
+        .accordion-title-wrap {
+            flex: 1;
+        }
+
+        .accordion-title {
+            font-size: 0.97rem;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .accordion-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-soft);
+            margin-top: 2px;
+        }
+
+        .accordion-badge {
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.14);
+            color: #818cf8;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: opacity 0.2s;
+        }
+
+        .accordion-item.open .accordion-badge {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .accordion-chevron {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-soft);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s;
+        }
+
+        .accordion-item.open .accordion-chevron {
+            transform: rotate(180deg);
+            color: #818cf8;
+        }
+
+        .accordion-chevron svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .accordion-body {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .accordion-item.open .accordion-body {
+            grid-template-rows: 1fr;
+        }
+
+        .accordion-inner {
+            overflow: hidden;
+            padding: 0 22px;
+            transition: padding 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .accordion-item.open .accordion-inner {
+            padding: 0 22px 22px;
+        }
+
+        .accordion-divider {
+            height: 1px;
+            background: var(--border);
+            margin-bottom: 18px;
+        }
+
+        .section-heading {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-soft);
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 
@@ -1226,55 +1406,94 @@
         <div id="general" class="tab-content active">
             <div class="section">
                 <h2>General Settings</h2>
+                <div class="accordion">
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="soundEnabled">
-                    <label for="soundEnabled">Enable sound notifications</label>
-                </div>
+                    <!-- Notifications & Reminders -->
+                    <div class="accordion-item open" id="acc-gen-notifications">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-gen-notifications">
+                            <span class="accordion-icon">🔔</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Notifications &amp; Reminders</span>
+                                <span class="accordion-subtitle">Sound, desktop alerts &amp; break nudges</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="soundEnabled"><label
+                                        for="soundEnabled">Enable sound notifications</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="notificationsEnabled"><label
+                                        for="notificationsEnabled">Enable desktop notifications</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="breakReminders"><label
+                                        for="breakReminders">Enable break reminders</label></div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="notificationsEnabled">
-                    <label for="notificationsEnabled">Enable desktop notifications</label>
-                </div>
+                    <!-- Appearance -->
+                    <div class="accordion-item" id="acc-gen-appearance">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-gen-appearance">
+                            <span class="accordion-icon">🎨</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Appearance</span>
+                                <span class="accordion-subtitle">Theme &amp; animation speed</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group">
+                                    <label for="theme">Theme</label>
+                                    <select id="theme">
+                                        <option value="light">Light Mode</option>
+                                        <option value="dark">Dark Mode</option>
+                                        <option value="solar">Solar Ember</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="animationSpeed">Animation Speed</label>
+                                    <select id="animationSpeed">
+                                        <option value="slow">Slow</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="fast">Fast</option>
+                                        <option value="instant">Instant</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="breakReminders">
-                    <label for="breakReminders">Enable break reminders</label>
-                </div>
+                    <!-- Startup & Sync -->
+                    <div class="accordion-item" id="acc-gen-startup">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-gen-startup">
+                            <span class="accordion-icon">⚙️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Startup &amp; Sync</span>
+                                <span class="accordion-subtitle">Auto-start, sync &amp; focus tips</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="autoStartClock"><label
+                                        for="autoStartClock">Auto-start clock on browser launch</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="syncAcrossDevices"><label
+                                        for="syncAcrossDevices">Sync settings across devices</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="showProductivityTips"><label
+                                        for="showProductivityTips">Show daily focus tips</label></div>
+                            </div>
+                        </div>
+                    </div>
 
-
-                <div class="form-group">
-                    <label for="theme">Theme</label>
-                    <select id="theme">
-                        <option value="light">Light Mode</option>
-                        <option value="dark">Dark Mode</option>
-                        <option value="solar">Solar Ember</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="animationSpeed">Animation Speed</label>
-                    <select id="animationSpeed">
-                        <option value="slow">Slow</option>
-                        <option value="normal">Normal</option>
-                        <option value="fast">Fast</option>
-                        <option value="instant">Instant</option>
-                    </select>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="autoStartClock">
-                    <label for="autoStartClock">Auto-start clock on browser launch</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="syncAcrossDevices">
-                    <label for="syncAcrossDevices">Sync settings across devices</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showProductivityTips">
-                    <label for="showProductivityTips">Show daily focus tips</label>
                 </div>
             </div>
         </div>
@@ -1282,74 +1501,116 @@
         <div id="clock" class="tab-content">
             <div class="section">
                 <h2>Clock Settings</h2>
-                <div class="form-group">
-                    <label for="timeFormat">Time Format</label>
-                    <select id="timeFormat">
-                        <option value="12h">12-hour (AM/PM)</option>
-                        <option value="24h">24-hour</option>
-                    </select>
-                </div>
+                <div class="accordion">
 
-                <div class="form-group">
-                    <label for="clockSize">Clock Size</label>
-                    <select id="clockSize">
-                        <option value="small">Small</option>
-                        <option value="medium">Medium</option>
-                        <option value="large">Large</option>
-                    </select>
-                </div>
+                    <!-- Display -->
+                    <div class="accordion-item open" id="acc-clk-display">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-clk-display">
+                            <span class="accordion-icon">🕐</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Display</span>
+                                <span class="accordion-subtitle">Format, size, opacity &amp; position</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group"><label for="timeFormat">Time Format</label>
+                                    <select id="timeFormat">
+                                        <option value="12h">12-hour (AM/PM)</option>
+                                        <option value="24h">24-hour</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label for="clockSize">Clock Size</label>
+                                    <select id="clockSize">
+                                        <option value="small">Small</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="large">Large</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label for="clockOpacity">Clock Opacity</label>
+                                    <input type="range" id="clockOpacity" min="10" max="100" value="90">
+                                    <span id="clockOpacityValue">90%</span>
+                                </div>
+                                <div class="form-group"><label for="clockPosition">Default Position</label>
+                                    <select id="clockPosition">
+                                        <option value="top-right">Top Right</option>
+                                        <option value="top-left">Top Left</option>
+                                        <option value="bottom-right">Bottom Right</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="center">Center</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="clockOpacity">Clock Opacity</label>
-                    <input type="range" id="clockOpacity" min="10" max="100" value="90">
-                    <span id="clockOpacityValue">90%</span>
-                </div>
+                    <!-- What to Show -->
+                    <div class="accordion-item" id="acc-clk-show">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-clk-show">
+                            <span class="accordion-icon">👁️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">What to Show</span>
+                                <span class="accordion-subtitle">Seconds, date &amp; timezone visibility</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="showSeconds"><label
+                                        for="showSeconds">Show seconds</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="showDate"><label
+                                        for="showDate">Show date</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="showTimezone"><label
+                                        for="showTimezone">Show timezone</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="nepalTime"><label
+                                        for="nepalTime">Use Nepal Time (NPT)</label></div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="clockPosition">Default Position</label>
-                    <select id="clockPosition">
-                        <option value="top-right">Top Right</option>
-                        <option value="top-left">Top Left</option>
-                        <option value="bottom-right">Bottom Right</option>
-                        <option value="bottom-left">Bottom Left</option>
-                        <option value="center">Center</option>
-                    </select>
-                </div>
+                    <!-- Timezone -->
+                    <div class="accordion-item" id="acc-clk-tz">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-clk-tz">
+                            <span class="accordion-icon">🌐</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Timezone</span>
+                                <span class="accordion-subtitle">Set your local timezone</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group">
+                                    <label for="timezone">Timezone</label>
+                                    <input type="text" id="timezone" list="timezoneList"
+                                        placeholder="e.g., Europe/London">
+                                    <datalist id="timezoneList">
+                                        <option value="Asia/Kathmandu">Nepal Time (NPT)</option>
+                                        <option value="UTC">UTC</option>
+                                        <option value="America/New_York">Eastern Time (US)</option>
+                                        <option value="America/Los_Angeles">Pacific Time (US)</option>
+                                        <option value="Europe/London">UK Time</option>
+                                        <option value="Europe/Paris">Central European Time</option>
+                                        <option value="Asia/Tokyo">Japan Time</option>
+                                        <option value="Australia/Sydney">Australia (Sydney)</option>
+                                    </datalist>
+                                    <p class="hint">Type any valid IANA timezone (e.g., America/Chicago, Europe/Berlin).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showSeconds">
-                    <label for="showSeconds">Show seconds</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showDate">
-                    <label for="showDate">Show date</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="showTimezone">
-                    <label for="showTimezone">Show timezone</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="nepalTime">
-                    <label for="nepalTime">Use Nepal Time (NPT)</label>
-                </div>
-
-                <div class="form-group">
-                    <label for="timezone">Timezone</label>
-                    <input type="text" id="timezone" list="timezoneList" placeholder="e.g., Europe/London">
-                    <datalist id="timezoneList">
-                        <option value="Asia/Kathmandu">Nepal Time (NPT)</option>
-                        <option value="UTC">UTC</option>
-                        <option value="America/New_York">Eastern Time (US)</option>
-                        <option value="America/Los_Angeles">Pacific Time (US)</option>
-                        <option value="Europe/London">UK Time</option>
-                        <option value="Europe/Paris">Central European Time</option>
-                        <option value="Asia/Tokyo">Japan Time</option>
-                        <option value="Australia/Sydney">Australia (Sydney)</option>
-                    </datalist>
-                    <p class="hint">You can type any valid IANA timezone (e.g., America/Chicago, Europe/Berlin).</p>
                 </div>
             </div>
         </div>
@@ -1357,166 +1618,285 @@
         <div id="focus" class="tab-content">
             <div class="section">
                 <h2>Focus Mode Settings</h2>
+                <div class="accordion">
 
-                <div class="form-group">
-                    <label for="focusDuration">Default Focus Duration (minutes)</label>
-                    <input type="number" id="focusDuration" min="1" max="180" value="25">
-                </div>
+                    <!-- Pomodoro Timer -->
+                    <div class="accordion-item open" id="acc-foc-timer">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-foc-timer">
+                            <span class="accordion-icon">🍅</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Pomodoro Timer</span>
+                                <span class="accordion-subtitle">Focus &amp; break durations, auto-start</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group"><label for="focusDuration">Default Focus Duration
+                                        (minutes)</label><input type="number" id="focusDuration" min="1" max="180"
+                                        value="25"></div>
+                                <div class="form-group"><label for="breakDuration">Short Break Duration
+                                        (minutes)</label><input type="number" id="breakDuration" min="1" max="30"
+                                        value="5"></div>
+                                <div class="form-group"><label for="longBreakDuration">Long Break Duration
+                                        (minutes)</label><input type="number" id="longBreakDuration" min="1" max="60"
+                                        value="15"></div>
+                                <div class="form-group"><label for="pomodoroCount">Pomodoro sessions until long
+                                        break</label><input type="number" id="pomodoroCount" min="2" max="10" value="4">
+                                </div>
+                                <div class="checkbox-group"><input type="checkbox" id="autoStartFocus"><label
+                                        for="autoStartFocus">Auto-start focus sessions</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="autoStartBreaks"><label
+                                        for="autoStartBreaks">Auto-start breaks</label></div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="breakDuration">Short Break Duration (minutes)</label>
-                    <input type="number" id="breakDuration" min="1" max="30" value="5">
-                </div>
+                    <!-- Protection Challenges -->
+                    <div class="accordion-item" id="acc-foc-challenges">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-challenges">
+                            <span class="accordion-icon">🛡️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Protection Challenges</span>
+                                <span class="accordion-subtitle">Make it harder to disable protection</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:14px;">Set up challenges to make it harder to
+                                    disable protection when willpower is low.</p>
+                                <div class="checkbox-group"><input type="checkbox" id="challengeTextEnabled"><label
+                                        for="challengeTextEnabled">Enable text challenge</label></div>
+                                <div class="form-group"><label for="challengeTextValue">Text challenge sentence</label>
+                                    <input type="text" id="challengeTextValue"
+                                        placeholder="My goals matter more than this momentary urge.">
+                                </div>
+                                <div class="checkbox-group"><input type="checkbox" id="challengePinEnabled"><label
+                                        for="challengePinEnabled">Enable PIN challenge</label></div>
+                                <div class="form-group"><label for="challengePinValue">PIN (4-6 digits)</label><input
+                                        type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
+                                </div>
+                                <div class="checkbox-group"><input type="checkbox" id="challengePasswordEnabled"><label
+                                        for="challengePasswordEnabled">Enable password challenge</label></div>
+                                <div class="form-group"><label for="challengePasswordValue">Password</label><input
+                                        type="text" id="challengePasswordValue" placeholder="focus"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="challengeDelayEnabled"><label
+                                        for="challengeDelayEnabled">Enable forced delay challenge</label></div>
+                                <div class="form-group"><label for="challengeDelaySeconds">Delay seconds
+                                        (3-60)</label><input type="number" id="challengeDelaySeconds" min="3" max="60"
+                                        value="8"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="longBreakDuration">Long Break Duration (minutes)</label>
-                    <input type="number" id="longBreakDuration" min="1" max="60" value="15">
-                </div>
+                    <!-- Pause Protection -->
+                    <div class="accordion-item" id="acc-foc-pause">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-pause">
+                            <span class="accordion-icon">⏸️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Pause Protection</span>
+                                <span class="accordion-subtitle">Challenge required for extended pauses</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:14px;">Free 5-minute pauses are limited to 2 per
+                                    day. Extended pauses require a text challenge.</p>
+                                <div class="form-group"><label for="pausePasswordValue">Text challenge for extended
+                                        pauses</label>
+                                    <input type="text" id="pausePasswordValue"
+                                        placeholder="Enter your personal challenge sentence">
+                                    <small class="hint">Required for pauses longer than 5 minutes or after using 2 free
+                                        pauses.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="pomodoroCount">Pomodoro sessions until long break</label>
-                    <input type="number" id="pomodoroCount" min="2" max="10" value="4">
-                </div>
+                    <!-- Focus Mode Blocklist -->
+                    <div class="accordion-item" id="acc-foc-blocklist">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-blocklist">
+                            <span class="accordion-icon">🎯</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Focus Mode Blocklist</span>
+                                <span class="accordion-subtitle">Sites blocked only during active focus sessions</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-focuslist">0 sites</span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:12px;">Sites here are blocked only during an active
+                                    Focus Session.</p>
+                                <div class="site-list" id="focusSitesList"></div>
+                                <div class="add-site-form" style="margin-top:12px;">
+                                    <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
+                                    <button class="btn btn-primary" id="addFocusSite">Add Site</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="autoStartFocus">
-                    <label for="autoStartFocus">Auto-start focus sessions</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="autoStartBreaks">
-                    <label for="autoStartBreaks">Auto-start breaks</label>
-                </div>
-
-                <!-- Protection Challenges -->
-                <h3>🛡️ Protection Challenges</h3>
-                <p class="hint">Set up challenges to make it harder to disable protection when willpower is low.</p>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengeTextEnabled">
-                    <label for="challengeTextEnabled">Enable text challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengeTextValue">Text challenge sentence</label>
-                    <input type="text" id="challengeTextValue" placeholder="I choose discipline over distraction, for my dreams are worth more than temporary comfort.">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengePinEnabled">
-                    <label for="challengePinEnabled">Enable PIN challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengePinValue">PIN (4-6 digits)</label>
-                    <input type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengePasswordEnabled">
-                    <label for="challengePasswordEnabled">Enable password challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengePasswordValue">Password</label>
-                    <input type="text" id="challengePasswordValue" placeholder="focus">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="challengeDelayEnabled">
-                    <label for="challengeDelayEnabled">Enable forced delay challenge</label>
-                </div>
-                <div class="form-group">
-                    <label for="challengeDelaySeconds">Delay seconds (3-60)</label>
-                    <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
-                </div>
-
-                <!-- Pause Protection -->
-                <h3>⏸️ Pause Protection</h3>
-                <p class="hint">Configure text challenge requirements for pausing blocking. Free 5-minute pauses are limited to 2 per day.</p>
-                <div class="form-group">
-                    <label for="pausePasswordValue">Text challenge for extended pauses</label>
-                    <input type="text" id="pausePasswordValue" placeholder="Enter text challenge for extended pauses">
-                    <small class="hint">This text is required for pauses longer than 5 minutes or after using 2 free 5-minute pauses.</small>
-                </div>
-
-                <!-- Focus Mode Blocklist -->
-                <h3>🎯 Focus Mode Blocklist</h3>
-                <p class="hint">Sites listed here will be blocked only during an active Focus Session.</p>
-                <div class="site-list" id="focusSitesList">
-                </div>
-                <div class="add-site-form">
-                    <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
-                    <button class="btn btn-primary" id="addFocusSite">Add Site</button>
                 </div>
             </div>
         </div>
 
-        <!-- NEW: Ad Blocker Tab -->
+        <!-- Ad Blocker Tab -->
         <div id="adblock" class="tab-content">
             <div class="section">
                 <h2>🚫 Ad Blocker Settings</h2>
+                <div class="accordion">
 
-                <div class="checkbox-group" style="margin-bottom: 18px;">
-                    <input type="checkbox" id="adBlockEnabledToggle">
-                    <label for="adBlockEnabledToggle">Enable ad blocking (turn off to see ads for testing)</label>
-                </div>
-
-                <div class="form-group">
-                    <h3>Filter Lists</h3>
-                    <p class="description">Select which filter lists to use (more lists = better blocking)</p>
-
-                    <div class="filter-list" id="filterLists">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="easyList" checked>
-                            <label for="easyList">EasyList (Ads)</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="easyPrivacy" checked>
-                            <label for="easyPrivacy">EasyPrivacy (Trackers)</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="advancedAnnoyances" checked>
-                            <label for="advancedAnnoyances">Advanced Annoyances</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="fanboysAnnoyances">
-                            <label for="fanboysAnnoyances">Fanboy's Annoyances</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="malwareDomains" checked>
-                            <label for="malwareDomains">Malware Domains</label>
+                    <!-- Enable / Level -->
+                    <div class="accordion-item open" id="acc-adb-main">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-adb-main">
+                            <span class="accordion-icon">🛑</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Ad Blocking</span>
+                                <span class="accordion-subtitle">Enable &amp; set blocking strength</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="checkbox-group" style="margin-bottom:16px;">
+                                    <input type="checkbox" id="adBlockEnabledToggle">
+                                    <label for="adBlockEnabledToggle">Enable ad blocking (turn off to see ads for
+                                        testing)</label>
+                                </div>
+                                <div class="form-group"><label for="blockingLevel">Blocking Level</label>
+                                    <select id="blockingLevel">
+                                        <option value="basic">Basic (block obvious ads only)</option>
+                                        <option value="medium" selected>Medium (recommended)</option>
+                                        <option value="aggressive">Aggressive (block everything, may break sites)
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <h3>Custom Filters</h3>
-                    <p class="description">Add your own blocking rules (one per line)</p>
-                    <textarea id="customFilters" rows="5" placeholder="||example.com^&#10;##.ad-banner"></textarea>
-                    <p class="hint">Use Adblock Plus syntax: ||domain.com^ for network, ##.class for hiding</p>
-                </div>
+                    <!-- Filter Lists -->
+                    <div class="accordion-item" id="acc-adb-filters">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-filters">
+                            <span class="accordion-icon">📋</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Filter Lists</span>
+                                <span class="accordion-subtitle">More lists = better blocking coverage</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="filter-list" id="filterLists">
+                                    <div class="checkbox-group"><input type="checkbox" id="easyList" checked><label
+                                            for="easyList">EasyList (Ads)</label></div>
+                                    <div class="checkbox-group"><input type="checkbox" id="easyPrivacy" checked><label
+                                            for="easyPrivacy">EasyPrivacy (Trackers)</label></div>
+                                    <div class="checkbox-group"><input type="checkbox" id="advancedAnnoyances"
+                                            checked><label for="advancedAnnoyances">Advanced Annoyances</label></div>
+                                    <div class="checkbox-group"><input type="checkbox" id="fanboysAnnoyances"><label
+                                            for="fanboysAnnoyances">Fanboy's Annoyances</label></div>
+                                    <div class="checkbox-group"><input type="checkbox" id="malwareDomains"
+                                            checked><label for="malwareDomains">Malware Domains</label></div>
+                                </div>
+                                <div
+                                    style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                    <button id="manualUpdate" class="btn btn-primary" style="padding:8px 16px;">Update
+                                        Filter Lists Now</button>
+                                    <span id="lastUpdate" style="font-size:0.82rem; color:var(--text-soft);"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <h3>Whitelist</h3>
-                    <p class="description">Sites where ad blocking should be disabled (one per line)</p>
-                    <textarea id="whitelist" rows="3" placeholder="example.com&#10;youtube.com"></textarea>
-                </div>
+                    <!-- Custom Filters -->
+                    <div class="accordion-item" id="acc-adb-custom">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-custom">
+                            <span class="accordion-icon">✏️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Custom Filters</span>
+                                <span class="accordion-subtitle">Your own blocking rules (Adblock Plus syntax)</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <textarea id="customFilters" rows="5"
+                                    placeholder="||example.com^&#10;##.ad-banner"></textarea>
+                                <p class="hint" style="margin-top:8px;">||domain.com^ for network blocking, ##.class for
+                                    element hiding</p>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="blockingLevel">Blocking Level</label>
-                    <select id="blockingLevel">
-                        <option value="basic">Basic (block obvious ads only)</option>
-                        <option value="medium" selected>Medium (recommended)</option>
-                        <option value="aggressive">Aggressive (block everything, may break sites)</option>
-                    </select>
-                </div>
+                    <!-- Ad Blocker Whitelist -->
+                    <div class="accordion-item" id="acc-adb-whitelist">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-whitelist">
+                            <span class="accordion-icon">✅</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Ad Blocker Whitelist</span>
+                                <span class="accordion-subtitle">Sites where ad blocking is disabled</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <textarea id="whitelist" rows="4" placeholder="example.com&#10;youtube.com"></textarea>
+                                <p class="hint" style="margin-top:8px;">One domain per line. Ad blocking will be
+                                    disabled on these sites.</p>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <h3>Stats Reset</h3>
-                    <button id="resetStats" class="btn btn-danger">Reset Ad Blocking Statistics</button>
-                </div>
+                    <!-- Stats -->
+                    <div class="accordion-item" id="acc-adb-stats">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-stats">
+                            <span class="accordion-icon">📊</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Statistics &amp; Reset</span>
+                                <span class="accordion-subtitle">Reset ad blocking counters</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:14px;">Reset all ad blocking statistics (ads
+                                    blocked, bandwidth saved, time saved).</p>
+                                <button id="resetStats" class="btn btn-danger">Reset Ad Blocking Statistics</button>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <h3>Manual Update</h3>
-                    <button id="manualUpdate" class="btn btn-primary">Update Filter Lists Now</button>
-                    <span id="lastUpdate"></span>
                 </div>
             </div>
         </div>
@@ -1524,233 +1904,334 @@
         <div id="tasks" class="tab-content">
             <div class="section">
                 <h2>Task Settings</h2>
+                <div class="accordion">
 
-                <div class="checkbox-group">
-                    <input type="checkbox" id="taskReminders">
-                    <label for="taskReminders">Enable task reminders</label>
-                </div>
+                    <!-- Task Preferences -->
+                    <div class="accordion-item open" id="acc-tasks-prefs">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-tasks-prefs">
+                            <span class="accordion-icon">📝</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Task Preferences</span>
+                                <span class="accordion-subtitle">Reminders, priority &amp; tracking</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="taskReminders"><label
+                                        for="taskReminders">Enable task reminders</label></div>
+                                <div class="form-group"><label for="defaultTaskPriority">Default Task Priority</label>
+                                    <select id="defaultTaskPriority">
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div class="checkbox-group"><input type="checkbox" id="trackTaskTime"><label
+                                        for="trackTaskTime">Track time spent on tasks</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="autoSortTasks"><label
+                                        for="autoSortTasks">Auto-sort tasks by priority</label></div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="defaultTaskPriority">Default Task Priority</label>
-                    <select id="defaultTaskPriority">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="trackTaskTime">
-                    <label for="trackTaskTime">Track time spent on tasks</label>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="autoSortTasks">
-                    <label for="autoSortTasks">Auto-sort tasks by priority</label>
                 </div>
             </div>
         </div>
 
         <div id="blocking" class="tab-content">
             <div class="section">
-                <h2>Schedules & Time Limits</h2>
+                <h2>Schedules &amp; Time Limits</h2>
 
-                <h3>Scheduled Blocking List</h3>
-                <p class="hint">Sites listed here will be blocked automatically during your scheduled hours.</p>
-                <div class="site-list" id="scheduledSitesList">
-                </div>
+                <div class="accordion" id="schedulesAccordion">
 
-                <div class="add-site-form">
-                    <input type="text" id="newScheduledSite" placeholder="Enter domain (e.g., facebook.com)">
-                    <button class="btn btn-primary" id="addScheduledSite">Add Site</button>
-                </div>
-
-                <h3 style="margin-top: 30px;">Schedule Settings</h3>
-                <div class="form-group">
-                    <label for="scheduledBlocking">Enable Scheduled Blocking</label>
-                    <select id="scheduledBlocking">
-                        <option value="disabled">Disabled</option>
-                        <option value="enabled">Enabled</option>
-                    </select>
-                </div>
-
-                <div id="scheduledBlockingSettings" style="display: none;">
-                    <div class="form-group">
-                        <label for="blockingStartTime">Start Time</label>
-                        <input type="time" id="blockingStartTime" value="09:00">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="blockingEndTime">End Time</label>
-                        <input type="time" id="blockingEndTime" value="17:00">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="blockingDays">Blocking Days</label>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="monday" value="1">
-                                Monday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="tuesday" value="2">
-                                Tuesday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="wednesday" value="3">
-                                Wednesday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="thursday" value="4">
-                                Thursday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="friday" value="5">
-                                Friday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="saturday" value="6">
-                                Saturday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sunday" value="0">
-                                Sunday
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 30px;">😴 Sleep Time Blocking</h3>
-                <p class="hint">Block ALL websites during your sleep hours to ensure proper rest and prevent late-night browsing.</p>
-                <div class="form-group">
-                    <label for="sleepBlocking">Enable Sleep Time Blocking</label>
-                    <select id="sleepBlocking">
-                        <option value="disabled">Disabled</option>
-                        <option value="enabled">Enabled</option>
-                    </select>
-                </div>
-
-                <div id="sleepBlockingSettings" style="display: none;">
-                    <div class="form-group">
-                        <label for="sleepStartTime">Bedtime Start</label>
-                        <input type="time" id="sleepStartTime" value="22:00">
-                        <small class="hint">When sleep blocking should begin</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sleepEndTime">Wake Time End</label>
-                        <input type="time" id="sleepEndTime" value="06:00">
-                        <small class="hint">When sleep blocking should end</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sleepBlockingDays">Sleep Blocking Days</label>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepMonday" value="1">
-                                Monday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepTuesday" value="2">
-                                Tuesday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepWednesday" value="3">
-                                Wednesday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepThursday" value="4">
-                                Thursday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepFriday" value="5">
-                                Friday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepSaturday" value="6">
-                                Saturday
-                            </label>
-                            <label class="checkbox-group">
-                                <input type="checkbox" id="sleepSunday" value="0">
-                                Sunday
-                            </label>
+                    <!-- ① Scheduled Blocking List -->
+                    <div class="accordion-item open" id="acc-blocklist">
+                        <button class="accordion-header" aria-expanded="true" data-target="acc-blocklist">
+                            <span class="accordion-icon">🚫</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Scheduled Blocking List</span>
+                                <span class="accordion-subtitle">Sites blocked during your scheduled hours</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-blocklist">0 sites</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="site-list" id="scheduledSitesList"></div>
+                                <div class="add-site-form" style="margin-top:12px;">
+                                    <input type="text" id="newScheduledSite"
+                                        placeholder="Enter domain (e.g., facebook.com)">
+                                    <button class="btn btn-primary" id="addScheduledSite">Add Site</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="checkbox-group" style="margin-top: 20px;">
-                        <input type="checkbox" id="sleepBlockAll" checked>
-                        <label for="sleepBlockAll">Block ALL websites (including work and productive sites)</label>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label>📚 Productive Sites Whitelist</label>
-                        <p class="hint">Add sites that should remain accessible during sleep time for studying and work productivity.</p>
-                        <div class="site-list" id="sleepWhitelistList">
+                    <!-- ② Schedule Settings -->
+                    <div class="accordion-item" id="acc-schedule">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-schedule">
+                            <span class="accordion-icon">🕐</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Schedule Settings</span>
+                                <span class="accordion-subtitle">Start &amp; end times, active days</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-schedule">Disabled</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group">
+                                    <label for="scheduledBlocking">Enable Scheduled Blocking</label>
+                                    <select id="scheduledBlocking">
+                                        <option value="disabled">Disabled</option>
+                                        <option value="enabled">Enabled</option>
+                                    </select>
+                                </div>
+                                <div id="scheduledBlockingSettings" style="display:none;">
+                                    <div
+                                        style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                                        <div class="form-group" style="margin:0;">
+                                            <label for="blockingStartTime">Start Time</label>
+                                            <input type="time" id="blockingStartTime" value="11:00">
+                                        </div>
+                                        <div class="form-group" style="margin:0;">
+                                            <label for="blockingEndTime">End Time</label>
+                                            <input type="time" id="blockingEndTime" value="08:00">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Blocking Days</label>
+                                        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+                                            <label class="checkbox-group"><input type="checkbox" id="monday" value="1">
+                                                Monday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="tuesday" value="2">
+                                                Tuesday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="wednesday"
+                                                    value="3"> Wednesday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="thursday"
+                                                    value="4"> Thursday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="friday" value="5">
+                                                Friday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="saturday"
+                                                    value="6"> Saturday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sunday" value="0">
+                                                Sunday</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="add-site-form">
-                            <input type="text" id="sleepWhitelistSite" placeholder="Site domain (e.g., wikipedia.org, github.com)">
-                            <button class="btn btn-primary" id="addSleepWhitelist">Add to Whitelist</button>
+                    </div>
+
+                    <!-- ③ Sleep Time Blocking -->
+                    <div class="accordion-item" id="acc-sleep">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-sleep">
+                            <span class="accordion-icon">😴</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Sleep Time Blocking</span>
+                                <span class="accordion-subtitle">Block all sites during sleep hours</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-sleep">Disabled</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:14px;">Block ALL websites during your sleep hours
+                                    to ensure proper rest and prevent late-night browsing.</p>
+                                <div class="form-group">
+                                    <label for="sleepBlocking">Enable Sleep Time Blocking</label>
+                                    <select id="sleepBlocking">
+                                        <option value="disabled">Disabled</option>
+                                        <option value="enabled">Enabled</option>
+                                    </select>
+                                </div>
+                                <div id="sleepBlockingSettings" style="display:none;">
+                                    <div
+                                        style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                                        <div class="form-group" style="margin:0;">
+                                            <label for="sleepStartTime">Bedtime Start</label>
+                                            <input type="time" id="sleepStartTime" value="12:00">
+                                            <small class="hint">When sleep blocking should begin</small>
+                                        </div>
+                                        <div class="form-group" style="margin:0;">
+                                            <label for="sleepEndTime">Wake Time End</label>
+                                            <input type="time" id="sleepEndTime" value="06:00">
+                                            <small class="hint">When sleep blocking should end</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Sleep Blocking Days</label>
+                                        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepMonday"
+                                                    value="1"> Monday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepTuesday"
+                                                    value="2"> Tuesday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepWednesday"
+                                                    value="3"> Wednesday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepThursday"
+                                                    value="4"> Thursday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepFriday"
+                                                    value="5"> Friday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepSaturday"
+                                                    value="6"> Saturday</label>
+                                            <label class="checkbox-group"><input type="checkbox" id="sleepSunday"
+                                                    value="0"> Sunday</label>
+                                        </div>
+                                    </div>
+                                    <div class="checkbox-group" style="margin-top:16px;">
+                                        <input type="checkbox" id="sleepBlockAll" checked>
+                                        <label for="sleepBlockAll">Block ALL websites (including work and productive
+                                            sites)</label>
+                                    </div>
+                                    <div class="form-group" style="margin-top:18px;">
+                                        <label>📚 Productive Sites Whitelist</label>
+                                        <p class="hint">Sites accessible during sleep time (study &amp; work).</p>
+                                        <div class="site-list" id="sleepWhitelistList"></div>
+                                        <div class="add-site-form" style="margin-top:12px;">
+                                            <input type="text" id="sleepWhitelistSite"
+                                                placeholder="e.g., wikipedia.org, github.com">
+                                            <button class="btn btn-primary" id="addSleepWhitelist">Add to
+                                                Whitelist</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <h3 style="margin-top: 30px;">Time Limits</h3>
-                <div class="form-group">
-                    <label for="timeLimits">Enable Daily Time Limits</label>
-                    <select id="timeLimits">
-                        <option value="disabled">Disabled</option>
-                        <option value="enabled">Enabled</option>
-                    </select>
-                </div>
-
-                <div id="timeLimitsSettings" style="display: none;">
-                    <div class="site-list" id="timeLimitsList">
+                    <!-- ④ Time Limits -->
+                    <div class="accordion-item" id="acc-timelimits">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-timelimits">
+                            <span class="accordion-icon">⏳</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Daily Time Limits</span>
+                                <span class="accordion-subtitle">Cap daily usage per site</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-timelimits">Disabled</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="form-group">
+                                    <label for="timeLimits">Enable Daily Time Limits</label>
+                                    <select id="timeLimits">
+                                        <option value="disabled">Disabled</option>
+                                        <option value="enabled">Enabled</option>
+                                    </select>
+                                </div>
+                                <div id="timeLimitsSettings" style="display:none;">
+                                    <div class="site-list" id="timeLimitsList"></div>
+                                    <div class="add-site-form" style="margin-top:12px;">
+                                        <input type="text" id="limitSite" placeholder="Site domain (e.g., youtube.com)">
+                                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="1"
+                                            max="480" style="width:170px;">
+                                        <button class="btn btn-primary" id="addTimeLimit">Add Limit</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="add-site-form">
-                        <input type="text" id="limitSite" placeholder="Site domain (e.g., youtube.com)">
-                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="1" max="480"
-                            style="width: 200px; margin-right: 10px;">
-                        <button class="btn btn-primary" id="addTimeLimit">Add Limit</button>
+                    <!-- ⑤ Global Distraction Limit -->
+                    <div class="accordion-item" id="acc-global">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-global">
+                            <span class="accordion-icon">🌍</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Global Distraction Limit</span>
+                                <span class="accordion-subtitle">Shared time cap across distraction sites</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-global">Disabled</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:14px;">Set a single shared time limit for a
+                                    combined group of distracting websites.</p>
+                                <div class="form-group">
+                                    <label for="globalLimitEnabled">Enable Global Shared Limit</label>
+                                    <select id="globalLimitEnabled">
+                                        <option value="disabled">Disabled</option>
+                                        <option value="enabled">Enabled</option>
+                                    </select>
+                                </div>
+                                <div id="globalLimitSettings" style="display:none;">
+                                    <div class="form-group"
+                                        style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                                        <label for="globalLimitMinutes" style="margin:0; white-space:nowrap;">Max Time
+                                            Allowed (min):</label>
+                                        <input type="number" id="globalLimitMinutes" value="60" min="1" max="1440"
+                                            style="width:100px;">
+                                    </div>
+                                    <div class="section-heading" style="margin-top:16px;">Sites in Global Pool</div>
+                                    <div class="site-list" id="globalLimitList"></div>
+                                    <div class="add-site-form" style="margin-top:12px;">
+                                        <input type="text" id="newGlobalLimitSite"
+                                            placeholder="Enter domain (e.g., netflix.com)">
+                                        <button class="btn btn-primary" id="addGlobalLimitSite">Add to Pool</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <h3 style="margin-top: 30px;">Global Distraction Limit 🌍</h3>
-                <p class="hint">Set a single shared time limit for a combined group of distracting websites.</p>
-                <div class="form-group">
-                    <label for="globalLimitEnabled">Enable Global Shared Limit</label>
-                    <select id="globalLimitEnabled">
-                        <option value="disabled">Disabled</option>
-                        <option value="enabled">Enabled</option>
-                    </select>
-                </div>
-
-                <div id="globalLimitSettings" style="display: none;">
-                    <div class="form-group" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                        <label for="globalLimitMinutes" style="margin: 0;">Max Time Allowed (Minutes):</label>
-                        <input type="number" id="globalLimitMinutes" value="60" min="1" max="1440"
-                            style="width: 100px;">
+                    <!-- ⑥ Whitelist -->
+                    <div class="accordion-item" id="acc-whitelist">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-whitelist">
+                            <span class="accordion-icon">✅</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Whitelist</span>
+                                <span class="accordion-subtitle">Sites always allowed, never blocked</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-whitelist">0 sites</span>
+                            <span class="accordion-chevron">
+                                <svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <div class="site-list" id="whitelistList"></div>
+                                <div class="add-site-form" style="margin-top:12px;">
+                                    <input type="text" id="newWhitelistSite"
+                                        placeholder="Enter domain (e.g., github.com)">
+                                    <button class="btn btn-primary" id="addWhitelistSite">Add Site</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <h4 style="margin-bottom: 15px; color: var(--slate-300);">Sites in Global Pool</h4>
-                    <div class="site-list" id="globalLimitList">
-                    </div>
-
-                    <div class="add-site-form">
-                        <input type="text" id="newGlobalLimitSite" placeholder="Enter domain (e.g., netflix.com)">
-                        <button class="btn btn-primary" id="addGlobalLimitSite">Add to Pool</button>
-                    </div>
-                </div>
-
-
-                <h3 style="margin-top: 30px;">Whitelist</h3>
-                <div class="site-list" id="whitelistList">
-                </div>
-
-                <div class="add-site-form">
-                    <input type="text" id="newWhitelistSite" placeholder="Enter domain (e.g., github.com)">
-                    <button class="btn btn-primary" id="addWhitelistSite">Add Site</button>
-                </div>
+                </div><!-- /accordion -->
             </div>
         </div>
 
@@ -1768,11 +2249,34 @@
                     <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--slate-400);">
                         <span style="opacity:0.9;">Range</span>
                         <select id="screenTimeRange"
-                            style="border-radius:999px; border:1px solid var(--border); padding:4px 10px; font-size:0.85rem;">
-                            <option value="day">Today</option>
-                            <option value="week">Last 7 days</option>
-                            <option value="month">Last 30 days</option>
+                            style="border-radius:999px; border:1px solid var(--border); padding:4px 10px; font-size:0.85rem; background: var(--surface); color: var(--text-main);">
+                            <option value="day">Daily View</option>
+                            <option value="week">Weekly View</option>
+                            <option value="month">Monthly View</option>
                         </select>
+                    </div>
+
+                    <div
+                        style="display:flex; align-items:center; gap:12px; background: var(--surface); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <button id="prevDate" class="action-btn-circle" title="Previous Date"
+                            style="background: transparent; border: none; color: var(--text-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"
+                                stroke-width="2.5">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <span id="currentDateDisplay"
+                            style="font-size: 0.95rem; font-weight: 600; color: var(--text-main); min-width: 160px; text-align: center;">Today</span>
+                        <button id="nextDate" class="action-btn-circle" title="Next Date"
+                            style="background: transparent; border: none; color: var(--text-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"
+                                stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                        <div style="width: 1px; height: 24px; background: var(--border); margin: 0 4px;"></div>
+                        <button id="jumpToToday"
+                            style="background: transparent; border: none; color: #818cf8; cursor: pointer; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px; border-radius: 6px; transition: all 0.2s;">Today</button>
                     </div>
                 </div>
 

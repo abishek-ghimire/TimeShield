@@ -540,7 +540,7 @@ class BackgroundService {
                 const isShortPause = message.durationMs === 300000; // 5 minutes = 300000ms
                 const requiresPassword = !isShortPause || this.shortPauseUsage.count >= 2;
                 console.log('🔍 Pause logic:', { isShortPause, requiresPassword, durationCheck: message.durationMs === 300000 });
-                
+
                 if (!requiresPassword) {
                     await this.incrementShortPause();
                     await this.pauseBlocking(message.durationMs);
@@ -554,7 +554,7 @@ class BackgroundService {
                 const pauseSettingsResult = await chrome.storage.local.get(['settings']);
                 const pauseSettings = pauseSettingsResult.settings || {};
                 const userChallengeText = pauseSettings.challengeTextValue || '';
-                
+
                 if (message.password === userChallengeText) {
                     await this.pauseBlocking(message.durationMs);
                     sendResponse({ success: true });
@@ -662,7 +662,7 @@ class BackgroundService {
         }
     }
 
-async checkScheduledBlocking() {
+    async checkScheduledBlocking() {
         const paused = await this.isPaused();
         if (paused) {
             await this.disableScheduledBlocking();
@@ -731,16 +731,16 @@ async checkScheduledBlocking() {
         const result = await chrome.storage.local.get(['sleepBlocking']);
         const sleepConfig = result.sleepBlocking || {};
         const whitelist = sleepConfig.whitelist || [];
-        
+
         console.log('🔍 Sleep blocking enabled:', { sleepConfig, whitelist });
-        
+
         // Block ALL websites during sleep time, but exclude whitelisted sites
         const allSitesPattern = ['*']; // This will block all domains
         await this.enableSiteBlocking(allSitesPattern, 301, 'sleep', whitelist);
         await this.redirectAllTabs('floating/sleep-block.html', whitelist);
         chrome.action.setBadgeText({ text: '😴' });
         chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' });
-        
+
         this.sleepBlockingState.isActive = true;
         this.sleepBlockingState.startTime = Date.now();
         await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
@@ -750,7 +750,7 @@ async checkScheduledBlocking() {
         await this.disableSiteBlockingRange(301, 400);
         await this.redirectTabsBack('floating/sleep-block.html');
         chrome.action.setBadgeText({ text: '' });
-        
+
         this.sleepBlockingState.isActive = false;
         await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
     }
@@ -760,17 +760,30 @@ async checkScheduledBlocking() {
         const normalizedWhitelist = whitelist.map(site => {
             return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
         }).filter(domain => domain);
-        
+
         const tabs = await chrome.tabs.query({});
         for (const tab of tabs) {
-            if (!tab.url || tab.url.includes(blockPage) || tab.url.startsWith('chrome-extension://')) continue;
-            
+            if (!tab.url) continue;
+            // Always skip extension pages, block pages already shown, local files, and PDFs
+            if (tab.url.includes(blockPage)) continue;
+            if (tab.url.startsWith('chrome-extension://')) continue;
+            if (tab.url.startsWith('chrome://')) continue;
+            if (tab.url.startsWith('file://')) continue;
+            if (/\.pdf($|[?#])/i.test(tab.url)) continue;
+
+            let tabDomain;
+            try {
+                tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+            } catch { continue; }
+
+            // Always allow localhost and 127.0.0.1 regardless of whitelist
+            if (tabDomain === 'localhost' || tabDomain === '127.0.0.1') continue;
+
             // Check if current tab is whitelisted
-            const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
-            const isWhitelisted = normalizedWhitelist.some(whitelistedDomain => 
+            const isWhitelisted = normalizedWhitelist.some(whitelistedDomain =>
                 tabDomain === whitelistedDomain || tabDomain.endsWith('.' + whitelistedDomain)
             );
-            
+
             // Only redirect non-whitelisted tabs
             if (!isWhitelisted) {
                 chrome.tabs.update(tab.id, {
@@ -949,7 +962,7 @@ async checkScheduledBlocking() {
             // Check if clock view is open
             const tabs = await chrome.tabs.query({});
             const clockTab = tabs.find(tab => tab.url && tab.url.includes('flip-clock.html'));
-            
+
             if (clockTab) {
                 // Send message to clock view to show focus timer
                 chrome.tabs.sendMessage(clockTab.id, {
@@ -978,7 +991,7 @@ async checkScheduledBlocking() {
             const tabs = await chrome.tabs.query({});
             for (const tab of tabs) {
                 if (tab.url && (tab.url.includes('focus-timer.html') || tab.url.includes('flip-clock.html'))) {
-                    chrome.tabs.sendMessage(tab.id, { action: 'hideFocusTimer' }).catch(() => {});
+                    chrome.tabs.sendMessage(tab.id, { action: 'hideFocusTimer' }).catch(() => { });
                 }
             }
         } catch (error) {
@@ -1031,8 +1044,8 @@ async checkScheduledBlocking() {
     }
 
     async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = []) {
-        const blockPage = type === 'schedule' ? 'floating/schedule-block.html' : 
-                        type === 'sleep' ? 'floating/sleep-block.html' : 'floating/focus-block.html';
+        const blockPage = type === 'schedule' ? 'floating/schedule-block.html' :
+            type === 'sleep' ? 'floating/sleep-block.html' : 'floating/focus-block.html';
         const extensionUrl = chrome.runtime.getURL(blockPage);
 
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
@@ -1049,7 +1062,7 @@ async checkScheduledBlocking() {
 
             // Create individual rules for each whitelist domain
             const rules = [];
-            
+
             // Main blocking rule for all sites (excluding PDFs)
             rules.push({
                 id: startId,
