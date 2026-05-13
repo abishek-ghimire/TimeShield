@@ -25,16 +25,33 @@
 
         <main class="popup-main">
             <!-- Quick Actions Grid -->
-            <div class="quick-actions">
-                <button id="toggleClock" class="btn btn-primary">
+            <div class="quick-actions-modern">
+                <button id="toggleClock" class="btn btn-primary" style="grid-column: span 2;">
                     <span class="icon">🕐</span> Clock View
                 </button>
-                <button id="startFocus" class="btn btn-focus">
-                    <span class="icon">🎯</span> Focus Mode
+                <div style="display: flex; gap: 8px; grid-column: span 2;">
+                    <button id="startFocus" class="btn btn-focus" style="flex: 1;">
+                        <span class="icon">🎯</span> Focus Mode
+                    </button>
+                    <button id="restoreFocusBtn" class="btn-tiny-restore" title="Restore Focus Overlay"
+                        style="display:none;">✨</button>
+                </div>
+                <button id="openSettings" class="btn btn-secondary" style="grid-column: span 2;">
+                    <span class="icon">⚙️</span> Settings
                 </button>
-                <button id="openSettings" class="btn btn-secondary">
-                    <span class="icon">⚙️</span>
-                </button>
+            </div>
+
+
+            <div
+                style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--card-border);">
+                <span
+                    style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.9rem;">🎯</span> Focus Overlay
+                </span>
+                <label class="switch">
+                    <input type="checkbox" id="focusTimerWidgetToggle">
+                    <span class="slider round"></span>
+                </label>
             </div>
 
             <div style="display: flex; gap: 16px; margin-top: 12px; margin-bottom: 8px;">
@@ -110,9 +127,21 @@
                         <span style="font-weight: 700; color: var(--text-muted);">:</span>
                         <input type="number" id="timerSeconds" placeholder="Sec" min="0" max="59" value="0">
                     </div>
-                    <button id="startTimer" class="btn btn-primary" style="width: 100%;">Start Flow</button>
-                    <button id="openTimerPopup" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">Open
-                        Timer Window</button>
+
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; padding: 4px 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">Floating Display</span>
+                        <label class="switch" style="transform: scale(0.85);">
+                            <input type="checkbox" id="timerWidgetToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <button id="startTimer" class="btn btn-primary" style="flex: 1;">Start Flow</button>
+                        <button id="restoreTimerBtn" class="btn-tiny-restore" title="Restore Timer Overlay"
+                            style="display:none;">✨</button>
+                    </div>
                 </div>
             </section>
 

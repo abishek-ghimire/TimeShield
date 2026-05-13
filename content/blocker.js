@@ -38,6 +38,10 @@ class ContentBlocker {
                     this.showTimeLimitWarning(message.site, message.remaining);
                     sendResponse({ success: true });
                     break;
+                case 'refreshVisibility':
+                    if (this.refs.widget) this._restoreVisibility(this.refs.widget);
+                    sendResponse({ success: true });
+                    break;
                 default:
                     break;
             }
@@ -64,6 +68,10 @@ class ContentBlocker {
                     this.refs.grip,
                     changes.clockMinimized.newValue === true
                 );
+            }
+
+            if (changes.focusState || changes.timerState || changes.sessionOverlayDismissed) {
+                await this._restoreVisibility(this.refs.widget);
             }
         });
     }
@@ -285,7 +293,11 @@ class ContentBlocker {
         document.getElementById('ts-close-btn').addEventListener('click', async () => {
             widget.style.display = 'none';
             try {
-                await chrome.storage.local.set({ clockVisible: false });
+                // If focus/timer is active, close it for ALL sites
+                await chrome.storage.local.set({
+                    clockVisible: false,
+                    sessionOverlayDismissed: true
+                });
                 chrome.runtime.sendMessage({ action: 'toggleClock', visible: false }).catch(() => { });
             } catch (e) {
                 // no-op
@@ -298,7 +310,7 @@ class ContentBlocker {
 
         const btn = document.getElementById('ts-minimize-btn');
         if (minimized) {
-            widget.dataset.prevH = widget.style.height || '160px';
+            widget.dataset.prevH = widget.style.height || (widget.dataset.isStatusOnly === 'true' ? '120px' : '160px');
             iframe.style.opacity = '0';
             setTimeout(() => {
                 if (widget.dataset.isMinimized === 'true') {
@@ -313,7 +325,7 @@ class ContentBlocker {
         } else {
             widget.dataset.isMinimized = 'false';
             iframe.style.display = 'block';
-            widget.style.height = widget.dataset.prevH || '160px';
+            widget.style.height = widget.dataset.isStatusOnly === 'true' ? '120px' : (widget.dataset.prevH || '160px');
             grip.style.display = 'block';
             setTimeout(() => {
                 iframe.style.opacity = '1';
@@ -417,9 +429,41 @@ class ContentBlocker {
     }
 
     async _restoreVisibility(widget) {
-        const result = await chrome.storage.local.get(['clockVisible', 'clockMinimized']);
-        if (result.clockVisible) {
+        const result = await chrome.storage.local.get(['clockVisible', 'clockMinimized', 'focusState', 'timerState', 'settings', 'sessionOverlayDismissed']);
+        const s = result.settings || {};
+
+        const focusEnabled = s.focusTimerWidgetEnabled !== false;
+        const timerEnabled = s.timerWidgetEnabled !== false;
+
+        const focusActive = result.focusState?.isActive === true && focusEnabled;
+        const timerActive = result.timerState?.isRunning === true && timerEnabled;
+        const shouldShowForStatus = focusActive || timerActive;
+
+        // If the session overlay was specifically dismissed by the user (x button), hide it everywhere
+        if (result.sessionOverlayDismissed && !result.clockVisible) {
+            widget.style.display = 'none';
+            return;
+        }
+
+        if (result.clockVisible || shouldShowForStatus) {
             widget.style.display = 'block';
+        } else {
+            widget.style.display = 'none';
+        }
+
+        // Set status only mode if clock is hidden but focus is active
+        const isStatusOnly = !result.clockVisible && shouldShowForStatus;
+        widget.dataset.isStatusOnly = String(isStatusOnly);
+
+        if (isStatusOnly) {
+            widget.style.height = '120px';
+            widget.style.minHeight = '100px';
+        } else {
+            widget.style.minHeight = '110px';
+            if (widget.dataset.isMinimized !== 'true') {
+                const pos = result.clockPos;
+                widget.style.height = pos?.h ? `${pos.h}px` : '160px';
+            }
         }
 
         if (result.clockMinimized && !this.isFullscreenFlip) {

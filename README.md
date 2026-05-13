@@ -36,37 +36,37 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 
 ### 🕐 Floating Clock System
 *   **Always-on-top Clock:** A draggable clock widget that stays on top of all websites
+*   **Global Visibility Sync:** Closing the widget on one site automatically hides it across all other tabs.
 *   **3D Flip Clock:** Beautiful retro flip clock with smooth animations in fullscreen mode
 *   **Fully Customizable:** Resize from small pill to large box, minimize to title bar
 *   **Smart Positioning:** Remembers your preferred position and size across sessions
 *   **Multiple Views:** Standard digital clock and immersive flip clock modes
-*   **Theme Integration:** Matches your selected theme (Dark, Light, Solar Ember)
+*   **Selective Restoration:** Restore session status widgets without forcing the clock view on.
 
 ### 🛑 Advanced Blocking System (REFINED!)
 *   **Accordion Organization:** All settings now use a beautiful, collapsible accordion interface with status badges.
-*   **Custom Challenge Text:** Use your own motivational sentences instead of defaults for typing challenges.
-*   **Challenge-based Unblocking:** Type motivational quotes to disable blocks (prevents easy bypass).
+*   **Psychological Deterrents:** Replaced tedious PIN/Password challenges with a mandatory 5-stage confirmation sequence to ensure intentional session breaking.
 *   **Grace Pauses:** 2 free 5-minute pauses daily, then challenges required.
 *   **Flexible Pause Options:** 5 minutes, 1 hour, or rest of day.
 *   **Universal Pause Access:** Pause protection button available on all blocking screens.
-*   **Verification System:** Multi-step verification with password and typing challenges.
+*   **Verification System:** Multi-step verification with motivational typing challenges.
 *   **Visual Indicators:** Badge shows current blocking status (🎯 focus, 🚫 scheduled, 😴 sleep).
 *   **Priority System:** Sleep blocking overrides all other blocking types.
-*   **Dev-Friendly Sleep:** Intelligently ignores `localhost`, `127.0.0.1`, and local `.pdf` files.
 
 ### 🎯 Focus Mode
 *   **Deep Work Sessions:** Block all distracting sites during focus periods
 *   **Smart Redirects:** Blocked sites redirect to motivational focus screens
 *   **Live Countdown:** Real-time timer display on block screens
-*   **Session Management:** Start, pause, and extend focus sessions
+*   **No-Refresh Injection:** Widget intelligently injects into all tabs without requiring manual page refreshes.
+*   **Auto-Dismissive Feedback:** Completion "congratulations" windows automatically close after 3 seconds to keep you in flow.
 *   **Motivational Content:** Rotating quotes and productivity tips
 
-### 😴 Sleep Time Blocking (NEW!)
+### 😴 Sleep Time Blocking (UPGRADED!)
 *   **Complete Site Blocking:** Blocks ALL websites during sleep hours
+*   **Localized Whitelisting:** Contextual whitelist specifically for study/work sites remains accessible during sleep.
 *   **Flexible Scheduling:** Set custom bedtime and wake time
 *   **Day Selection:** Choose which days sleep blocking applies to
 *   **Overnight Support:** Handles time ranges that span midnight (e.g., 10 PM - 6 AM)
-*   **Sleep-themed Interface:** Calming block page with sleep-related motivational quotes
 *   **Automatic Enforcement:** Checks every minute and activates/deactivates seamlessly
 
 ### ⏰ Scheduled Blocking
@@ -80,13 +80,6 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 *   **Real-time Tracking:** Shows remaining time on limit screens
 *   **Challenge Protection:** Increasing limits requires motivational typing challenge
 *   **Visual Warnings:** Countdown displays when approaching time limits
-*   **Automatic Blocking:** Sites redirect when daily limit is reached
-
-### 🌍 Global Shared Limits
-*   **Combined Time Tracking:** Single time limit across multiple distracting sites
-*   **Smart Grouping:** YouTube, Instagram, TikTok, etc. share one time budget
-*   **Flexible Configuration:** Choose which sites count toward global limit
-*   **Unified Blocking:** All sites in group blocked when limit is reached
 
 ### 🩹 Advanced Ad Blocker
 *   **Smart Filtering:** Blocks ads and trackers while preserving functionality
@@ -94,28 +87,25 @@ Since this is a custom productivity tool, you install it as a "developer" extens
 *   **Element Picker:** Right-click to hide any annoying page element
 *   **Custom Filters:** Add your own filter rules
 *   **Performance Stats:** Track ads blocked and bandwidth saved
-*   **Whitelist Support:** Allow ads on trusted sites
 
 ### 📊 Screen Time Analytics (UPGRADED!)
 *   **Historical Navigation:** Navigate back through past days and weeks using a new interactive date-picker.
 *   **Flexible Ranges:** Daily, Weekly, and Monthly views with historical shifting.
 *   **Detailed Tracking:** Monitor time spent on each website with 24-hour timelines.
 *   **Visual Graphs:** Donut charts and bar charts for intuitive usage insights.
-*   **Site Favicons:** High-quality icons for quick identification of visited domains.
 *   **Quick Access:** Jump to stats directly from block screens.
 
 ### ⚡ Quick Actions & Controls
+*   **Compact Restoration:** Tiny "✨" buttons for quick session recovery without UI clutter.
 *   **One-click Blocking:** Add current site to blocklist from popup
-*   **Ad Blocker Toggle:** Quick enable/disable from main menu
 *   **Focus Mode Start:** Instantly begin focus sessions
 *   **Clock Controls:** Show/hide, resize, and switch clock modes
-*   **Settings Access:** Quick links to all configuration options
 
 ### ✅ Task Management
 *   **Todo List:** Built-in task manager for productivity goals
+*   **Instant Feedback:** Sleek, self-dismissing toast notifications appear when tasks are completed.
 *   **Daily Tasks:** Create and track daily objectives
 *   **Focus Integration:** Tasks visible during focus sessions
-*   **Progress Tracking:** Mark tasks complete and monitor progress
 
 ### 🎨 Themes & Customization
 *   **Multiple Themes:** Dark Mode, Light Mode, Solar Ember
@@ -143,6 +133,7 @@ TimeShield includes Dark, Light, and Solar Ember themes. We've optimized the col
 
 ---
 
+<!-- 
 ## 🖼️ Screenshots
 Below are reference screenshots for the main views in TimeShield.
 
@@ -253,6 +244,7 @@ Below are reference screenshots for the main views in TimeShield.
 ![Sleep Blocking Screen](assets/screenshots/sleep-block.png)
 
 </details>
+-->
 
 ---
 

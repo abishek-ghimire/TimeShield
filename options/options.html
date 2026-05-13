@@ -1569,6 +1569,9 @@
                                         for="showDate">Show date</label></div>
                                 <div class="checkbox-group"><input type="checkbox" id="showTimezone"><label
                                         for="showTimezone">Show timezone</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="timerWidgetEnabled"
+                                        checked><label for="timerWidgetEnabled">Enable integrated display for Custom
+                                        Timers</label></div>
                                 <div class="checkbox-group"><input type="checkbox" id="nepalTime"><label
                                         for="nepalTime">Use Nepal Time (NPT)</label></div>
                             </div>
@@ -1651,6 +1654,9 @@
                                         for="autoStartFocus">Auto-start focus sessions</label></div>
                                 <div class="checkbox-group"><input type="checkbox" id="autoStartBreaks"><label
                                         for="autoStartBreaks">Auto-start breaks</label></div>
+                                <div class="checkbox-group"><input type="checkbox" id="focusTimerWidgetEnabled"
+                                        checked><label for="focusTimerWidgetEnabled">Enable integrated display for Focus
+                                        Sessions</label></div>
                             </div>
                         </div>
                     </div>
@@ -1672,21 +1678,11 @@
                                 <div class="accordion-divider"></div>
                                 <p class="hint" style="margin-bottom:14px;">Set up challenges to make it harder to
                                     disable protection when willpower is low.</p>
-                                <div class="checkbox-group"><input type="checkbox" id="challengeTextEnabled"><label
-                                        for="challengeTextEnabled">Enable text challenge</label></div>
-                                <div class="form-group"><label for="challengeTextValue">Text challenge sentence</label>
-                                    <input type="text" id="challengeTextValue"
-                                        placeholder="My goals matter more than this momentary urge.">
-                                </div>
-                                <div class="checkbox-group"><input type="checkbox" id="challengePinEnabled"><label
-                                        for="challengePinEnabled">Enable PIN challenge</label></div>
-                                <div class="form-group"><label for="challengePinValue">PIN (4-6 digits)</label><input
-                                        type="number" id="challengePinValue" min="1000" max="999999" placeholder="1234">
-                                </div>
-                                <div class="checkbox-group"><input type="checkbox" id="challengePasswordEnabled"><label
-                                        for="challengePasswordEnabled">Enable password challenge</label></div>
-                                <div class="form-group"><label for="challengePasswordValue">Password</label><input
-                                        type="text" id="challengePasswordValue" placeholder="focus"></div>
+                                <div class="checkbox-group"><input type="checkbox" id="challengeDelayEnabled"><label
+                                        for="challengeDelayEnabled">Enable forced delay challenge</label></div>
+                                <div class="form-group"><label for="challengeDelaySeconds">Delay seconds
+                                        (3-60)</label><input type="number" id="challengeDelaySeconds" min="3" max="60"
+                                        value="8"></div>
                                 <div class="checkbox-group"><input type="checkbox" id="challengeDelayEnabled"><label
                                         for="challengeDelayEnabled">Enable forced delay challenge</label></div>
                                 <div class="form-group"><label for="challengeDelaySeconds">Delay seconds
@@ -1712,14 +1708,7 @@
                             <div class="accordion-inner">
                                 <div class="accordion-divider"></div>
                                 <p class="hint" style="margin-bottom:14px;">Free 5-minute pauses are limited to 2 per
-                                    day. Extended pauses require a text challenge.</p>
-                                <div class="form-group"><label for="pausePasswordValue">Text challenge for extended
-                                        pauses</label>
-                                    <input type="text" id="pausePasswordValue"
-                                        placeholder="Enter your personal challenge sentence">
-                                    <small class="hint">Required for pauses longer than 5 minutes or after using 2 free
-                                        pauses.</small>
-                                </div>
+                                    day. Beyond that, manual verification is required.</p>
                             </div>
                         </div>
                     </div>
@@ -2203,33 +2192,6 @@
                         </div>
                     </div>
 
-                    <!-- ⑥ Whitelist -->
-                    <div class="accordion-item" id="acc-whitelist">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-whitelist">
-                            <span class="accordion-icon">✅</span>
-                            <span class="accordion-title-wrap">
-                                <span class="accordion-title">Whitelist</span>
-                                <span class="accordion-subtitle">Sites always allowed, never blocked</span>
-                            </span>
-                            <span class="accordion-badge" id="badge-whitelist">0 sites</span>
-                            <span class="accordion-chevron">
-                                <svg viewBox="0 0 24 24">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </span>
-                        </button>
-                        <div class="accordion-body">
-                            <div class="accordion-inner">
-                                <div class="accordion-divider"></div>
-                                <div class="site-list" id="whitelistList"></div>
-                                <div class="add-site-form" style="margin-top:12px;">
-                                    <input type="text" id="newWhitelistSite"
-                                        placeholder="Enter domain (e.g., github.com)">
-                                    <button class="btn btn-primary" id="addWhitelistSite">Add Site</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                 </div><!-- /accordion -->
             </div>
