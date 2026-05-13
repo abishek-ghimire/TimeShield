@@ -3,7 +3,6 @@ class OptionsManager {
         this.settings = {};
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
-        this.whitelist = [];
         this.screenTimeRefDate = new Date();
 
         this.init();
@@ -17,14 +16,13 @@ class OptionsManager {
 
     async loadData() {
         const result = await chrome.storage.local.get([
-            'settings', 'focusBlockedSites', 'whitelist',
+            'settings', 'focusBlockedSites',
             'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking'
         ]);
 
         this.settings = result.settings || this.getDefaultSettings();
         this.focusBlockedSites = result.focusBlockedSites || [];
         this.scheduledBlockedSites = result.scheduledBlockedSites || this.getDefaultBlockedSites();
-        this.whitelist = result.whitelist || [];
         this.scheduledBlocking = result.scheduledBlocking || this.getDefaultScheduledBlocking();
         this.timeLimits = result.timeLimits || [];
         this.timeLimitsEnabled = result.timeLimitsEnabled || false;
@@ -210,7 +208,7 @@ class OptionsManager {
 
         // Auto-save on change for immediate feedback
         document.querySelectorAll('input, select').forEach(element => {
-            if (element.id && !['saveSettings', 'resetToDefaults', 'importFile', 'newBlockedSite', 'newWhitelistSite', 'limitSite', 'limitMinutes'].includes(element.id)) {
+            if (element.id && !['saveSettings', 'resetToDefaults', 'importFile', 'newBlockedSite', 'limitSite', 'limitMinutes'].includes(element.id)) {
                 element.addEventListener('change', () => {
                     this.saveSettings();
                 });
@@ -224,7 +222,6 @@ class OptionsManager {
     setupSiteManagement() {
         document.getElementById('addFocusSite').addEventListener('click', () => this.addFocusSite());
         document.getElementById('addScheduledSite').addEventListener('click', () => this.addScheduledSite());
-        document.getElementById('addWhitelistSite').addEventListener('click', () => this.addWhitelistSite());
 
         // Scheduled blocking toggle
         document.getElementById('scheduledBlocking').addEventListener('change', (e) => {
@@ -270,10 +267,6 @@ class OptionsManager {
 
         document.getElementById('newScheduledSite').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addScheduledSite();
-        });
-
-        document.getElementById('newWhitelistSite').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addWhitelistSite();
         });
 
         // Global limits
@@ -559,7 +552,6 @@ class OptionsManager {
     updateSiteLists() {
         const focusSitesList = document.getElementById('focusSitesList');
         const scheduledSitesList = document.getElementById('scheduledSitesList');
-        const whitelistList = document.getElementById('whitelistList');
 
         focusSitesList.innerHTML = '';
         this.focusBlockedSites.forEach(site => {
@@ -571,12 +563,6 @@ class OptionsManager {
         this.scheduledBlockedSites.forEach(site => {
             const siteItem = this.createSiteItem(site, 'scheduled');
             scheduledSitesList.appendChild(siteItem);
-        });
-
-        whitelistList.innerHTML = '';
-        this.whitelist.forEach(site => {
-            const siteItem = this.createSiteItem(site, 'whitelist');
-            whitelistList.appendChild(siteItem);
         });
     }
 
@@ -621,19 +607,6 @@ class OptionsManager {
         }
     }
 
-    async addWhitelistSite() {
-        const input = document.getElementById('newWhitelistSite');
-        const site = input.value.trim().toLowerCase();
-
-        if (site && !this.whitelist.includes(site)) {
-            this.whitelist.push(site);
-            await this.saveSiteLists();
-            this.updateSiteLists();
-            input.value = '';
-            this.showNotification('Site added to whitelist', 'success');
-        }
-    }
-
     async removeSite(site, type) {
         if (type === 'focus') {
             const allowed = await this.runProtectionSequence(`Remove ${site} from Focus blocklist`);
@@ -643,8 +616,6 @@ class OptionsManager {
             const allowed = await this.runProtectionSequence(`Remove ${site} from Scheduled blocking`);
             if (!allowed) return;
             this.scheduledBlockedSites = this.scheduledBlockedSites.filter(s => s !== site);
-        } else {
-            this.whitelist = this.whitelist.filter(s => s !== site);
         }
 
         // Parallel update and refresh
@@ -1711,14 +1682,6 @@ class OptionsManager {
             glBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             glBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
         }
-
-        // Whitelist — site count
-        const wlBadge = document.getElementById('badge-whitelist');
-        if (wlBadge) {
-            const n = this.whitelist ? this.whitelist.length : 0;
-            wlBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
-        }
-
         // Focus Blocklist — count
         const fblBadge = document.getElementById('badge-focus-blocklist');
         if (fblBadge) {

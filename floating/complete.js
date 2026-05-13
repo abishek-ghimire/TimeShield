@@ -122,8 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dismissBtn.addEventListener('click', () => window.close());
     }
 
-    // 2. Auto-close after 8.5 seconds
-    setTimeout(() => window.close(), 8500);
+    // 2. Auto-close after 3 seconds
+    setTimeout(() => window.close(), 3000);
 
     // 3. Display random quote
     const quoteEl = document.getElementById('quote');

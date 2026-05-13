@@ -52,13 +52,13 @@
             hmEl.textContent = `${hour}:${minute}`;
             const dayPeriod = get('dayPeriod');
             const secPart = document.querySelector('.seconds-part');
-            
+
             if (is12h && dayPeriod) {
                 secPart.textContent = `${get('second')} ${dayPeriod}`;
             } else {
                 secPart.textContent = get('second');
             }
-            
+
             dateEl.textContent = `${get('weekday')}, ${get('month')} ${get('day')}`;
         } catch (e) {
             // Fallback to local time if timezone formatting fails
@@ -77,7 +77,7 @@
             const date = now.getDate();
             const mon = MONTHS[now.getMonth()];
             hmEl.textContent = `${displayHour}:${m}`;
-            
+
             const secPart = document.querySelector('.seconds-part');
             secPart.textContent = s2 + (is12h ? ampm : '');
             dateEl.textContent = `${day}, ${mon} ${date}`;
@@ -154,27 +154,55 @@
     }
 
     async function applySettings() {
-        const result = await chrome.storage.local.get(['settings']);
+        const result = await chrome.storage.local.get(['settings', 'clockVisible', 'focusState', 'timerState']);
         cachedSettings = result.settings || {};
         const s = cachedSettings;
         currentTimezone = s.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        // Always use the standard digital style
-        dateEl.style.display = (s.showDate !== false) ? 'block' : 'none';
-        tzEl.style.display = (s.showTimezone !== false) ? 'block' : 'none';
+        const clockVisible = result.clockVisible !== false;
+        const focusActive = result.focusState?.isActive === true;
+        const timerActive = result.timerState?.isRunning === true;
+        const isStatusOnly = !clockVisible && (focusActive || timerActive);
 
-        // Range Opacity (if controlled by CSS variable)
+        // Standard digital style elements
+        const timeDisplay = document.querySelector('.time-display');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const tzDisplay = document.getElementById('tzDisplay');
+        const clockFace = document.querySelector('.clock-face');
+
+        if (isStatusOnly) {
+            if (timeDisplay) timeDisplay.style.display = 'none';
+            if (dateDisplay) dateDisplay.style.display = 'none';
+            if (tzDisplay) tzDisplay.style.display = 'none';
+            if (clockFace) {
+                clockFace.style.justifyContent = 'center';
+                clockFace.classList.add('status-only');
+            }
+        } else {
+            if (timeDisplay) timeDisplay.style.display = 'flex';
+            if (dateDisplay) dateDisplay.style.display = (s.showDate !== false) ? 'block' : 'none';
+            if (tzDisplay) tzDisplay.style.display = (s.showTimezone !== false) ? 'block' : 'none';
+            if (clockFace) {
+                clockFace.style.justifyContent = 'center';
+                clockFace.classList.remove('status-only');
+            }
+        }
+
+        // Range Opacity
         if (s.clockOpacity) {
             document.documentElement.style.setProperty('--bg-opacity', s.clockOpacity / 100);
         }
 
-        if (s.showSeconds === false) {
-            document.querySelector('.seconds-part').style.display = 'none';
-        } else {
-            document.querySelector('.seconds-part').style.display = 'inline';
+        const secPart = document.querySelector('.seconds-part');
+        if (secPart) {
+            if (isStatusOnly || s.showSeconds === false) {
+                secPart.style.display = 'none';
+            } else {
+                secPart.style.display = 'inline';
+            }
         }
 
-        updateClock(); // Update immediately after applying settings
+        updateClock();
         updateTimezone();
     }
 
@@ -199,7 +227,10 @@
 
     // Listen for changes
     chrome.storage.onChanged.addListener((changes) => {
-        if (changes.focusState || changes.timerState) checkActiveTimers();
+        if (changes.focusState || changes.timerState || changes.clockVisible) {
+            checkActiveTimers();
+            applySettings();
+        }
         if (changes.settings) applySettings();
         if (changes.clockView) applyClockView(changes.clockView.newValue || 'standard');
     });

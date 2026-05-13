@@ -87,6 +87,20 @@
             flex-direction: column;
             align-items: center;
             gap: calc(6px * var(--ts-scale));
+            transition: all 0.3s ease;
+        }
+
+        .status-only .focus-indicator {
+            margin-top: 0;
+            gap: calc(4px * var(--ts-scale));
+        }
+
+        .status-only .focus-indicator-line {
+            font-size: calc(clamp(14px, 4vw, 18px) * var(--ts-scale));
+            background: none;
+            box-shadow: none !important;
+            animation: none;
+            color: #818cf8;
         }
 
         .focus-indicator-line {

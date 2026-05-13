@@ -168,12 +168,38 @@ body.theme-light .current-time {
     gap: 8px;
 }
 
-/* Quick Actions */
-.quick-actions {
+/* Modern Quick Actions */
+.quick-actions-modern {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-bottom: 18px;
+}
+
+.btn-tiny-restore {
+    width: 44px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--primary);
+    box-shadow: var(--elev-shadow);
+}
+
+.btn-tiny-restore:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-tiny-restore:active {
+    transform: translateY(0);
 }
 
 .flip-clock-btn {
@@ -422,6 +448,18 @@ body.theme-light .todo-item:hover {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translate(-50%, 20px);
     }
 }
 

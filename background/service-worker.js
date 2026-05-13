@@ -210,6 +210,7 @@ class BackgroundService {
     }
 
     async restoreState() {
+
         // Restore timer state
         const timerResult = await chrome.storage.local.get(['timerState']);
         if (timerResult.timerState) {
@@ -312,9 +313,32 @@ class BackgroundService {
     }
 
     setupMessageHandlers() {
+        chrome.runtime.onInstalled.addListener(async (details) => {
+            if (details.reason === 'install' || details.reason === 'update') {
+                await this.initializeStorage();
+                await this.ensureContentScriptInjected();
+                console.log('🚀 TimeShield initialized and injected into active tabs');
+            }
+        });
+
+        chrome.runtime.onStartup.addListener(() => {
+            this.ensureContentScriptInjected();
+        });
+
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             this.initPromise.then(() => {
-                this.handleMessage(message, sender, sendResponse);
+                if (message.action === 'showStatusWidget') {
+                    chrome.storage.local.set({ sessionOverlayDismissed: false }).then(() => {
+                        chrome.tabs.query({}).then(tabs => {
+                            tabs.forEach(tab => {
+                                chrome.tabs.sendMessage(tab.id, { action: 'refreshVisibility' }).catch(() => { });
+                            });
+                        });
+                        sendResponse({ success: true });
+                    });
+                } else {
+                    this.handleMessage(message, sender, sendResponse);
+                }
             });
             return true;
         });
@@ -854,10 +878,11 @@ class BackgroundService {
     }
 
     async startTimer(duration, type = 'custom') {
+        await this.ensureContentScriptInjected();
         const durSec = parseInt(duration);
         this.timerState = { isRunning: true, startTime: Date.now(), duration: durSec, type };
         chrome.alarms.create('timer', { delayInMinutes: durSec / 60 });
-        await chrome.storage.local.set({ timerState: this.timerState });
+        await chrome.storage.local.set({ timerState: this.timerState, sessionOverlayDismissed: false });
         chrome.action.setBadgeText({ text: '⏱️' });
         chrome.action.setBadgeBackgroundColor({ color: '#28a745' });
         // No popup window created here anymore as requested
@@ -920,11 +945,11 @@ class BackgroundService {
     }
 
     async startFocusMode(duration, focusBlockedSites = []) {
-        const endTime = Date.now() + duration;
+        await this.ensureContentScriptInjected();
+        const endTime = Date.now() + (duration * 1000);
         this.focusState = { isActive: true, startTime: Date.now(), duration, endTime };
         chrome.alarms.create('focusMode', { delayInMinutes: duration / 60 });
-
-        await chrome.storage.local.set({ focusState: this.focusState });
+        await chrome.storage.local.set({ focusState: this.focusState, sessionOverlayDismissed: false });
 
         const paused = await this.isPaused();
         if (!paused) {
@@ -959,27 +984,9 @@ class BackgroundService {
 
     async showFocusTimer() {
         try {
-            // Check if clock view is open
-            const tabs = await chrome.tabs.query({});
-            const clockTab = tabs.find(tab => tab.url && tab.url.includes('flip-clock.html'));
-
-            if (clockTab) {
-                // Send message to clock view to show focus timer
-                chrome.tabs.sendMessage(clockTab.id, {
-                    action: 'showFocusTimer',
-                    focusEndTime: this.focusState.endTime
-                });
-            } else {
-                // Open focus timer in new window
-                await chrome.windows.create({
-                    url: chrome.runtime.getURL('floating/focus-timer.html'),
-                    type: 'popup',
-                    width: 250,
-                    height: 60,
-                    top: 100,
-                    left: screen.width - 350
-                });
-            }
+            // Focus timer is now integrated into the floating clock widget
+            // which automatically appears in status mode if the clock is hidden
+            console.log('🎯 Focus session started - status widget will appear in tabs');
         } catch (error) {
             console.error('Error showing focus timer:', error);
         }
@@ -1261,7 +1268,9 @@ class BackgroundService {
                 notificationsEnabled: true,
                 breakReminders: true,
                 clockPosition: { x: 20, y: 20 },
-                clockSize: 'medium'
+                clockSize: 'medium',
+                focusTimerWidgetEnabled: true,
+                timerWidgetEnabled: true
             },
             blockedSites: [
                 'facebook.com',

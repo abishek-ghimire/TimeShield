@@ -48,7 +48,6 @@ class PopupController {
         this.elements.startFocusBtn.addEventListener('click', () => this.handleFocusMode());
         document.getElementById('openSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
         this.elements.startTimerBtn.addEventListener('click', () => this.toggleTimer());
-        document.getElementById('openTimerPopup').addEventListener('click', () => this.openTimerPopup());
         document.getElementById('addTask').addEventListener('click', () => this.addTask());
         document.getElementById('blockElement').addEventListener('click', () => this.startElementPicker());
         document.getElementById('toggleFormat').addEventListener('click', () => this.toggleTimeFormat());
@@ -63,10 +62,43 @@ class PopupController {
         this.elements.timerMinutes.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds.addEventListener('input', () => this.syncTimerInputs());
 
+        const restoreFocusBtn = document.getElementById('restoreFocusBtn');
+        if (restoreFocusBtn) {
+            restoreFocusBtn.addEventListener('click', () => {
+                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
+                window.close();
+            });
+        }
+
+        const restoreTimerBtn = document.getElementById('restoreTimerBtn');
+        if (restoreTimerBtn) {
+            restoreTimerBtn.addEventListener('click', () => {
+                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
+                window.close();
+            });
+        }
+
         // Ad blocker toggle
         document.getElementById('adBlockToggle').addEventListener('change', (e) => {
             chrome.runtime.sendMessage({ action: 'toggleAdBlock', enabled: e.target.checked });
         });
+
+        // Widget display toggles
+        document.getElementById('focusTimerWidgetToggle').addEventListener('change', (e) => {
+            this.updateWidgetSetting('focusTimerWidgetEnabled', e.target.checked);
+        });
+        document.getElementById('timerWidgetToggle').addEventListener('change', (e) => {
+            this.updateWidgetSetting('timerWidgetEnabled', e.target.checked);
+        });
+    }
+
+    async updateWidgetSetting(key, enabled) {
+        const result = await chrome.storage.local.get(['settings']);
+        const settings = result.settings || {};
+        settings[key] = enabled;
+        await chrome.storage.local.set({ settings });
+        // Trigger a check in active tabs
+        chrome.runtime.sendMessage({ action: 'settingsUpdated' }).catch(() => { });
     }
 
     syncTimerInputs() {
@@ -98,6 +130,18 @@ class PopupController {
         if (result.focusState?.isActive) {
             this.elements.startFocusBtn.classList.add('active');
             this.startFocusInterval(result.focusState);
+        }
+
+        // Check if we need to show the "Restore" buttons
+        const clockRes = await chrome.storage.local.get(['clockVisible']);
+        const restoreFocusBtn = document.getElementById('restoreFocusBtn');
+        const restoreTimerBtn = document.getElementById('restoreTimerBtn');
+
+        if (restoreFocusBtn) {
+            restoreFocusBtn.style.display = (result.focusState?.isActive && !clockRes.clockVisible) ? 'flex' : 'none';
+        }
+        if (restoreTimerBtn) {
+            restoreTimerBtn.style.display = (result.timerState?.isRunning && !clockRes.clockVisible) ? 'flex' : 'none';
         }
 
         if (result.adBlockEnabled !== undefined) {
@@ -408,37 +452,13 @@ class PopupController {
         setTimeout(() => btn.textContent = oldText, 2000);
     }
 
-    openTimerPopup() {
-        const mins = parseInt(this.elements.timerMinutes.value) || 25;
-        const secs = parseInt(this.elements.timerSeconds.value) || 0;
-        chrome.windows.create({
-            url: chrome.runtime.getURL(`floating/timer-popup.html?m=${mins}&s=${secs}`),
-            type: 'popup',
-            width: 360,
-            height: 420,
-            focused: true
-        });
-    }
-
     async runChallengeChecks(actionLabel) {
         const { settings } = await chrome.storage.local.get(['settings']);
         const s = settings || {};
 
-        if (s.challengeTextEnabled) {
-            const expected = (s.challengeTextValue || 'I choose focus over distraction.').trim();
-            const typed = prompt(`${actionLabel}\n\nType this sentence exactly:\n"${expected}"`, '') || '';
-            if (typed.trim() !== expected) return false;
-        }
+        // Removed text challenge per user request
 
-        if (s.challengePinEnabled) {
-            const pin = prompt(`${actionLabel}\n\nEnter your focus PIN`, '') || '';
-            if (pin !== String(s.challengePinValue || '1234')) return false;
-        }
-
-        if (s.challengePasswordEnabled) {
-            const pwd = prompt(`${actionLabel}\n\nEnter your focus password`, '') || '';
-            if (pwd !== String(s.challengePasswordValue || 'focus')) return false;
-        }
+        // Removed PIN and Password challenges per user request
 
         if (s.challengeDelayEnabled) {
             const delay = Math.max(3, Math.min(60, Number(s.challengeDelaySeconds || 8)));
@@ -449,12 +469,11 @@ class PopupController {
     }
 
     async runProtectionSequence(actionLabel) {
-        const awareness = confirm('This action may reduce your productivity. Continue?');
-        if (!awareness) return false;
-        const reflection = confirm('Your current productive session will be dismissed. Continue?');
-        if (!reflection) return false;
-        const emotional = confirm('Stay focused. Distractions break momentum. Continue anyway?');
-        if (!emotional) return false;
+        if (!confirm('AWAKENING: This action will break your current focus session. Are you absolutely certain?')) return false;
+        if (!confirm('CONSIDERATION: Is this distraction more important than your deep work goals?')) return false;
+        if (!confirm('INTENTION: Will you regret breaking this momentum in 10 minutes?')) return false;
+        if (!confirm('DETERMINATION: You are almost there. Stay focused instead? (Cancel to stay, OK to break)')) return false;
+        if (!confirm('FINAL WARNING: This is the 5th and final prompt. Break focus now?')) return false;
 
         const challengeOk = await this.runChallengeChecks(actionLabel);
         if (!challengeOk) {
@@ -483,7 +502,10 @@ class PopupController {
             <input type="checkbox" id="${todo.id}" ${todo.completed ? 'checked' : ''}>
             <label for="${todo.id}">${todo.text}</label>
         `;
-        div.querySelector('input').addEventListener('change', () => {
+        div.querySelector('input').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.showToast('✅ Awesome! Task completed.');
+            }
             this.saveTodos();
         });
         this.elements.todoList.appendChild(div);
@@ -512,6 +534,38 @@ class PopupController {
         } else {
             document.body.className = 'theme-dark';
         }
+
+        // Set widget toggles
+        const s = result.settings || {};
+        const focToggle = document.getElementById('focusTimerWidgetToggle');
+        const timToggle = document.getElementById('timerWidgetToggle');
+        if (focToggle) focToggle.checked = s.focusTimerWidgetEnabled !== false;
+        if (timToggle) timToggle.checked = s.timerWidgetEnabled !== false;
+    }
+
+    showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'rgba(16, 185, 129, 0.95)';
+        toast.style.color = 'white';
+        toast.style.padding = '10px 20px';
+        toast.style.borderRadius = '12px';
+        toast.style.fontSize = '0.9rem';
+        toast.style.fontWeight = '600';
+        toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+        toast.style.zIndex = '10000';
+        toast.style.animation = 'fadeIn 0.3s ease-out';
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease-in forwards';
+            setTimeout(() => toast.remove(), 3000);
+        }, 3000);
     }
 }
 
