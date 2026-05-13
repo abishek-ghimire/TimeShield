@@ -4,6 +4,7 @@ class OptionsManager {
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
         this.whitelist = [];
+        this.screenTimeRefDate = new Date();
 
         this.init();
     }
@@ -44,6 +45,7 @@ class OptionsManager {
         this.setupAdBlockListeners(); // NEW
         this.setupEnhancedInteractions();
         this.setupScreenTimeListeners(); // NEW
+        this.setupAccordion(); // Schedules & Limits collapsible panels
     }
 
     setupFooterInteractions() {
@@ -929,7 +931,7 @@ class OptionsManager {
         this.sleepBlocking.enabled = wantsEnable;
         this.saveSleepBlocking();
         this.populateSleepBlocking();
-        
+
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
     }
@@ -950,22 +952,22 @@ class OptionsManager {
         this.sleepBlocking.days = days;
 
         await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking });
-        
+
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
     }
 
     addSleepWhitelist() {
         const site = document.getElementById('sleepWhitelistSite').value.trim();
-        
+
         if (site) {
             // Normalize the domain
             const normalizedSite = site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
-            
+
             if (!this.sleepBlocking.whitelist) {
                 this.sleepBlocking.whitelist = [];
             }
-            
+
             // Check if already exists
             if (!this.sleepBlocking.whitelist.includes(normalizedSite)) {
                 this.sleepBlocking.whitelist.push(normalizedSite);
@@ -991,7 +993,7 @@ class OptionsManager {
     populateSleepWhitelist() {
         const whitelistList = document.getElementById('sleepWhitelistList');
         whitelistList.innerHTML = '';
-        
+
         if (this.sleepBlocking.whitelist && this.sleepBlocking.whitelist.length > 0) {
             this.sleepBlocking.whitelist.forEach(site => {
                 const siteItem = document.createElement('div');
@@ -1355,7 +1357,48 @@ class OptionsManager {
         }
 
         if (rangeSelect) {
-            rangeSelect.addEventListener('change', () => this.renderScreenTime());
+            rangeSelect.addEventListener('change', () => {
+                this.renderScreenTime();
+            });
+        }
+
+        const prevBtn = document.getElementById('prevDate');
+        const nextBtn = document.getElementById('nextDate');
+        const todayBtn = document.getElementById('jumpToToday');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                const range = document.getElementById('screenTimeRange')?.value || 'day';
+                const days = range === 'week' ? 7 : range === 'month' ? 30 : 1;
+                this.screenTimeRefDate.setDate(this.screenTimeRefDate.getDate() - days);
+                this.renderScreenTime();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const range = document.getElementById('screenTimeRange')?.value || 'day';
+                const days = range === 'week' ? 7 : range === 'month' ? 30 : 1;
+                const newDate = new Date(this.screenTimeRefDate);
+                newDate.setDate(newDate.getDate() + days);
+
+                // Don't allow navigating into the future
+                if (newDate <= new Date()) {
+                    this.screenTimeRefDate = newDate;
+                    this.renderScreenTime();
+                } else {
+                    this.screenTimeRefDate = new Date();
+                    this.renderScreenTime();
+                    this.showNotification('You are already at the current date.', 'warning');
+                }
+            });
+        }
+
+        if (todayBtn) {
+            todayBtn.addEventListener('click', () => {
+                this.screenTimeRefDate = new Date();
+                this.renderScreenTime();
+            });
         }
 
         document.querySelectorAll('.tab').forEach(tab => {
@@ -1401,21 +1444,48 @@ class OptionsManager {
     async renderScreenTime() {
         const container = document.getElementById('screenTimeContainer');
         const chartContainer = document.getElementById('screenTimeChart');
+        const dateDisplay = document.getElementById('currentDateDisplay');
         const svgEl = document.querySelector('#screenTimeChart svg');
         if (!container || !chartContainer || !svgEl) return;
 
         const { siteUsageData = {}, siteOpenCounts = {}, siteUsageTimeline = {} } =
             await chrome.storage.local.get(['siteUsageData', 'siteOpenCounts', 'siteUsageTimeline']);
 
-        const now = new Date();
-        const days = this.getRangeDays();
-        const perSite = {};
+        const refDate = new Date(this.screenTimeRefDate);
+        refDate.setHours(23, 59, 59, 999); // End of the ref day
 
+        const range = document.getElementById('screenTimeRange')?.value || 'day';
+        const days = this.getRangeDays();
+
+        // Update date display
+        if (dateDisplay) {
+            const today = new Date().toDateString();
+            if (this.screenTimeRefDate.toDateString() === today) {
+                if (range === 'day') dateDisplay.textContent = 'Today';
+                else if (range === 'week') dateDisplay.textContent = 'Last 7 Days';
+                else dateDisplay.textContent = 'Last 30 Days';
+            } else {
+                if (range === 'day') {
+                    dateDisplay.textContent = this.screenTimeRefDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+                } else {
+                    const start = new Date(this.screenTimeRefDate);
+                    start.setDate(start.getDate() - (days - 1));
+                    dateDisplay.textContent = `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${this.screenTimeRefDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+                }
+            }
+        }
+
+        const perSite = {};
         Object.keys(siteUsageData).forEach(dateKey => {
             const d = new Date(dateKey);
             if (Number.isNaN(d.getTime())) return;
-            const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-            if (diff < 0 || diff >= days) return;
+
+            // Calculate difference in days from reference date
+            // We want dates in the range [refDate - days, refDate]
+            const timeDiff = refDate.getTime() - d.getTime();
+            const dayDiff = timeDiff / (1000 * 60 * 60 * 24);
+
+            if (dayDiff < 0 || dayDiff >= days) return;
 
             const byDomain = siteUsageData[dateKey] || {};
             Object.keys(byDomain).forEach(domain => {
@@ -1559,6 +1629,139 @@ class OptionsManager {
                 });
             });
         });
+    }
+
+    // ── ACCORDION (Schedules & Limits) ────────────────────────────────────────
+    setupAccordion() {
+        document.querySelectorAll('.accordion-header').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const item = document.getElementById(targetId);
+                if (!item) return;
+
+                const isOpen = item.classList.contains('open');
+
+                // Toggle this panel
+                item.classList.toggle('open', !isOpen);
+                btn.setAttribute('aria-expanded', String(!isOpen));
+
+                // Update badge when closing
+                if (!isOpen) {
+                    // Opened — badge fades via CSS
+                } else {
+                    this.updateAccordionBadges();
+                }
+            });
+        });
+
+        // Keep badges in sync when selects change
+        ['scheduledBlocking', 'sleepBlocking', 'timeLimits', 'globalLimitEnabled'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.updateAccordionBadges());
+        });
+
+        // Initial badge values
+        this.updateAccordionBadges();
+    }
+
+    updateAccordionBadges() {
+        // Scheduled Blocking List — site count
+        const blBadge = document.getElementById('badge-blocklist');
+        if (blBadge) {
+            const n = this.scheduledBlockedSites ? this.scheduledBlockedSites.length : 0;
+            blBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
+        }
+
+        // Schedule Settings — Enabled / Disabled
+        const schBadge = document.getElementById('badge-schedule');
+        if (schBadge) {
+            const sel = document.getElementById('scheduledBlocking');
+            const isEnabled = sel && sel.value === 'enabled';
+            schBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            schBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
+            schBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
+        }
+
+        // Sleep Blocking — Enabled / Disabled
+        const slBadge = document.getElementById('badge-sleep');
+        if (slBadge) {
+            const sel = document.getElementById('sleepBlocking');
+            const isEnabled = sel && sel.value === 'enabled';
+            slBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            slBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
+            slBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
+        }
+
+        // Time Limits — Enabled / Disabled
+        const tlBadge = document.getElementById('badge-timelimits');
+        if (tlBadge) {
+            const sel = document.getElementById('timeLimits');
+            const isEnabled = sel && sel.value === 'enabled';
+            tlBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            tlBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
+            tlBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
+        }
+
+        // Global Limit — Enabled / Disabled
+        const glBadge = document.getElementById('badge-global');
+        if (glBadge) {
+            const sel = document.getElementById('globalLimitEnabled');
+            const isEnabled = sel && sel.value === 'enabled';
+            glBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            glBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
+            glBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
+        }
+
+        // Whitelist — site count
+        const wlBadge = document.getElementById('badge-whitelist');
+        if (wlBadge) {
+            const n = this.whitelist ? this.whitelist.length : 0;
+            wlBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
+        }
+
+        // Focus Blocklist — count
+        const fblBadge = document.getElementById('badge-focus-blocklist');
+        if (fblBadge) {
+            const n = this.focusBlockedSites ? this.focusBlockedSites.length : 0;
+            fblBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
+        }
+
+        // Ad Blocker Status
+        const abBadge = document.getElementById('badge-adblock-blocking');
+        if (abBadge) {
+            const toggle = document.getElementById('adBlockEnabledToggle');
+            const isEnabled = toggle ? toggle.checked : true;
+            abBadge.textContent = isEnabled ? 'Active' : 'Paused';
+            abBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)';
+            abBadge.style.color = isEnabled ? '#34d399' : '#f43f5e';
+        }
+
+        // Notification Badge
+        const notifBadge = document.getElementById('badge-general-notifications');
+        if (notifBadge) {
+            const enabled = document.getElementById('notificationsEnabled')?.checked;
+            notifBadge.textContent = enabled ? 'On' : 'Off';
+        }
+
+        // Theme Badge
+        const themeBadge = document.getElementById('badge-general-appearance');
+        if (themeBadge) {
+            const theme = document.getElementById('theme')?.value || 'Solar';
+            themeBadge.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+        }
+
+        // Pomodoro Badge
+        const pomoBadge = document.getElementById('badge-focus-pomodoro');
+        if (pomoBadge) {
+            const dur = document.getElementById('focusDuration')?.value || '25';
+            pomoBadge.textContent = `${dur} min`;
+        }
+
+        // Ad Stats Badge
+        const adsStatsBadge = document.getElementById('badge-adblock-stats');
+        if (adsStatsBadge && this.adBlockStats) {
+            adsStatsBadge.textContent = `${this.adBlockStats.adsBlocked || 0} blocked`;
+        }
     }
 }
 
