@@ -31,6 +31,40 @@ class ScheduleBlockPage {
         this.startQuoteRotation();
         this.addPauseBlockButton();
         await this.incrementBlocked();
+        this.addSiteClickHandler();
+    }
+
+    addSiteClickHandler() {
+        // Get the current blocked site from URL
+        const params = new URLSearchParams(window.location.search);
+        const site = params.get('site');
+        
+        if (site) {
+            // Add click handler to professional message to add site to scheduled blocklist
+            const messageEl = document.getElementById('professionalMessage');
+            if (messageEl) {
+                messageEl.style.cursor = 'pointer';
+                messageEl.title = 'Click to add this site to scheduled blocklist';
+                messageEl.addEventListener('click', async () => {
+                    try {
+                        const result = await chrome.storage.local.get(['scheduledBlockedSites']);
+                        const scheduledBlockedSites = result.scheduledBlockedSites || [];
+                        
+                        if (scheduledBlockedSites.includes(site)) {
+                            alert(`${site} is already in your scheduled blocklist`);
+                        } else {
+                            scheduledBlockedSites.push(site);
+                            await chrome.storage.local.set({ scheduledBlockedSites });
+                            alert(`${site} added to scheduled blocklist`);
+                            // Notify background to update blocking
+                            chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => {});
+                        }
+                    } catch (error) {
+                        console.error('Failed to add site to scheduled blocklist:', error);
+                    }
+                });
+            }
+        }
     }
 
     addPauseBlockButton() {

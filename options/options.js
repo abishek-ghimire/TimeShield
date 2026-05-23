@@ -12,6 +12,8 @@ class OptionsManager {
         await this.loadData();
         this.setupEventListeners();
         this.populateForm();
+        // Update badges after form is populated to ensure correct initial state
+        this.updateAccordionBadges();
     }
 
     async loadData() {
@@ -208,7 +210,7 @@ class OptionsManager {
 
         // Auto-save on change for immediate feedback
         document.querySelectorAll('input, select').forEach(element => {
-            if (element.id && !['saveSettings', 'resetToDefaults', 'importFile', 'newBlockedSite', 'limitSite', 'limitMinutes'].includes(element.id)) {
+            if (element.id && !['saveSettings', 'resetToDefaults', 'importFile', 'newBlockedSite', 'limitSite', 'limitMinutes', 'newFocusSite', 'newScheduledSite', 'newGlobalLimitSite', 'sleepWhitelistSite'].includes(element.id)) {
                 element.addEventListener('change', () => {
                     this.saveSettings();
                 });
@@ -1631,8 +1633,7 @@ class OptionsManager {
             if (el) el.addEventListener('change', () => this.updateAccordionBadges());
         });
 
-        // Initial badge values
-        this.updateAccordionBadges();
+        // Don't call updateAccordionBadges here - it's called after populateForm in init()
     }
 
     updateAccordionBadges() {
@@ -1646,8 +1647,8 @@ class OptionsManager {
         // Schedule Settings — Enabled / Disabled
         const schBadge = document.getElementById('badge-schedule');
         if (schBadge) {
-            const sel = document.getElementById('scheduledBlocking');
-            const isEnabled = sel && sel.value === 'enabled';
+            // Read from data object instead of DOM to ensure correct initial state
+            const isEnabled = this.scheduledBlocking && this.scheduledBlocking.enabled;
             schBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             schBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             schBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -1656,8 +1657,8 @@ class OptionsManager {
         // Sleep Blocking — Enabled / Disabled
         const slBadge = document.getElementById('badge-sleep');
         if (slBadge) {
-            const sel = document.getElementById('sleepBlocking');
-            const isEnabled = sel && sel.value === 'enabled';
+            // Read from data object instead of DOM to ensure correct initial state
+            const isEnabled = this.sleepBlocking && this.sleepBlocking.enabled;
             slBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             slBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             slBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -1666,8 +1667,8 @@ class OptionsManager {
         // Time Limits — Enabled / Disabled
         const tlBadge = document.getElementById('badge-timelimits');
         if (tlBadge) {
-            const sel = document.getElementById('timeLimits');
-            const isEnabled = sel && sel.value === 'enabled';
+            // Read from data object instead of DOM to ensure correct initial state
+            const isEnabled = this.timeLimitsEnabled;
             tlBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             tlBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             tlBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -1676,8 +1677,8 @@ class OptionsManager {
         // Global Limit — Enabled / Disabled
         const glBadge = document.getElementById('badge-global');
         if (glBadge) {
-            const sel = document.getElementById('globalLimitEnabled');
-            const isEnabled = sel && sel.value === 'enabled';
+            // Read from data object instead of DOM to ensure correct initial state
+            const isEnabled = this.globalLimit && this.globalLimit.enabled;
             glBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             glBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             glBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
