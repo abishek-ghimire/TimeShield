@@ -5,17 +5,47 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (site) {
         document.getElementById('siteName').textContent = site;
+        
+        // Add click handler to site name to add it to time limits
+        const siteNameElement = document.getElementById('siteName');
+        if (siteNameElement) {
+            siteNameElement.style.cursor = 'pointer';
+            siteNameElement.title = 'Click to add this site to time limits';
+            siteNameElement.addEventListener('click', async () => {
+                try {
+                    const result = await chrome.storage.local.get(['timeLimits']);
+                    const timeLimits = result.timeLimits || [];
+                    const existingLimit = timeLimits.find(l => l.site === site);
+                    
+                    if (existingLimit) {
+                        alert(`${site} is already in your time limits with ${existingLimit.minutes} minutes/day`);
+                    } else {
+                        const minutes = prompt(`Enter daily time limit for ${site} (in minutes):`, '30');
+                        if (minutes && !isNaN(minutes) && parseInt(minutes) > 0) {
+                            timeLimits.push({
+                                site: site,
+                                minutes: parseInt(minutes),
+                                usedToday: 0,
+                                lastReset: new Date().toDateString()
+                            });
+                            await chrome.storage.local.set({ timeLimits });
+                            alert(`${site} added to time limits with ${minutes} minutes/day`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to add site to time limits:', error);
+                }
+            });
+        }
     }
 
     
-    // Redirect cleanly to options page screen time tab
+    // Redirect cleanly to options page screen time tab in the same tab
     const optionsLink = document.getElementById('optionsLink');
     if (optionsLink) {
         optionsLink.addEventListener('click', (e) => {
             e.preventDefault();
-            chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#screentime') });
-            // Alternatively, #screentime if the hash mapping logic handles it, but Options HTML expects click to switch.
-            // A full tab create ensures it works smoothly from an iframe or redirect page.
+            chrome.tabs.update({ url: chrome.runtime.getURL('options/options.html#screentime') });
         });
     }
 

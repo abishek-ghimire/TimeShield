@@ -871,6 +871,65 @@ class BackgroundService {
                 }
             }
         }
+        // After redirecting tabs back, reload any tabs that were previously blocked to ensure they refresh
+        await this.refreshUnblockedTabs();
+    }
+
+    async refreshUnblockedTabs() {
+        // Get all tabs that might have been blocked
+        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+        for (const tab of tabs) {
+            if (!tab.url) continue;
+            // Skip extension pages and special pages
+            if (tab.url.startsWith('chrome-extension://') || tab.url.startsWith('chrome://') || tab.url.startsWith('file://')) continue;
+            
+            // Check if this tab should be unblocked and refresh it
+            const hostname = new URL(tab.url).hostname.replace(/^www\./, '');
+            const isBlocked = await this.isSiteBlocked(hostname);
+            
+            if (!isBlocked) {
+                // Tab is not blocked, refresh it to ensure content loads properly
+                chrome.tabs.reload(tab.id).catch(() => { });
+            }
+        }
+    }
+
+    async isSiteBlocked(hostname) {
+        // Check if site is in any blocklist
+        const result = await chrome.storage.local.get(['focusBlockedSites', 'scheduledBlockedSites', 'timeLimits', 'timeLimitsEnabled', 'globalLimit']);
+        
+        const focusSites = result.focusBlockedSites || [];
+        const scheduledSites = result.scheduledBlockedSites || [];
+        const timeLimits = result.timeLimits || [];
+        const timeLimitsEnabled = result.timeLimitsEnabled || false;
+        const globalLimit = result.globalLimit || { enabled: false, domains: [] };
+        
+        // Check focus blocking
+        const focusResult = await chrome.storage.local.get(['focusState']);
+        if (focusResult.focusState && focusResult.focusState.isActive && focusSites.includes(hostname)) {
+            return true;
+        }
+        
+        // Check scheduled blocking
+        const isScheduledActive = await this.isScheduledBlockingActive();
+        if (isScheduledActive && scheduledSites.includes(hostname)) {
+            return true;
+        }
+        
+        // Check time limits
+        if (timeLimitsEnabled) {
+            const limit = timeLimits.find(l => l.site === hostname);
+            if (limit) {
+                return true;
+            }
+        }
+        
+        // Check global limit
+        if (globalLimit.enabled && globalLimit.domains.includes(hostname)) {
+            return true;
+        }
+        
+        return false;
     }
     timeToMinutes(timeString) {
         const [hours, minutes] = timeString.split(':').map(Number);
