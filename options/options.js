@@ -594,6 +594,16 @@ class OptionsManager {
             this.updateSiteLists();
             input.value = '';
             this.showNotification('Great move — site added to your focus shield.', 'success');
+
+            // Check if focus mode is active and apply blocking immediately
+            const focusState = await chrome.storage.local.get(['focusState']);
+            if (focusState.focusState && focusState.focusState.isActive) {
+                // Dynamically apply block to all tabs matching this site
+                await chrome.runtime.sendMessage({
+                    action: 'applyDynamicFocusBlock',
+                    site: site
+                }).catch(() => {});
+            }
         }
     }
 
@@ -1392,6 +1402,9 @@ class OptionsManager {
         if (todayBtn) {
             todayBtn.addEventListener('click', () => {
                 this.screenTimeRefDate = new Date();
+                // Reset range dropdown to 'day' when jumping to today
+                const rangeSelect = document.getElementById('screenTimeRange');
+                if (rangeSelect) rangeSelect.value = 'day';
                 this.renderScreenTime();
             });
         }

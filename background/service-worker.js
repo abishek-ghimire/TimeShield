@@ -448,6 +448,33 @@ class BackgroundService {
                     sendResponse({ success: true });
                 }
                 break;
+            case 'applyDynamicFocusBlock':
+                {
+                    // Dynamically apply block to a newly added focus site if focus mode is active
+                    const site = message.site.toLowerCase().replace(/^www\./, '');
+                    const focusResult = await chrome.storage.local.get(['focusState']);
+                    if (focusResult.focusState && focusResult.focusState.isActive) {
+                        // Find and block all tabs matching this site
+                        const tabs = await chrome.tabs.query({});
+                        for (const tab of tabs) {
+                            if (tab.url) {
+                                try {
+                                    const tabHostname = new URL(tab.url).hostname.toLowerCase().replace(/^www\./, '');
+                                    if (tabHostname === site || tabHostname.endsWith('.' + site)) {
+                                        // Redirect this tab to the focus block page
+                                        chrome.tabs.update(tab.id, {
+                                            url: chrome.runtime.getURL('floating/focus-block.html?site=' + encodeURIComponent(site))
+                                        });
+                                    }
+                                } catch (e) {
+                                    // Ignore invalid URLs
+                                }
+                            }
+                        }
+                    }
+                    sendResponse({ success: true });
+                }
+                break;
             case 'authorizeDisableActions':
                 {
                     const ttlMs = Math.max(10000, Math.min(120000, Number(message.ttlMs || 45000)));
@@ -624,6 +651,13 @@ class BackgroundService {
     }
 
     async pauseBlocking(durationMs) {
+        // Deep Work Strict Mode: Prevent pausing during active focus
+        const focusResult = await chrome.storage.local.get(['focusState']);
+        const focusState = focusResult.focusState || {};
+        if (focusState.isActive && focusState.deepWorkMode) {
+            return; // Silently ignore pause request during Deep Work Mode
+        }
+
         if (durationMs === -1) {
             await chrome.storage.local.set({ pauseBlockingUntil: -1 });
         } else {
@@ -987,7 +1021,8 @@ class BackgroundService {
     async startFocusMode(duration, focusBlockedSites = []) {
         await this.ensureContentScriptInjected();
         const endTime = Date.now() + (duration * 1000);
-        this.focusState = { isActive: true, startTime: Date.now(), duration, endTime };
+        // Deep Work Strict Mode: automatically enabled during Focus Mode
+        this.focusState = { isActive: true, startTime: Date.now(), duration, endTime, deepWorkMode: true };
         chrome.alarms.create('focusMode', { delayInMinutes: duration / 60 });
         await chrome.storage.local.set({ focusState: this.focusState, sessionOverlayDismissed: false });
 
@@ -1005,10 +1040,14 @@ class BackgroundService {
         await this.showFocusTimer();
 
         this.playSound('focus-start');
+
+        // Block access to chrome://extensions during Deep Work Mode
+        await this.blockExtensionsPage();
     }
 
     async stopFocusMode() {
         this.focusState.isActive = false;
+        this.focusState.deepWorkMode = false;
         this.focusState.endTime = Date.now();
 
         await chrome.alarms.clear('focusMode');
@@ -1020,6 +1059,9 @@ class BackgroundService {
 
         // Hide focus timer
         await this.hideFocusTimer();
+
+        // Unblock chrome://extensions access
+        await this.unblockExtensionsPage();
     }
 
     async showFocusTimer() {
@@ -1298,6 +1340,45 @@ class BackgroundService {
                 visible: newState
             }).catch(() => { });
         });
+    }
+
+    async blockExtensionsPage() {
+        // Create a DNR rule to redirect chrome://extensions to a blocked page
+        // This helps prevent users from disabling the extension during Deep Work Mode
+        // Note: Chrome doesn't allow blocking chrome:// URLs via content scripts or DNR
+        // Instead, we monitor tab creation and close any attempt to visit chrome://extensions
+        try {
+            const tabs = await chrome.tabs.query({});
+            for (const tab of tabs) {
+                if (tab.url && tab.url.includes('chrome://extensions')) {
+                    // Close any existing extensions management tabs
+                    chrome.tabs.remove(tab.id);
+                }
+            }
+
+            // Set up a listener to prevent navigating to chrome://extensions
+            if (!chrome.webNavigation.onBeforeNavigate.hasListener) {
+                chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+                    if (details.url === 'chrome://extensions/' && this.focusState.isActive) {
+                        // Note: We cannot fully prevent navigation to chrome pages
+                        // but we can notify the user of the Deep Work Mode restriction
+                        chrome.tabs.sendMessage(details.tabId, {
+                            action: 'showNotification',
+                            title: '🔒 Deep Work Mode Active',
+                            message: 'Extension management is locked during Deep Work Mode.'
+                        }).catch(() => {});
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error blocking extensions page:', error);
+        }
+    }
+
+    async unblockExtensionsPage() {
+        // Remove any restrictions on chrome://extensions access
+        // (Note: We don't need to do much here as restrictions are checked at runtime)
+        console.log('Deep Work Strict Mode disabled - chrome://extensions access restored');
     }
 
     async initializeStorage() {

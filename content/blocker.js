@@ -79,6 +79,15 @@ class ContentBlocker {
     async injectFloatingClock() {
         if (document.getElementById('ts-clock-widget')) return;
 
+        // Create an isolated wrapper to prevent CSS leakage
+        const wrapper = document.createElement('div');
+        wrapper.id = 'timeshield-wrapper';
+        wrapper.style.cssText = `
+            all: initial;
+            display: contents;
+            font-family: inherit;
+        `;
+
         const widget = document.createElement('div');
         widget.id = 'ts-clock-widget';
         widget.style.cssText = `
@@ -98,6 +107,7 @@ class ContentBlocker {
             font-family: 'Inter', -apple-system, sans-serif;
             will-change: transform;
             transition: width 0.22s ease, height 0.22s ease, border-radius 0.22s ease;
+            contain: layout style paint;
         `;
 
         const header = document.createElement('div');
@@ -157,7 +167,8 @@ class ContentBlocker {
         widget.appendChild(header);
         widget.appendChild(iframe);
         widget.appendChild(grip);
-        document.body.appendChild(widget);
+        wrapper.appendChild(widget);
+        document.body.appendChild(wrapper);
 
         this.refs = { widget, header, iframe, grip };
 
