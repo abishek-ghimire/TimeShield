@@ -68,7 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 errorMsg.style.display = 'block';
                 if (passInput) passInput.value = '';
-                if (chlInput) chlInput.value = '';
+                if (chlInput) {
+                    chlInput.value = '';
+                    // Clear error on typing
+                    chlInput.addEventListener('input', () => {
+                        errorMsg.style.display = 'none';
+                    }, { once: true });
+                }
             }
         });
     }
@@ -118,12 +124,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cleanText = (str) => str.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
 
             const mText1 = cleanText(document.getElementById('motivationText1').textContent);
-            const mText2 = cleanText(document.getElementById('motivationText2').textContent);
-
             const mInput1 = cleanText(document.getElementById('motivationInput1').value);
-            const mInput2 = cleanText(document.getElementById('motivationInput2').value);
 
-            if (mInput1 === mText1 && mInput2 === mText2) {
+            if (mInput1 === mText1) {
                 if (parseInt(selectedDurationMs) === 5 * 60000) {
                     await chrome.runtime.sendMessage({ action: 'incrementGracePause' });
                 }
@@ -131,6 +134,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.close();
             } else {
                 document.getElementById('motivationErrorMsg').style.display = 'block';
+                // Clear error on typing
+                document.getElementById('motivationInput1').addEventListener('input', () => {
+                    document.getElementById('motivationErrorMsg').style.display = 'none';
+                }, { once: true });
             }
         });
     }
@@ -148,5 +155,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     disableCopy('challengeTextDisplay');
     disableCopy('motivationText1');
-    disableCopy('motivationText2');
 });

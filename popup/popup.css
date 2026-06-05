@@ -124,6 +124,7 @@ body.theme-light .brand h1 {
     font-size: 0.7rem;
     color: var(--text-muted);
     font-weight: 500;
+    margin-top: 4px;
 }
 
 .current-time {

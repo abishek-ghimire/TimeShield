@@ -232,7 +232,6 @@
                 <button class="duration-btn" data-minutes="30">30 minutes</button>
                 <button class="duration-btn" data-minutes="60">1 hour</button>
                 <button class="duration-btn" data-minutes="eod">Rest of the Day</button>
-                <button class="duration-btn" data-minutes="-1">Until I Turn Off</button>
             </div>
 
             <button class="btn" id="cancelBtn1" style="background:rgba(255,255,255,0.1);">Cancel</button>
@@ -240,20 +239,13 @@
 
         <!-- Motivation View -->
         <div id="motivationView" class="section">
-            <h1>Final Warning</h1>
-            <p class="message" style="color:var(--primary);">You are about to breach your defenses. Type the motivation
-                lines below to confirm.</p>
+            <h1>Final Verification</h1>
+            <p class="message" style="color:var(--primary);">Type the sentence below to confirm and proceed.</p>
 
             <div class="form-group">
-                <div class="challenge-text" id="motivationText1" style="font-size: 0.95rem;">I accept that giving in to
-                    distraction reduces my potential.</div>
-                <input type="text" id="motivationInput1" placeholder="Type the line above" autocomplete="off"
+                <div class="challenge-text" id="motivationText1" style="font-size: 0.95rem;">I choose discipline over distraction, for my dreams are worth more than temporary comfort.</div>
+                <input type="text" id="motivationInput1" placeholder="Type the sentence above" autocomplete="off"
                     onpaste="return false;" style="margin-bottom: 12px; font-size:0.9rem;">
-
-                <div class="challenge-text" id="motivationText2" style="font-size: 0.95rem;">I will stay mindful of how I
-                    spend my time.</div>
-                <input type="text" id="motivationInput2" placeholder="Type the line above" autocomplete="off"
-                    onpaste="return false;" style="font-size:0.9rem;">
             </div>
 
             <button class="btn" id="confirmPauseBtn"
