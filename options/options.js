@@ -19,7 +19,7 @@ class OptionsManager {
     async loadData() {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites',
-            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking'
+            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist'
         ]);
 
         this.settings = result.settings || this.getDefaultSettings();
@@ -33,6 +33,7 @@ class OptionsManager {
         this.globalLimit = result.globalLimit || { enabled: false, minutes: 60, domains: [] };
         this.adBlockStats = result.adBlockStats || { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
         this.sleepBlocking = result.sleepBlocking || this.getDefaultSleepBlocking();
+        this.whitelist = result.whitelist || [];
     }
 
     setupEventListeners() {
@@ -886,6 +887,27 @@ class OptionsManager {
         this.timeLimitsEnabled = wantsEnable;
         chrome.storage.local.set({ timeLimitsEnabled: this.timeLimitsEnabled });
         this.populateTimeLimits();
+    }
+
+    async toggleScheduledBlocking(value) {
+        const wantsEnable = value === 'enabled';
+        if (!wantsEnable) {
+            const allowed = await this.runProtectionSequence('Disable Scheduled Blocking');
+            if (!allowed) {
+                document.getElementById('scheduledBlocking').value = 'enabled';
+                return;
+            }
+            this.showNotification('Scheduled blocking disabled. Stay focused!', 'warning');
+        } else {
+            this.showNotification('Scheduled blocking enabled — protect your focus time!', 'success');
+        }
+
+        this.scheduledBlocking.enabled = wantsEnable;
+        this.saveScheduledBlocking();
+        this.populateScheduledBlocking();
+
+        // Trigger immediate check in background
+        chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
     }
 
     async toggleSleepBlocking(value) {
