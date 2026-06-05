@@ -180,8 +180,12 @@ class BackgroundService {
                 } catch (e) { continue; }
 
                 // Only send rules that match the current hostname.
-                // Do NOT send generic rules (!r.domain) to avoid completely breaking sites like Instagram
-                const finalRules = tabRules.filter(r => r.domain);
+                // Do NOT send generic rules with no domain to avoid breaking unrelated sites.
+                const finalRules = cosmetic.filter(rule => {
+                    if (!rule.domain) return false;
+                    const domain = rule.domain.replace(/^\|\|/, '').trim();
+                    return hostname === domain || hostname.endsWith('.' + domain);
+                });
 
                 chrome.tabs.sendMessage(tab.id, {
                     action: 'applyCosmeticRules',
@@ -866,30 +870,7 @@ class BackgroundService {
                 const orig = urlObj.searchParams.get('orig');
                 if (orig) {
                     chrome.tabs.update(tab.id, { url: decodeURIComponent(orig) }).catch(() => { });
-                } else {
-                    chrome.tabs.goBack(tab.id).catch(() => chrome.tabs.reload(tab.id).catch(() => { }));
                 }
-            }
-        }
-        // After redirecting tabs back, reload any tabs that were previously blocked to ensure they refresh
-        await this.refreshUnblockedTabs();
-    }
-
-    async refreshUnblockedTabs() {
-        // Get all tabs that might have been blocked
-        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-        for (const tab of tabs) {
-            if (!tab.url) continue;
-            // Skip extension pages and special pages
-            if (tab.url.startsWith('chrome-extension://') || tab.url.startsWith('chrome://') || tab.url.startsWith('file://')) continue;
-            
-            // Check if this tab should be unblocked and refresh it
-            const hostname = new URL(tab.url).hostname.replace(/^www\./, '');
-            const isBlocked = await this.isSiteBlocked(hostname);
-            
-            if (!isBlocked) {
-                // Tab is not blocked, refresh it to ensure content loads properly
-                chrome.tabs.reload(tab.id).catch(() => { });
             }
         }
     }
