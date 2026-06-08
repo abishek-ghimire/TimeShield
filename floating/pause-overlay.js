@@ -90,9 +90,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const eod = new Date();
                 eod.setHours(23, 59, 59, 999);
                 selectedDurationMs = eod.getTime() - now.getTime();
-            } else if (dur === '-1') {
-                selectedDurationMs = -1;
             } else {
+                // Disallow indefinite '-1' pauses — require timed duration
+                if (dur === '-1') {
+                    alert('Indefinite pause option removed. Please pick a timed duration.');
+                    return;
+                }
                 selectedDurationMs = parseInt(dur) * 60000;
             }
 
@@ -117,28 +120,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 4. Motivation Validation Handle
+    // 4. Motivation Validation Handle (single exact-sentence requirement)
+    // Support either id for backward compatibility
+    const motTextEl = document.getElementById('motivationText') || document.getElementById('motivationText1');
+    if (motTextEl) {
+        // store expected to protect against accidental clearing
+        motTextEl.dataset.expected = motTextEl.textContent || motTextEl.dataset.expected || '';
+    }
+
     const confirmBtn = document.getElementById('confirmPauseBtn');
     if (confirmBtn) {
         confirmBtn.addEventListener('click', async () => {
-            const cleanText = (str) => str.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+            const cleanText = (str) => (str || '').toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
 
-            const mText1 = cleanText(document.getElementById('motivationText1').textContent);
-            const mInput1 = cleanText(document.getElementById('motivationInput1').value);
+            const mText = cleanText(motTextEl ? motTextEl.textContent : (motTextEl && motTextEl.dataset.expected) || '');
+            const mInput = cleanText(document.getElementById('motivationInput').value || '');
 
-            if (mInput1 === mText1) {
+            if (mInput === mText) {
                 if (parseInt(selectedDurationMs) === 5 * 60000) {
                     await chrome.runtime.sendMessage({ action: 'incrementGracePause' });
                 }
                 await chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: selectedDurationMs });
                 window.close();
             } else {
-                document.getElementById('motivationErrorMsg').style.display = 'block';
-                // Clear error on typing
-                document.getElementById('motivationInput1').addEventListener('input', () => {
-                    document.getElementById('motivationErrorMsg').style.display = 'none';
-                }, { once: true });
+                const err = document.getElementById('motivationErrorMsg');
+                if (err) err.style.display = 'block';
+                // Do not clear or modify the displayed target sentence so user can retry
+                if (motTextEl && (!motTextEl.textContent || motTextEl.textContent.trim() === '')) {
+                    motTextEl.textContent = motTextEl.dataset.expected || '';
+                }
+                // Hide error on user's input again
+                const inp = document.getElementById('motivationInput');
+                if (inp) {
+                    inp.addEventListener('input', () => {
+                        const er = document.getElementById('motivationErrorMsg');
+                        if (er) er.style.display = 'none';
+                    }, { once: true });
+                }
             }
+        });
+    }
+
+    // Enforce anti-paste on both challenge input fields (auth challenge and motivation input)
+    if (chlInput) {
+        chlInput.addEventListener('paste', (e) => e.preventDefault());
+        chlInput.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') e.preventDefault();
+        });
+    }
+
+    const motInp = document.getElementById('motivationInput');
+    if (motInp) {
+        motInp.addEventListener('paste', (e) => e.preventDefault());
+        motInp.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') e.preventDefault();
         });
     }
 
@@ -154,5 +189,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) el.addEventListener('copy', (e) => e.preventDefault());
     };
     disableCopy('challengeTextDisplay');
-    disableCopy('motivationText1');
+    disableCopy('motivationText');
 });

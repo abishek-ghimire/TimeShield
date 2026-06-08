@@ -48,44 +48,36 @@ class ElementPicker {
     document.removeEventListener('click', this._onClick, true);
     document.removeEventListener('keydown', this._onKeyDown);
 
-    const ui = document.getElementById('element-picker-ui');
-    if (ui) ui.remove();
+    // Remove host (which contains the shadow root + UI)
+    if (this._pickerHost) {
+      this._pickerHost.remove();
+      this._pickerHost = null;
+      this._pickerShadow = null;
+    }
 
     document.body.style.cursor = '';
   }
 
   createPickerUI() {
-    const existing = document.getElementById('element-picker-ui');
-    if (existing) existing.remove();
+    // Host element holds a shadow root so extension UI styles cannot leak nor be overridden
+    const existingHost = document.getElementById('ts-element-picker-host');
+    if (existingHost) existingHost.remove();
 
-    const ui = document.createElement('div');
-    ui.id = 'element-picker-ui';
-    ui.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(15,23,42,0.9);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 100px;
-        z-index: 2147483647;
-        font-family: 'Inter', -apple-system, sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        border: 1px solid rgba(255,255,255,0.1);
-        backdrop-filter: blur(12px);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      ">
+    const host = document.createElement('div');
+    host.id = 'ts-element-picker-host';
+    // keep host inert visually and position on top
+    host.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:2147483647';
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `
+      <div id="element-picker-ui" style="pointer-events:auto; position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(15,23,42,0.9); color: white; padding: 12px 24px; border-radius: 100px; font-family: 'Inter', -apple-system, sans-serif; font-size: 14px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); display:flex; align-items:center; gap:10px;">
         <span style="font-size:18px;">🎯</span>
         Click any element to block it &nbsp;<kbd style="background:rgba(255,255,255,0.1); border-radius:4px; padding:2px 6px; font-size:12px;">Esc</kbd> to cancel
       </div>
     `;
-    document.body.appendChild(ui);
+
+    document.body.appendChild(host);
+    this._pickerHost = host;
+    this._pickerShadow = shadow;
   }
 
   onMouseOver(event) {
@@ -155,27 +147,14 @@ class ElementPicker {
 
   showBlockDialog(selector, element) {
     // Remove existing dialog
-    const old = document.getElementById('element-picker-dialog');
-    if (old) old.remove();
+    // Create dialog inside the existing shadow root so styles remain isolated
+    if (!this._pickerShadow) return;
+    const existing = this._pickerShadow.querySelector('#element-picker-dialog');
+    if (existing) existing.remove();
 
     const dialog = document.createElement('div');
     dialog.id = 'element-picker-dialog';
-    dialog.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(15,23,42,0.97);
-      color: white;
-      padding: 28px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-      z-index: 2147483647;
-      font-family: 'Inter', -apple-system, sans-serif;
-      min-width: 340px;
-      backdrop-filter: blur(16px);
-    `;
+    dialog.style.cssText = `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15,23,42,0.97); color: white; padding: 28px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.5); font-family: 'Inter', -apple-system, sans-serif; min-width: 340px; backdrop-filter: blur(16px); pointer-events: auto;`;
 
     dialog.innerHTML = `
       <h3 style="margin:0 0 8px; font-size:16px; font-weight:600;">Block Element</h3>
@@ -193,15 +172,19 @@ class ElementPicker {
       </div>
     `;
 
-    document.body.appendChild(dialog);
+    this._pickerShadow.appendChild(dialog);
 
-    document.getElementById('picker-cancel').onclick = () => {
+    const cancelBtn = this._pickerShadow.querySelector('#picker-cancel');
+    const confirmBtn = this._pickerShadow.querySelector('#picker-confirm');
+
+    cancelBtn.onclick = () => {
       dialog.remove();
       this.stopPicker();
     };
 
-    document.getElementById('picker-confirm').onclick = () => {
-      const scope = document.getElementById('picker-block-scope').value;
+    confirmBtn.onclick = () => {
+      const scopeEl = this._pickerShadow.querySelector('#picker-block-scope');
+      const scope = scopeEl ? scopeEl.value : 'domain';
 
       chrome.runtime.sendMessage({
         action: 'blockElement',

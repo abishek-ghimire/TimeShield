@@ -63,9 +63,9 @@ body.ts-adblock-active #anti-adblock-wall {
 }
 
 /* ── 8. Extension UI (Element Picker) ──────────────────────────────── */
-/* Keep these active even if ad-blocking is toggled off, as picker is a separate tool */
-#element-picker-ui,
-#element-picker-dialog {
+/* Scope UI rules under the adblock-active body class to avoid leaking into host sites */
+body.ts-adblock-active #element-picker-ui,
+body.ts-adblock-active #element-picker-dialog {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
   z-index: 2147483647 !important;
 }
