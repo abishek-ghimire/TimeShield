@@ -121,10 +121,10 @@ body.theme-light .brand h1 {
 }
 
 .brand-subtitle {
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
     font-weight: 500;
-    margin-top: 4px;
+    margin-top: 8px;
 }
 
 .current-time {

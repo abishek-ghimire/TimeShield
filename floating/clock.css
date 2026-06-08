@@ -121,6 +121,7 @@ body {
 .clock-display {
     text-align: center;
     margin-bottom: 15px;
+    white-space: nowrap; /* prevent AM/PM wrapping */
 }
 
 .time {
@@ -133,6 +134,14 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+
+    /* Stabilize layout: fixed width, no-wrap, tabular numerals */
+    display: inline-block;
+    width: 145px;
+    padding: 0 4px;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
 }
 
 .date {

@@ -74,7 +74,9 @@ class SleepBlockPage {
                     eod.setHours(23, 59, 59, 999);
                     durationMs = eod.getTime() - now.getTime();
                 } else if (duration === '-1') {
-                    durationMs = -1;
+                    // Indefinite pause removed — require a timed duration
+                    alert('Indefinite pause option has been removed. Please choose a timed duration.');
+                    return;
                 } else {
                     durationMs = parseInt(duration) * 60000;
                 }
