@@ -91,67 +91,89 @@
     }
 
     let activeInterval = null;
-    function checkActiveTimers() {
-        chrome.storage.local.get(['focusState', 'timerState'], (res) => {
-            const focusActive = res.focusState?.isActive === true;
-            const timerActive = res.timerState?.isRunning === true;
+    async function checkActiveTimers() {
+        const res = await chrome.storage.local.get(['focusState', 'timerState']);
+        const focusActive = res.focusState?.isActive === true;
+        const timerActive = res.timerState?.isRunning === true;
+        const focusEl = document.getElementById('focusIndicator');
 
-            if (activeInterval) clearInterval(activeInterval);
+        if (!focusEl) return;
 
-            // Hide indicator when nothing is running
-            if (!focusActive && !timerActive) {
-                focusEl.style.display = 'none';
-                focusEl.textContent = '';
-                return;
+        // Hide indicator when nothing is running
+        if (!focusActive && !timerActive) {
+            focusEl.style.display = 'none';
+            focusEl.textContent = '';
+            focusEl.classList.remove('has-timer');
+            return;
+        }
+
+        focusEl.style.display = 'block';
+        focusEl.classList.add('has-timer');
+
+        const focusStart = res.focusState?.startTime;
+        const focusDuration = res.focusState?.duration || 0;
+        const timerStart = res.timerState?.startTime;
+        const timerDuration = res.timerState?.duration || 0;
+
+        const updateStatus = () => {
+            const parts = [];
+
+            if (focusActive && focusStart && focusDuration > 0) {
+                const elapsed = Math.floor((Date.now() - focusStart) / 1000);
+                const remaining = Math.max(0, focusDuration - elapsed);
+                if (remaining > 0) {
+                    const m = Math.floor(remaining / 60);
+                    const s = remaining % 60;
+                    parts.push(`🎯 Focus: ${pad(m)}:${pad(s)}`);
+                } else {
+                    parts.push('🎯 Focus Complete');
+                }
             }
 
-            focusEl.style.display = 'block';
-
-            const focusStart = res.focusState?.startTime;
-            const focusDuration = res.focusState?.duration || 0;
-            const timerStart = res.timerState?.startTime;
-            const timerDuration = res.timerState?.duration || 0;
-
-            const updateStatus = () => {
-                const parts = [];
-
-                if (focusActive && focusStart && focusDuration > 0) {
-                    const elapsed = Math.floor((Date.now() - focusStart) / 1000);
-                    const remaining = Math.max(0, focusDuration - elapsed);
-                    if (remaining > 0) {
-                        const m = Math.floor(remaining / 60);
-                        const s = remaining % 60;
-                        parts.push(`🎯 Focus: ${pad(m)}:${pad(s)}`);
-                    } else {
-                        parts.push('🎯 Focus Complete');
-                    }
-                }
-
-                if (timerActive && timerStart && timerDuration > 0) {
-                    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-                    const remaining = Math.max(0, timerDuration - elapsed);
-                    if (remaining > 0) {
-                        const m = Math.floor(remaining / 60);
-                        const s = remaining % 60;
-                        parts.push(`⏱️ Timer: ${pad(m)}:${pad(s)}`);
-                    } else {
-                        parts.push('⏱️ Timer Complete');
-                    }
-                }
-
-                if (!parts.length) {
-                    focusEl.innerHTML = '';
+            if (timerActive && timerStart && timerDuration > 0) {
+                const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+                const remaining = Math.max(0, timerDuration - elapsed);
+                if (remaining > 0) {
+                    const m = Math.floor(remaining / 60);
+                    const s = remaining % 60;
+                    parts.push(`⏱️ Timer: ${pad(m)}:${pad(s)}`);
                 } else {
-                    focusEl.innerHTML = parts
-                        .map(text => `<div class="focus-indicator-line">${text}</div>`)
-                        .join('');
+                    parts.push('⏱️ Timer Complete');
                 }
-            };
+            }
 
-            updateStatus();
-            activeInterval = setInterval(updateStatus, 1000);
-        });
+            if (!parts.length) {
+                focusEl.innerHTML = '';
+                focusEl.classList.remove('has-timer');
+            } else {
+                focusEl.innerHTML = parts
+                    .map(text => `<div class="focus-indicator-line">${text}</div>`)
+                    .join('');
+            }
+        };
+
+        updateStatus();
+        activeInterval = setInterval(updateStatus, 1000);
     }
+
+    // Setup close button functionality
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeBtn = document.getElementById('timerCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', async () => {
+                const res = await chrome.storage.local.get(['focusState', 'timerState']);
+                const focusActive = res.focusState?.isActive === true;
+                const timerActive = res.timerState?.isRunning === true;
+
+                if (focusActive) {
+                    await chrome.runtime.sendMessage({ action: 'stopFocusMode' });
+                }
+                if (timerActive) {
+                    await chrome.runtime.sendMessage({ action: 'stopTimer' });
+                }
+            });
+        }
+    });
 
     async function applySettings() {
         const result = await chrome.storage.local.get(['settings', 'clockVisible', 'focusState', 'timerState']);

@@ -340,13 +340,57 @@ class PopupController {
     }
 
     async blockSocialMedia() {
-        await chrome.runtime.sendMessage({
-            action: 'startFocusMode',
-            duration: 25 * 60,
-            focusBlockedSites: this.socialMediaSites
-        });
-        this.showToast('Social media block started for 25 minutes.');
+        const result = await chrome.storage.local.get(['focusState']);
+        const focusState = result.focusState || {};
+        
+        // Check if social media blocking is currently active
+        const isSocialMediaBlocked = focusState.isActive && 
+            focusState.focusBlockedSites && 
+            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site));
+
+        if (isSocialMediaBlocked) {
+            // Disable social media blocking by stopping focus mode
+            await chrome.runtime.sendMessage({ action: 'stopFocusMode' });
+            this.showToast('Social media block disabled.');
+            this.updateSocialMediaButton(false);
+        } else {
+            // Enable social media blocking
+            await chrome.runtime.sendMessage({
+                action: 'startFocusMode',
+                duration: 25 * 60,
+                focusBlockedSites: this.socialMediaSites
+            });
+            this.showToast('Social media block started for 25 minutes.');
+            this.updateSocialMediaButton(true);
+        }
         window.close();
+    }
+
+    async checkSocialMediaBlockState() {
+        const result = await chrome.storage.local.get(['focusState']);
+        const focusState = result.focusState || {};
+        
+        const isSocialMediaBlocked = focusState.isActive && 
+            focusState.focusBlockedSites && 
+            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site));
+        
+        this.updateSocialMediaButton(isSocialMediaBlocked);
+    }
+
+    updateSocialMediaButton(isBlocked) {
+        const label = document.getElementById('blockSocialMediaLabel');
+        const button = document.getElementById('blockSocialMedia');
+        if (label && button) {
+            if (isBlocked) {
+                label.textContent = 'Unblock Social Media';
+                button.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                button.style.background = 'rgba(16, 185, 129, 0.1)';
+            } else {
+                label.textContent = 'Block Social Media';
+                button.style.borderColor = '';
+                button.style.background = '';
+            }
+        }
     }
 
     async toggleFloatingClock() {
