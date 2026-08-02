@@ -4,6 +4,9 @@ class OptionsManager {
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
         this.screenTimeRefDate = new Date();
+        this.syncStatus = { state: 'offline', lastSynced: null, email: null, error: null };
+        this.siteCategories = this.getDefaultSiteCategories();
+        this.customCategories = [];
 
         this.init();
     }
@@ -12,6 +15,8 @@ class OptionsManager {
         await this.loadData();
         this.setupEventListeners();
         this.populateForm();
+        await this.refreshSyncStatus();
+        this.startSyncStatusPolling();
         // Update badges after form is populated to ensure correct initial state
         this.updateAccordionBadges();
     }
@@ -19,7 +24,8 @@ class OptionsManager {
     async loadData() {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites',
-            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist'
+            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist',
+            'firebaseUser', 'customFirebaseConfig', 'syncStatus', 'siteCategories', 'customCategories'
         ]);
 
         this.settings = result.settings || this.getDefaultSettings();
@@ -34,6 +40,11 @@ class OptionsManager {
         this.adBlockStats = result.adBlockStats || { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
         this.sleepBlocking = result.sleepBlocking || this.getDefaultSleepBlocking();
         this.whitelist = result.whitelist || [];
+        this.firebaseUser = result.firebaseUser || null;
+        this.customFirebaseConfig = result.customFirebaseConfig || null;
+        this.syncStatus = result.syncStatus || this.syncStatus;
+        this.siteCategories = result.siteCategories || this.getDefaultSiteCategories();
+        this.customCategories = result.customCategories || [];
     }
 
     setupEventListeners() {
@@ -46,6 +57,7 @@ class OptionsManager {
         this.setupAdBlockListeners(); // NEW
         this.setupEnhancedInteractions();
         this.setupScreenTimeListeners(); // NEW
+        this.setupSyncListeners();
         this.setupAccordion(); // Schedules & Limits collapsible panels
     }
 
@@ -233,10 +245,16 @@ class OptionsManager {
 
         document.getElementById('blockingStartTime').addEventListener('change', () => this.saveScheduledBlocking());
         document.getElementById('blockingEndTime').addEventListener('change', () => this.saveScheduledBlocking());
+        document.getElementById('scheduleSelectAllDays').addEventListener('change', (e) => {
+            this.setDayGroupChecked(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'], e.target.checked);
+            this.saveScheduledBlocking();
+        });
 
         // Day checkboxes
         ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
-            document.getElementById(day).addEventListener('change', () => this.saveScheduledBlocking());
+            document.getElementById(day).addEventListener('change', () => {
+                this.saveScheduledBlocking();
+            });
         });
 
         // Sleep blocking
@@ -246,10 +264,16 @@ class OptionsManager {
 
         document.getElementById('sleepStartTime').addEventListener('change', () => this.saveSleepBlocking());
         document.getElementById('sleepEndTime').addEventListener('change', () => this.saveSleepBlocking());
+        document.getElementById('sleepSelectAllDays').addEventListener('change', (e) => {
+            this.setDayGroupChecked(['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday'], e.target.checked);
+            this.saveSleepBlocking();
+        });
 
         // Sleep blocking day checkboxes
         ['sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday', 'sleepSunday'].forEach(day => {
-            document.getElementById(day).addEventListener('change', () => this.saveSleepBlocking());
+            document.getElementById(day).addEventListener('change', () => {
+                this.saveSleepBlocking();
+            });
         });
 
         document.getElementById('sleepBlockAll').addEventListener('change', () => this.saveSleepBlocking());
@@ -311,8 +335,341 @@ class OptionsManager {
         this.populateTimeLimits();
         this.populateGlobalLimit(); // NEW
         this.populateAdBlockSettings(); // NEW
+        this.populateSyncSettings();
+        this.populateSiteCategories();
         this.updateRangeDisplays();
         this.applyTheme();
+    }
+
+    getDefaultSiteCategories() {
+        return {
+            socialMedia: [
+                'facebook.com',
+                'instagram.com',
+                'x.com',
+                'twitter.com',
+                'tiktok.com',
+                'reddit.com',
+                'snapchat.com',
+                'linkedin.com',
+                'pinterest.com',
+                'threads.net',
+                'discord.com',
+                'youtube.com'
+            ],
+            entertainment: ['netflix.com', 'hulu.com', 'primevideo.com', 'disneyplus.com', 'hbomax.com', 'twitch.tv'],
+            movies: ['imdb.com', 'rottentomatoes.com', 'letterboxd.com', 'fandango.com'],
+            gaming: ['steamcommunity.com', 'store.steampowered.com', 'epicgames.com', 'roblox.com', 'minecraft.net', 'twitch.tv'],
+            shopping: ['amazon.com', 'ebay.com', 'walmart.com', 'etsy.com', 'aliexpress.com'],
+            news: ['news.google.com', 'cnn.com', 'bbc.com', 'nytimes.com', 'foxnews.com', 'reuters.com'],
+            adult: ['pornhub.com', 'xvideos.com', 'xhamster.com', 'onlyfans.com']
+        };
+    }
+
+    getAllCategoryEntries() {
+        const presets = Object.entries(this.siteCategories || {}).map(([key, sites]) => ({
+            value: `preset:${key}`,
+            label: key,
+            sites
+        }));
+
+        const customs = (this.customCategories || []).map((category, index) => ({
+            value: `custom:${index}`,
+            label: category.name,
+            sites: category.sites || []
+        }));
+
+        return [...presets, ...customs];
+    }
+
+    populateSiteCategories() {
+        const select = document.getElementById('categoryPreset');
+        const customList = document.getElementById('customCategoriesList');
+        if (!select) return;
+
+        const entries = this.getAllCategoryEntries();
+        select.innerHTML = '';
+
+        entries.forEach((entry, index) => {
+            const option = document.createElement('option');
+            option.value = entry.value;
+            option.textContent = entry.label;
+            if (index === 0) option.selected = true;
+            select.appendChild(option);
+        });
+
+        if (customList) {
+            customList.innerHTML = '';
+            if (!this.customCategories.length) {
+                customList.innerHTML = '<p class="hint">No custom categories yet.</p>';
+                return;
+            }
+
+            this.customCategories.forEach((category, index) => {
+                const item = document.createElement('div');
+                item.className = 'site-item';
+                item.innerHTML = `
+                    <span class="site-url">${category.name}</span>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span class="site-url">${(category.sites || []).length} sites</span>
+                        <button class="remove-site" data-index="${index}" data-type="custom-category">Remove</button>
+                    </div>
+                `;
+                item.querySelector('.remove-site').addEventListener('click', (e) => {
+                    this.removeCustomCategory(Number(e.target.dataset.index));
+                });
+                customList.appendChild(item);
+            });
+        }
+    }
+
+    normalizeCategorySites(sites) {
+        return [...new Set((sites || []).map(site => site.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]).filter(Boolean))];
+    }
+
+    async applyCategoryToList(target) {
+        const select = document.getElementById('categoryPreset');
+        if (!select) return;
+
+        const selected = this.getAllCategoryEntries().find(entry => entry.value === select.value);
+        if (!selected) {
+            this.showNotification('Select a category first.', 'warning');
+            return;
+        }
+
+        const sites = this.normalizeCategorySites(selected.sites);
+        if (!sites.length) {
+            this.showNotification('Selected category has no sites.', 'warning');
+            return;
+        }
+
+        if (target === 'focus') {
+            this.focusBlockedSites = [...new Set([...this.focusBlockedSites, ...sites])];
+        } else {
+            this.scheduledBlockedSites = [...new Set([...this.scheduledBlockedSites, ...sites])];
+        }
+
+        await this.saveSiteLists();
+        this.updateSiteLists();
+        this.showNotification(`Added ${selected.label} sites to ${target} block list.`, 'success');
+    }
+
+    async saveCustomCategory() {
+        const nameInput = document.getElementById('customCategoryName');
+        const sitesInput = document.getElementById('customCategorySites');
+        const name = nameInput?.value.trim();
+        const sites = this.normalizeCategorySites((sitesInput?.value || '').split(/[\n,]/));
+
+        if (!name || !sites.length) {
+            this.showNotification('Enter a category name and at least one site.', 'warning');
+            return;
+        }
+
+        const existingIndex = this.customCategories.findIndex(category => category.name.toLowerCase() === name.toLowerCase());
+        const category = { name, sites };
+        if (existingIndex >= 0) {
+            this.customCategories[existingIndex] = category;
+        } else {
+            this.customCategories.push(category);
+        }
+
+        await chrome.storage.local.set({ customCategories: this.customCategories });
+        this.populateSiteCategories();
+        if (nameInput) nameInput.value = '';
+        if (sitesInput) sitesInput.value = '';
+        this.showNotification('Custom category saved.', 'success');
+    }
+
+    async removeCustomCategory(index) {
+        this.customCategories.splice(index, 1);
+        await chrome.storage.local.set({ customCategories: this.customCategories });
+        this.populateSiteCategories();
+        this.showNotification('Custom category removed.', 'warning');
+    }
+
+    populateSyncSettings() {
+        const apiKeyInput = document.getElementById('firebaseApiKey');
+        const projectIdInput = document.getElementById('firebaseProjectId');
+        const emailInput = document.getElementById('syncEmail');
+        const passwordInput = document.getElementById('syncPassword');
+
+        if (apiKeyInput) apiKeyInput.value = this.customFirebaseConfig?.apiKey || '';
+        if (projectIdInput) projectIdInput.value = this.customFirebaseConfig?.projectId || '';
+        if (emailInput) emailInput.value = this.firebaseUser?.email || '';
+        if (passwordInput) passwordInput.value = '';
+
+        this.renderSyncStatus(this.syncStatus);
+    }
+
+    setupSyncListeners() {
+        const saveConfigButton = document.getElementById('saveSyncConfig');
+        const loginButton = document.getElementById('syncLogin');
+        const signUpButton = document.getElementById('syncSignUp');
+        const logoutButton = document.getElementById('syncLogout');
+        const syncNowButton = document.getElementById('syncNow');
+
+        if (saveConfigButton) {
+            saveConfigButton.addEventListener('click', () => this.saveSyncConfig());
+        }
+        if (loginButton) {
+            loginButton.addEventListener('click', () => this.loginToSync());
+        }
+        if (signUpButton) {
+            signUpButton.addEventListener('click', () => this.signUpForSync());
+        }
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.logoutOfSync());
+        }
+        if (syncNowButton) {
+            syncNowButton.addEventListener('click', () => this.syncNow());
+        }
+
+        const syncPassword = document.getElementById('syncPassword');
+        if (syncPassword) {
+            syncPassword.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.loginToSync();
+                }
+            });
+        }
+    }
+
+    async refreshSyncStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getSyncStatus' });
+            if (response?.syncStatus) {
+                this.syncStatus = response.syncStatus;
+                this.renderSyncStatus(this.syncStatus);
+            }
+        } catch (error) {
+            this.renderSyncStatus({ state: 'offline', lastSynced: null, error: error.message || 'Sync service unavailable' });
+        }
+    }
+
+    startSyncStatusPolling() {
+        if (this._syncStatusTimer) clearInterval(this._syncStatusTimer);
+        this._syncStatusTimer = setInterval(() => this.refreshSyncStatus(), 30000);
+    }
+
+    renderSyncStatus(status) {
+        const value = document.getElementById('syncStatusValue');
+        const lastSynced = document.getElementById('syncLastSyncedValue');
+
+        if (value) {
+            const labelMap = {
+                syncing: 'Syncing',
+                synced: 'Synced',
+                offline: 'Offline',
+                failed: 'Sync Failed'
+            };
+            value.textContent = labelMap[status?.state] || 'Offline';
+        }
+
+        if (lastSynced) {
+            lastSynced.textContent = status?.lastSynced ? new Date(status.lastSynced).toLocaleString() : 'Never';
+        }
+    }
+
+    async saveSyncConfig() {
+        try {
+            const apiKey = document.getElementById('firebaseApiKey')?.value.trim();
+            const projectId = document.getElementById('firebaseProjectId')?.value.trim();
+
+            if (!apiKey || !projectId) {
+                this.showNotification('Enter both Firebase API key and project ID.', 'warning');
+                return;
+            }
+
+            const response = await chrome.runtime.sendMessage({ action: 'configureFirebase', apiKey, projectId });
+            if (response?.success) {
+                this.customFirebaseConfig = { apiKey, projectId };
+                await chrome.storage.local.set({ customFirebaseConfig: this.customFirebaseConfig });
+                this.showNotification('Sync configuration saved.', 'success');
+                await this.refreshSyncStatus();
+            } else {
+                throw new Error(response?.error || 'Failed to save sync configuration');
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Unable to save sync configuration.', 'error');
+        }
+    }
+
+    async loginToSync() {
+        try {
+            const email = document.getElementById('syncEmail')?.value.trim();
+            const password = document.getElementById('syncPassword')?.value || '';
+
+            if (!email || !password) {
+                this.showNotification('Enter both email and password.', 'warning');
+                return;
+            }
+
+            const response = await chrome.runtime.sendMessage({ action: 'login', email, password });
+            if (response?.success) {
+                const stored = await chrome.storage.local.get(['firebaseUser']);
+                this.firebaseUser = stored.firebaseUser || null;
+                this.showNotification('Signed in and syncing settings.', 'success');
+                await this.refreshSyncStatus();
+            } else {
+                throw new Error(response?.error || 'Login failed');
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Login failed.', 'error');
+        }
+    }
+
+    async signUpForSync() {
+        try {
+            const email = document.getElementById('syncEmail')?.value.trim();
+            const password = document.getElementById('syncPassword')?.value || '';
+
+            if (!email || !password) {
+                this.showNotification('Enter both email and password.', 'warning');
+                return;
+            }
+
+            const response = await chrome.runtime.sendMessage({ action: 'signUp', email, password });
+            if (response?.success) {
+                const stored = await chrome.storage.local.get(['firebaseUser']);
+                this.firebaseUser = stored.firebaseUser || null;
+                this.showNotification('Account created and synced.', 'success');
+                await this.refreshSyncStatus();
+            } else {
+                throw new Error(response?.error || 'Sign up failed');
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Sign up failed.', 'error');
+        }
+    }
+
+    async logoutOfSync() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'logout' });
+            if (response?.success) {
+                this.firebaseUser = null;
+                this.syncStatus = { state: 'offline', lastSynced: this.syncStatus.lastSynced || null, email: null, error: null };
+                this.renderSyncStatus(this.syncStatus);
+                this.showNotification('Signed out from cloud sync.', 'success');
+            } else {
+                throw new Error(response?.error || 'Logout failed');
+            }
+        } catch (error) {
+            this.showNotification(error.message || 'Logout failed.', 'error');
+        }
+    }
+
+    setDayGroupChecked(dayIds, checked) {
+        dayIds.forEach((id) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) checkbox.checked = checked;
+        });
+    }
+
+    updateSelectAllState(allCheckboxId, dayIds) {
+        const allCheckbox = document.getElementById(allCheckboxId);
+        if (!allCheckbox) return;
+
+        allCheckbox.checked = dayIds.every((id) => document.getElementById(id)?.checked);
     }
 
     // NEW: Global Limits Methods
@@ -472,6 +829,7 @@ class OptionsManager {
         days.forEach(day => {
             document.getElementById(day).checked = this.scheduledBlocking.days && this.scheduledBlocking.days.includes(parseInt(day === 'sunday' ? 0 : day === 'monday' ? 1 : day === 'tuesday' ? 2 : day === 'wednesday' ? 3 : day === 'thursday' ? 4 : day === 'friday' ? 5 : 6));
         });
+        this.updateSelectAllState('scheduleSelectAllDays', days);
     }
 
     populateSleepBlocking() {
@@ -496,6 +854,7 @@ class OptionsManager {
             const dayValue = parseInt(day.replace('sleep', '').replace('sunday', '0').replace('monday', '1').replace('tuesday', '2').replace('wednesday', '3').replace('thursday', '4').replace('friday', '5').replace('saturday', '6'));
             document.getElementById(day).checked = this.sleepBlocking.days && this.sleepBlocking.days.includes(dayValue);
         });
+        this.updateSelectAllState('sleepSelectAllDays', days);
 
         // Populate block all checkbox
         document.getElementById('sleepBlockAll').checked = this.sleepBlocking.blockAll !== false; // Default to true
@@ -938,7 +1297,7 @@ class OptionsManager {
         this.populateSleepBlocking();
 
         // Trigger immediate check in background
-        chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
+        chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
     }
 
     async saveSleepBlocking() {
@@ -955,11 +1314,21 @@ class OptionsManager {
             }
         });
         this.sleepBlocking.days = days;
+        this.updateSelectAllState('sleepSelectAllDays', ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday']);
 
-        await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking });
+        this.scheduledBlocking = {
+            enabled: this.sleepBlocking.enabled,
+            startTime: this.sleepBlocking.startTime,
+            endTime: this.sleepBlocking.endTime,
+            days: this.sleepBlocking.days,
+            mode: this.sleepBlocking.blockAll ? 'all' : 'specific',
+            whitelist: this.sleepBlocking.whitelist || []
+        };
+
+        await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking, scheduledBlocking: this.scheduledBlocking });
 
         // Trigger immediate check in background
-        chrome.runtime.sendMessage({ action: 'checkSleepBlocking' }).catch(() => { });
+        chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
     }
 
     addSleepWhitelist() {
@@ -1108,6 +1477,7 @@ class OptionsManager {
             endTime: endTime,
             days: days
         };
+        this.updateSelectAllState('scheduleSelectAllDays', ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
 
         await chrome.storage.local.set({ scheduledBlocking: this.scheduledBlocking });
         // Trigger immediate check in service worker
@@ -1283,6 +1653,113 @@ class OptionsManager {
         });
     }
 
+    async showDisableCountdown(actionLabel, seconds = 12) {
+        const messages = [
+            'Take a breath and keep your momentum.',
+            'Your future self will thank you for waiting.',
+            'Small pauses protect big goals.',
+            'Focus first, distractions later.',
+            'You are building a better default.'
+        ];
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 100000;
+                background: rgba(2, 6, 23, 0.8);
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(6px);
+            `;
+
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                width: min(540px, calc(100vw - 32px));
+                background: linear-gradient(180deg, #0f172a, #111827);
+                color: #e5e7eb;
+                border: 1px solid rgba(99,102,241,0.35);
+                border-radius: 18px;
+                padding: 22px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+            `;
+
+            modal.innerHTML = `
+                <div style="font-size:0.8rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Protection Countdown</div>
+                <div style="font-size:1.15rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
+                <div id="ts-countdown-message" style="font-size:0.95rem;line-height:1.55;color:#cbd5e1;margin-bottom:18px;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+                    <div id="ts-countdown-value" style="font-family:'Outfit',sans-serif;font-size:3rem;font-weight:800;color:#818cf8;min-width:96px;">${seconds}</div>
+                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
+                        <div id="ts-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="ts-countdown-cancel" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
+                    <button id="ts-countdown-continue" disabled style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue</button>
+                </div>
+            `;
+
+            const cleanup = () => {
+                clearInterval(timerId);
+                document.removeEventListener('keydown', escHandler, true);
+                overlay.remove();
+            };
+
+            const resolveAndCleanup = (value) => {
+                cleanup();
+                resolve(value);
+            };
+
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    resolveAndCleanup(false);
+                }
+            };
+
+            const messageEl = modal.querySelector('#ts-countdown-message');
+            const valueEl = modal.querySelector('#ts-countdown-value');
+            const barEl = modal.querySelector('#ts-countdown-bar');
+            const continueBtn = modal.querySelector('#ts-countdown-continue');
+            const cancelBtn = modal.querySelector('#ts-countdown-cancel');
+
+            const update = () => {
+                const remaining = Math.max(0, endAt - Date.now());
+                const remainingSeconds = Math.ceil(remaining / 1000);
+                const message = messages[remainingSeconds % messages.length];
+                valueEl.textContent = String(remainingSeconds);
+                messageEl.textContent = message;
+                barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
+
+                if (remainingSeconds <= 0) {
+                    continueBtn.disabled = false;
+                    continueBtn.style.opacity = '1';
+                    continueBtn.style.cursor = 'pointer';
+                    continueBtn.textContent = 'Continue';
+                    clearInterval(timerId);
+                } else {
+                    continueBtn.textContent = `Wait ${remainingSeconds}s`;
+                }
+            };
+
+            const totalMs = Math.max(10000, Math.min(15000, seconds * 1000));
+            const endAt = Date.now() + totalMs;
+            let timerId = null;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', escHandler, true);
+
+            cancelBtn.addEventListener('click', () => resolveAndCleanup(false));
+            continueBtn.addEventListener('click', () => {
+                if (continueBtn.disabled) return;
+                resolveAndCleanup(true);
+            });
+
+            update();
+            timerId = setInterval(update, 1000);
+        });
+    }
+
     async runChallengeChecks(actionLabel) {
         const settings = this.settings || {};
 
@@ -1313,23 +1790,8 @@ class OptionsManager {
     }
 
     async runProtectionSequence(actionLabel) {
-        const step1 = await this.showGuardStep(
-            'Awareness',
-            'This action may reduce your productivity and increase distraction risk.'
-        );
-        if (!step1) return false;
-
-        const step2 = await this.showGuardStep(
-            'Reflection',
-            'Your current productive session and guardrails may be dismissed if you continue.'
-        );
-        if (!step2) return false;
-
-        const step3 = await this.showGuardStep(
-            'Stay Focused',
-            'Stay focused. Distractions break momentum. Continue only if absolutely necessary.'
-        );
-        if (!step3) return false;
+        const countdownAllowed = await this.showDisableCountdown(actionLabel, 12);
+        if (!countdownAllowed) return false;
 
         const challengeResult = await this.runChallengeChecks(actionLabel);
         if (!challengeResult.ok) {
