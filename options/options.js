@@ -1674,7 +1674,7 @@ class OptionsManager {
         });
     }
 
-    async showDisableCountdown(actionLabel, seconds = 12) {
+    async showDisableCountdown(actionLabel, seconds = 60) {
         const messages = [
             'Take a breath and keep your momentum.',
             'Your future self will thank you for waiting.',
@@ -1743,11 +1743,18 @@ class OptionsManager {
             const continueBtn = modal.querySelector('#ts-countdown-continue');
             const cancelBtn = modal.querySelector('#ts-countdown-cancel');
 
+            const formatCountdown = (value) => {
+                const total = Math.max(0, Number(value) || 0);
+                const mins = Math.floor(total / 60);
+                const secs = total % 60;
+                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            };
+
             const update = () => {
                 const remaining = Math.max(0, endAt - Date.now());
                 const remainingSeconds = Math.ceil(remaining / 1000);
                 const message = messages[remainingSeconds % messages.length];
-                valueEl.textContent = String(remainingSeconds);
+                valueEl.textContent = formatCountdown(remainingSeconds);
                 messageEl.textContent = message;
                 barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
 
@@ -1762,7 +1769,7 @@ class OptionsManager {
                 }
             };
 
-            const totalMs = Math.max(10000, Math.min(15000, seconds * 1000));
+            const totalMs = Math.max(1000, (Number(seconds) || 60) * 1000);
             const endAt = Date.now() + totalMs;
             let timerId = null;
 
@@ -1811,7 +1818,7 @@ class OptionsManager {
     }
 
     async runProtectionSequence(actionLabel) {
-        const countdownAllowed = await this.showDisableCountdown(actionLabel, 12);
+        const countdownAllowed = await this.showDisableCountdown(actionLabel, 60);
         if (!countdownAllowed) return false;
 
         const challengeResult = await this.runChallengeChecks(actionLabel);

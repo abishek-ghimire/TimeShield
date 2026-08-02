@@ -685,7 +685,7 @@ class PopupController {
                 <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
                 <div id="popup-countdown-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                    <div id="popup-countdown-value" style="font-family:'Outfit',sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:80px;">12</div>
+                    <div id="popup-countdown-value" style="font-family:'Outfit',sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:80px;">01:00</div>
                     <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
                         <div id="popup-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
                     </div>
@@ -696,7 +696,7 @@ class PopupController {
                 </div>
             `;
 
-            const totalSeconds = 12;
+            const totalSeconds = 60;
             const totalMs = totalSeconds * 1000;
             const endAt = Date.now() + totalMs;
             let timerId = null;
@@ -725,10 +725,17 @@ class PopupController {
             const cancelBtn = modal.querySelector('#popup-countdown-cancel');
             const continueBtn = modal.querySelector('#popup-countdown-continue');
 
+            const formatCountdown = (value) => {
+                const total = Math.max(0, Number(value) || 0);
+                const mins = Math.floor(total / 60);
+                const secs = total % 60;
+                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            };
+
             const tick = () => {
                 const remaining = Math.max(0, endAt - Date.now());
                 const remainingSeconds = Math.ceil(remaining / 1000);
-                valueEl.textContent = String(remainingSeconds);
+                valueEl.textContent = formatCountdown(remainingSeconds);
                 messageEl.textContent = messages[remainingSeconds % messages.length];
                 barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
 

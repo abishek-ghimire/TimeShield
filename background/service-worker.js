@@ -472,7 +472,9 @@ class BackgroundService {
                 const fSites = Array.isArray(message.focusBlockedSites) && message.focusBlockedSites.length > 0
                     ? message.focusBlockedSites
                     : (focusBlockedResult.focusBlockedSites || []);
-                await this.startFocusMode(message.duration, fSites, Number(message.startAfterMinutes || 0));
+                const requestedDelay = message.startAfterMinutes;
+                const startAfterMinutes = requestedDelay === undefined ? 1 : Number(requestedDelay);
+                await this.startFocusMode(message.duration, fSites, startAfterMinutes);
                 sendResponse({ success: true });
                 break;
             case 'stopFocusMode':
