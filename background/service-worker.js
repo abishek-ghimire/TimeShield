@@ -4,6 +4,7 @@ import { FilterListManager } from './filter-lists.js';
 import { RuleCompiler } from './adblock-rules.js';
 import { StorageManager } from '../lib/storage-manager.js';
 import { usageTracker } from './usage-tracker.js';
+import { SyncService } from '../utils/sync-service.js';
 
 class BackgroundService {
     constructor() {
@@ -21,11 +22,7 @@ class BackgroundService {
             focusBlockedSites: []
         };
 
-        this.sleepBlockingState = {
-            isActive: false,
-            startTime: null,
-            endTime: null
-        };
+        // sleepBlockingState removed
 
         // Track short pause usage (5 min, max 2 per day)
         this.shortPauseUsage = {
@@ -50,13 +47,15 @@ class BackgroundService {
     }
 
     async init() {
+        this.syncService = new SyncService();
+        await this.syncService.init();
         this.setupMessageHandlers();
         this.setupAlarmHandlers();
         await this.initializeStorage();
+        await this.migrateOldSettings();
         await this.restoreState();
         await this.initializeAdBlocking();
         await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
-        await this.checkSleepBlocking(); // Ensure sleep blocking is enforced on startup
         // Auto-start floating clock on browser launch if enabled in settings
         try {
             const settings = await this.getSettings();
@@ -268,11 +267,7 @@ class BackgroundService {
         this.gracePauses = graceResult.gracePauses || { count: 0, lastResetDate: new Date().toDateString() };
         await this.checkGracePauseReset();
 
-        // Restore sleep blocking state
-        const sleepResult = await chrome.storage.local.get(['sleepBlockingState']);
-        if (sleepResult.sleepBlockingState) {
-            this.sleepBlockingState = sleepResult.sleepBlockingState;
-        }
+        // Restore sleep blocking state - deprecated
 
         // Restore short pause usage
         const shortPauseResult = await chrome.storage.local.get(['shortPauseUsage']);
@@ -346,6 +341,36 @@ class BackgroundService {
             });
             return true;
         });
+
+        // Background Cloud Sync listener
+        chrome.storage.onChanged.addListener(async (changes, areaName) => {
+            if (areaName !== 'local') return;
+            const restoringResult = await chrome.storage.local.get('__isRestoring');
+            if (restoringResult.__isRestoring) return;
+
+            const SYNC_EXCLUDED_KEYS = new Set([
+                'firebaseUser',
+                'syncStatus',
+                'syncDirty',
+                '__isRestoring',
+                'defaultFirebaseConfig',
+                'customFirebaseConfig',
+                'migrationDone',
+                'lastSyncTime',
+                'timerState',
+                'focusState',
+                'pauseBlockingUntil',
+                'disableAuthorizedUntil',
+                'sessionOverlayDismissed',
+                'shortPauseUsage',
+                'adBlockStats',
+                'lastFilterUpdate'
+            ]);
+            const hasSyncKeyChanged = Object.keys(changes).some(key => !SYNC_EXCLUDED_KEYS.has(key));
+            if (hasSyncKeyChanged && this.syncService) {
+                this.syncService.scheduleSync();
+            }
+        });
     }
 
     setupAlarmHandlers() {
@@ -360,11 +385,8 @@ class BackgroundService {
 
         // Check and apply scheduled blocking every minute
         chrome.alarms.create('scheduledBlockingCheck', { periodInMinutes: 1 });
-        // Check and apply sleep blocking every minute
-        chrome.alarms.create('sleepBlockingCheck', { periodInMinutes: 1 });
         // Also check immediately on startup
         this.checkScheduledBlocking();
-        this.checkSleepBlocking();
     }
 
     async handleAlarm(alarm) {
@@ -389,9 +411,10 @@ class BackgroundService {
             case 'scheduledBlockingCheck':
                 await this.checkScheduledBlocking();
                 break;
-
-            case 'sleepBlockingCheck':
-                await this.checkSleepBlocking();
+            case 'syncUploadBackup':
+                if (this.syncService) {
+                    await this.syncService.syncNow();
+                }
                 break;
 
             default:
@@ -433,7 +456,9 @@ class BackgroundService {
                 break;
             case 'startFocusMode':
                 const focusBlockedResult = await chrome.storage.local.get(['focusBlockedSites']);
-                const fSites = focusBlockedResult.focusBlockedSites || [];
+                const fSites = Array.isArray(message.focusBlockedSites) && message.focusBlockedSites.length > 0
+                    ? message.focusBlockedSites
+                    : (focusBlockedResult.focusBlockedSites || []);
                 await this.startFocusMode(message.duration, fSites);
                 sendResponse({ success: true });
                 break;
@@ -638,18 +663,40 @@ class BackgroundService {
             case 'settingsUpdated':
                 await this.initializeAdBlocking();
                 await this.checkScheduledBlocking();
-                await this.checkSleepBlocking();
+                if (this.syncService) this.syncService.scheduleSync();
                 sendResponse({ success: true });
                 break;
-            case 'checkSleepBlocking':
-                await this.checkSleepBlocking();
-                sendResponse({ active: await this.isSleepBlockingActive() });
+            case 'login':
+                this.syncService.login(message.email, message.password)
+                    .then(() => sendResponse({ success: true }))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
                 break;
-            case 'getSleepBlockingState':
-                sendResponse({ state: this.sleepBlockingState });
+            case 'signUp':
+                this.syncService.signUp(message.email, message.password)
+                    .then(() => sendResponse({ success: true }))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
+                break;
+            case 'logout':
+                this.syncService.logout()
+                    .then(() => sendResponse({ success: true }))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
+                break;
+            case 'configureFirebase':
+                this.syncService.configureFirebase(message.apiKey, message.projectId)
+                    .then(() => sendResponse({ success: true }))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
+                break;
+            case 'syncNow':
+                this.syncService.syncNow(message.force || false)
+                    .then(() => sendResponse({ success: true }))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
+                break;
+            case 'getSyncStatus':
+                sendResponse({ syncStatus: this.syncService.syncStatus });
                 break;
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
+                break;
         }
     }
 
@@ -695,7 +742,6 @@ class BackgroundService {
 
         // Re-evaluate ALL blocking features
         await this.checkScheduledBlocking();
-        await this.checkSleepBlocking();
         await this.checkTimeLimits(); // Re-evaluate time limits
         await this.checkGlobalLimits(); // Re-evaluate global limits
 
@@ -754,81 +800,30 @@ class BackgroundService {
     }
 
     async enableScheduledBlocking() {
-        const result = await chrome.storage.local.get(['scheduledBlockedSites']);
-        const sites = result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites();
-        await this.enableSiteBlocking(sites, 201, 'schedule');
-        await this.redirectTabsOnBlock(sites, 'floating/schedule-block.html');
-        chrome.action.setBadgeText({ text: '🚫' });
+        const result = await chrome.storage.local.get(['scheduledBlockedSites', 'scheduledBlocking']);
+        const scheduledConfig = result.scheduledBlocking || {};
+        const mode = scheduledConfig.mode || 'specific';
+
+        if (mode === 'all') {
+            const whitelist = scheduledConfig.whitelist || [];
+            const allSitesPattern = ['*'];
+            await this.enableSiteBlocking(allSitesPattern, 201, 'schedule', whitelist);
+            await this.redirectAllTabs('floating/schedule-block.html', whitelist);
+            chrome.action.setBadgeText({ text: '😴' });
+            chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' }); // Purple color for "sleep/block all"
+        } else {
+            const sites = result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites();
+            await this.enableSiteBlocking(sites, 201, 'schedule');
+            await this.redirectTabsOnBlock(sites, 'floating/schedule-block.html');
+            chrome.action.setBadgeText({ text: '🚫' });
+            chrome.action.setBadgeBackgroundColor({ color: '#dc3545' }); // Red color for "specific blocklist"
+        }
     }
 
     async disableScheduledBlocking() {
         await this.disableSiteBlockingRange(201, 300);
         await this.redirectTabsBack('floating/schedule-block.html');
         chrome.action.setBadgeText({ text: '' });
-    }
-
-    async isSleepBlockingActive() {
-        const result = await chrome.storage.local.get(['sleepBlocking']);
-        const sleepConfig = result.sleepBlocking;
-
-        if (!sleepConfig || !sleepConfig.enabled) return false;
-
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        const startTime = this.timeToMinutes(sleepConfig.startTime || '22:00');
-        const endTime = this.timeToMinutes(sleepConfig.endTime || '06:00');
-
-        if (startTime <= endTime) {
-            // Normal schedule: e.g. 22:00 - 06:00 (same day)
-            return currentTime >= startTime && currentTime <= endTime;
-        } else {
-            // Overnight schedule: e.g. 22:00 - 06:00 (next day)
-            return currentTime >= startTime || currentTime <= endTime;
-        }
-    }
-
-    async checkSleepBlocking() {
-        const paused = await this.isPaused();
-        if (paused) {
-            await this.disableSleepBlocking();
-            return;
-        }
-
-        const isActive = await this.isSleepBlockingActive();
-        if (isActive) {
-            await this.enableSleepBlocking();
-        } else {
-            await this.disableSleepBlocking();
-        }
-    }
-
-    async enableSleepBlocking() {
-        // Get sleep blocking settings including whitelist
-        const result = await chrome.storage.local.get(['sleepBlocking']);
-        const sleepConfig = result.sleepBlocking || {};
-        const whitelist = sleepConfig.whitelist || [];
-
-        console.log('🔍 Sleep blocking enabled:', { sleepConfig, whitelist });
-
-        // Block ALL websites during sleep time, but exclude whitelisted sites
-        const allSitesPattern = ['*']; // This will block all domains
-        await this.enableSiteBlocking(allSitesPattern, 301, 'sleep', whitelist);
-        await this.redirectAllTabs('floating/sleep-block.html', whitelist);
-        chrome.action.setBadgeText({ text: '😴' });
-        chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' });
-
-        this.sleepBlockingState.isActive = true;
-        this.sleepBlockingState.startTime = Date.now();
-        await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
-    }
-
-    async disableSleepBlocking() {
-        await this.disableSiteBlockingRange(301, 400);
-        await this.redirectTabsBack('floating/sleep-block.html');
-        chrome.action.setBadgeText({ text: '' });
-
-        this.sleepBlockingState.isActive = false;
-        await chrome.storage.local.set({ sleepBlockingState: this.sleepBlockingState });
     }
 
     async redirectAllTabs(blockPage, whitelist = []) {
@@ -925,7 +920,7 @@ class BackgroundService {
 
     async isSiteBlocked(hostname) {
         // Check if site is in any blocklist
-        const result = await chrome.storage.local.get(['focusBlockedSites', 'scheduledBlockedSites', 'timeLimits', 'timeLimitsEnabled', 'globalLimit']);
+        const result = await chrome.storage.local.get(['focusBlockedSites', 'scheduledBlockedSites', 'timeLimits', 'timeLimitsEnabled', 'globalLimit', 'scheduledBlocking']);
         
         const focusSites = result.focusBlockedSites || [];
         const scheduledSites = result.scheduledBlockedSites || [];
@@ -939,10 +934,27 @@ class BackgroundService {
             return true;
         }
         
-        // Check scheduled blocking
+        // Check scheduled blocking (unified specific vs block all)
         const isScheduledActive = await this.isScheduledBlockingActive();
-        if (isScheduledActive && scheduledSites.includes(hostname)) {
-            return true;
+        if (isScheduledActive) {
+            const scheduledConfig = result.scheduledBlocking || {};
+            const mode = scheduledConfig.mode || 'specific';
+            if (mode === 'all') {
+                const whitelist = scheduledConfig.whitelist || [];
+                const normalizedWhitelist = whitelist.map(site => {
+                    return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+                }).filter(domain => domain);
+                
+                const isWhitelisted = normalizedWhitelist.some(whitelistedDomain =>
+                    hostname === whitelistedDomain || hostname.endsWith('.' + whitelistedDomain)
+                );
+                const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+                if (!isWhitelisted && !isLocalhost) {
+                    return true;
+                }
+            } else if (scheduledSites.includes(hostname)) {
+                return true;
+            }
         }
         
         // Check time limits
@@ -959,6 +971,48 @@ class BackgroundService {
         }
         
         return false;
+    }
+
+    async migrateOldSettings() {
+        const result = await chrome.storage.local.get(['sleepBlocking', 'scheduledBlocking', 'whitelist', 'migrationDone']);
+        if (result.migrationDone) return;
+
+        console.log('🔄 Checking for deprecated Night/Sleep Blocking settings to migrate...');
+
+        const scheduledBlocking = result.scheduledBlocking || {
+            enabled: false,
+            startTime: '09:00',
+            endTime: '17:00',
+            days: [1, 2, 3, 4, 5],
+            mode: 'specific',
+            whitelist: []
+        };
+
+        if (!scheduledBlocking.mode) {
+            scheduledBlocking.mode = 'specific';
+        }
+        if (!scheduledBlocking.whitelist) {
+            scheduledBlocking.whitelist = result.whitelist || [];
+        }
+
+        const sleepBlocking = result.sleepBlocking;
+        if (sleepBlocking && sleepBlocking.enabled) {
+            console.log('Migrating sleep blocking settings to unified scheduler...');
+            scheduledBlocking.enabled = true;
+            scheduledBlocking.startTime = sleepBlocking.startTime || '22:00';
+            scheduledBlocking.endTime = sleepBlocking.endTime || '06:00';
+            scheduledBlocking.days = sleepBlocking.days || [0, 1, 2, 3, 4, 5, 6];
+            scheduledBlocking.mode = 'all';
+            scheduledBlocking.whitelist = sleepBlocking.whitelist || [];
+        }
+
+        await chrome.storage.local.set({
+            scheduledBlocking,
+            migrationDone: true
+        });
+
+        await chrome.storage.local.remove(['sleepBlocking', 'sleepBlockingState']);
+        console.log('✅ Night/Sleep Blocking migration completed.');
     }
     timeToMinutes(timeString) {
         const [hours, minutes] = timeString.split(':').map(Number);

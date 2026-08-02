@@ -1,5 +1,20 @@
 class PopupController {
     constructor() {
+        this.socialMediaSites = [
+            'facebook.com',
+            'instagram.com',
+            'x.com',
+            'twitter.com',
+            'tiktok.com',
+            'reddit.com',
+            'snapchat.com',
+            'linkedin.com',
+            'pinterest.com',
+            'threads.net',
+            'discord.com',
+            'youtube.com'
+        ];
+
         this.elements = {
             currentTime: document.getElementById('currentTime'),
             timerDisplay: document.getElementById('timerDisplay'),
@@ -8,7 +23,9 @@ class PopupController {
             timerSeconds: document.getElementById('timerSeconds'),
             todoList: document.getElementById('todoList'),
             startTimerBtn: document.getElementById('startTimer'),
-            startFocusBtn: document.getElementById('startFocus')
+            startFocusBtn: document.getElementById('startFocus'),
+            syncStatusText: document.getElementById('syncStatusText'),
+            syncLastSyncedText: document.getElementById('syncLastSyncedText')
         };
 
         this.state = {
@@ -35,7 +52,8 @@ class PopupController {
             this.loadTodos(),
             this.restoreTimerState(),
             this.loadCurrentSite(),  // Quick-Add current site
-            this.checkPauseState()
+            this.checkPauseState(),
+            this.refreshSyncStatus()
         ]);
     }
 
@@ -45,6 +63,9 @@ class PopupController {
         document.getElementById('toggleClock').addEventListener('click', () => this.toggleFloatingClock());
         document.getElementById('flipClockMode').addEventListener('click', () => this.openFlipClockTab());
         document.getElementById('pauseProtectionMode').addEventListener('click', () => this.handlePauseProtection());
+        document.getElementById('blockSocialMedia').addEventListener('click', () => this.blockSocialMedia());
+        document.getElementById('syncNowButton').addEventListener('click', () => this.syncNow());
+        document.getElementById('openSyncSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
         this.elements.startFocusBtn.addEventListener('click', () => this.handleFocusMode());
         document.getElementById('openSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
         this.elements.startTimerBtn.addEventListener('click', () => this.toggleTimer());
@@ -90,6 +111,56 @@ class PopupController {
         document.getElementById('timerWidgetToggle').addEventListener('change', (e) => {
             this.updateWidgetSetting('timerWidgetEnabled', e.target.checked);
         });
+    }
+
+    async refreshSyncStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getSyncStatus' });
+            const status = response?.syncStatus || { state: 'offline', lastSynced: null, error: null };
+            this.renderSyncStatus(status);
+        } catch (error) {
+            this.renderSyncStatus({ state: 'offline', lastSynced: null, error: error.message || 'Sync unavailable' });
+        }
+    }
+
+    renderSyncStatus(status) {
+        if (this.elements.syncStatusText) {
+            const labelMap = {
+                syncing: 'Syncing',
+                synced: 'Synced',
+                offline: 'Offline',
+                failed: 'Sync Failed'
+            };
+            this.elements.syncStatusText.textContent = labelMap[status?.state] || 'Offline';
+        }
+
+        if (this.elements.syncLastSyncedText) {
+            this.elements.syncLastSyncedText.textContent = status?.lastSynced
+                ? `Last synced: ${new Date(status.lastSynced).toLocaleString()}`
+                : 'Last synced: never';
+        }
+    }
+
+    async syncNow() {
+        const button = document.getElementById('syncNowButton');
+        const originalText = button?.textContent;
+        if (button) {
+            button.textContent = 'Syncing...';
+            button.disabled = true;
+        }
+
+        try {
+            await chrome.runtime.sendMessage({ action: 'syncNow', force: true });
+            await this.refreshSyncStatus();
+            this.showToast('Cloud sync started.');
+        } catch (error) {
+            this.showToast('Sync failed. Open settings to check your account.');
+        } finally {
+            if (button) {
+                button.textContent = originalText || 'Sync Now';
+                button.disabled = false;
+            }
+        }
     }
 
     async updateWidgetSetting(key, enabled) {
@@ -266,6 +337,16 @@ class PopupController {
                 window.close();
             }
         }
+    }
+
+    async blockSocialMedia() {
+        await chrome.runtime.sendMessage({
+            action: 'startFocusMode',
+            duration: 25 * 60,
+            focusBlockedSites: this.socialMediaSites
+        });
+        this.showToast('Social media block started for 25 minutes.');
+        window.close();
     }
 
     async toggleFloatingClock() {
@@ -469,11 +550,112 @@ class PopupController {
     }
 
     async runProtectionSequence(actionLabel) {
-        if (!confirm('AWAKENING: This action will break your current focus session. Are you absolutely certain?')) return false;
-        if (!confirm('CONSIDERATION: Is this distraction more important than your deep work goals?')) return false;
-        if (!confirm('INTENTION: Will you regret breaking this momentum in 10 minutes?')) return false;
-        if (!confirm('DETERMINATION: You are almost there. Stay focused instead? (Cancel to stay, OK to break)')) return false;
-        if (!confirm('FINAL WARNING: This is the 5th and final prompt. Break focus now?')) return false;
+        const messages = [
+            'Stay with the task a little longer.',
+            'Your attention is already invested here.',
+            'Breaks are easier to start than momentum is to rebuild.',
+            'Hold the line and protect the session.',
+            'This pause exists to prevent accidental disengagement.'
+        ];
+
+        const allowed = await new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 100000;
+                background: rgba(2, 6, 23, 0.82);
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(6px);
+            `;
+
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                width: min(460px, calc(100vw - 32px));
+                background: linear-gradient(180deg, #0f172a, #111827);
+                color: #e5e7eb;
+                border: 1px solid rgba(99,102,241,0.35);
+                border-radius: 18px;
+                padding: 20px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+                font-family: 'Inter', sans-serif;
+            `;
+
+            modal.innerHTML = `
+                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Protection Countdown</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
+                <div id="popup-countdown-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+                    <div id="popup-countdown-value" style="font-family:'Outfit',sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:80px;">12</div>
+                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
+                        <div id="popup-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="popup-countdown-cancel" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
+                    <button id="popup-countdown-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Wait</button>
+                </div>
+            `;
+
+            const totalSeconds = 12;
+            const totalMs = totalSeconds * 1000;
+            const endAt = Date.now() + totalMs;
+            let timerId = null;
+
+            const cleanup = () => {
+                clearInterval(timerId);
+                document.removeEventListener('keydown', escHandler, true);
+                overlay.remove();
+            };
+
+            const settle = (value) => {
+                cleanup();
+                resolve(value);
+            };
+
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    settle(false);
+                }
+            };
+
+            const messageEl = modal.querySelector('#popup-countdown-message');
+            const valueEl = modal.querySelector('#popup-countdown-value');
+            const barEl = modal.querySelector('#popup-countdown-bar');
+            const cancelBtn = modal.querySelector('#popup-countdown-cancel');
+            const continueBtn = modal.querySelector('#popup-countdown-continue');
+
+            const tick = () => {
+                const remaining = Math.max(0, endAt - Date.now());
+                const remainingSeconds = Math.ceil(remaining / 1000);
+                valueEl.textContent = String(remainingSeconds);
+                messageEl.textContent = messages[remainingSeconds % messages.length];
+                barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
+
+                if (remainingSeconds <= 0) {
+                    continueBtn.disabled = false;
+                    continueBtn.style.opacity = '1';
+                    continueBtn.style.cursor = 'pointer';
+                    continueBtn.textContent = 'Continue';
+                    clearInterval(timerId);
+                } else {
+                    continueBtn.textContent = `Wait ${remainingSeconds}s`;
+                }
+            };
+
+            cancelBtn.addEventListener('click', () => settle(false));
+            continueBtn.addEventListener('click', () => {
+                if (continueBtn.disabled) return;
+                settle(true);
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', escHandler, true);
+            tick();
+            timerId = setInterval(tick, 1000);
+        });
+
+        if (!allowed) return false;
 
         const challengeOk = await this.runChallengeChecks(actionLabel);
         if (!challengeOk) {

@@ -36,6 +36,9 @@
                     <button id="restoreFocusBtn" class="btn-tiny-restore" title="Restore Focus Overlay"
                         style="display:none;">✨</button>
                 </div>
+                <button id="blockSocialMedia" class="btn btn-secondary" style="grid-column: span 2;">
+                    <span class="icon">🚫</span> Block Social Media
+                </button>
                 <button id="openSettings" class="btn btn-secondary" style="grid-column: span 2;">
                     <span class="icon">⚙️</span> Settings
                 </button>
@@ -63,6 +66,18 @@
                     <span class="icon" id="pauseIcon">⏸️</span> <span id="pauseLabel">Pause Blocks</span>
                 </button>
             </div>
+
+            <section class="card sync-card">
+                <div class="card-title">
+                    <span class="icon">☁️</span> Cloud Sync
+                </div>
+                <div id="syncStatusText" style="font-size: 0.92rem; font-weight: 600; margin-bottom: 4px;">Checking sync status...</div>
+                <div id="syncLastSyncedText" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">Last synced: never</div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="syncNowButton" class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.75rem;">Sync Now</button>
+                    <button id="openSyncSettings" class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.75rem;">Settings</button>
+                </div>
+            </section>
 
             <!-- Quick-Add Current Site -->
             <section id="quickAddPanel" class="card" style="display:none; padding: 10px 12px;">
