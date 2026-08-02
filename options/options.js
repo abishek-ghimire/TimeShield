@@ -237,6 +237,8 @@ class OptionsManager {
     setupSiteManagement() {
         document.getElementById('addFocusSite').addEventListener('click', () => this.addFocusSite());
         document.getElementById('addScheduledSite').addEventListener('click', () => this.addScheduledSite());
+        document.getElementById('addCategoryToFocus').addEventListener('click', () => this.applyCategoryToList('focus'));
+        document.getElementById('addCategoryToSchedule').addEventListener('click', () => this.applyCategoryToList('schedule'));
 
         // Scheduled blocking toggle
         document.getElementById('scheduledBlocking').addEventListener('change', (e) => {
@@ -253,6 +255,7 @@ class OptionsManager {
         // Day checkboxes
         ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
             document.getElementById(day).addEventListener('change', () => {
+                this.updateSelectAllState('scheduleSelectAllDays', ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
                 this.saveScheduledBlocking();
             });
         });
@@ -272,6 +275,7 @@ class OptionsManager {
         // Sleep blocking day checkboxes
         ['sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday', 'sleepSunday'].forEach(day => {
             document.getElementById(day).addEventListener('change', () => {
+                this.updateSelectAllState('sleepSelectAllDays', ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday']);
                 this.saveSleepBlocking();
             });
         });
@@ -383,19 +387,22 @@ class OptionsManager {
     }
 
     populateSiteCategories() {
-        const select = document.getElementById('categoryPreset');
+        const focusSelect = document.getElementById('categoryPreset');
+        const scheduleSelect = document.getElementById('scheduleCategoryPreset');
         const customList = document.getElementById('customCategoriesList');
-        if (!select) return;
-
+        
         const entries = this.getAllCategoryEntries();
-        select.innerHTML = '';
-
-        entries.forEach((entry, index) => {
-            const option = document.createElement('option');
-            option.value = entry.value;
-            option.textContent = entry.label;
-            if (index === 0) option.selected = true;
-            select.appendChild(option);
+        
+        [focusSelect, scheduleSelect].forEach(select => {
+            if (!select) return;
+            select.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const option = document.createElement('option');
+                option.value = entry.value;
+                option.textContent = entry.label;
+                if (index === 0) option.selected = true;
+                select.appendChild(option);
+            });
         });
 
         if (customList) {
@@ -1266,6 +1273,15 @@ class OptionsManager {
                 document.getElementById('scheduledBlocking').value = 'enabled';
                 return;
             }
+            
+            // Show countdown before disabling
+            const countdownResult = await this.showCountdown('Disabling Scheduled Blocking', 
+                ['Stay focused, you can do it!', 'Your goals are worth it!', 'Don\'t give up now!'], 15);
+            if (!countdownResult) {
+                document.getElementById('scheduledBlocking').value = 'enabled';
+                return;
+            }
+            
             this.showNotification('Scheduled blocking disabled. Stay focused!', 'warning');
         } else {
             this.showNotification('Scheduled blocking enabled — protect your focus time!', 'success');
@@ -1287,7 +1303,19 @@ class OptionsManager {
                 document.getElementById('sleepBlocking').value = 'enabled';
                 return;
             }
+            
+            // Show countdown before disabling
+            const countdownResult = await this.showCountdown('Disabling Sleep Blocking', 
+                ['Your sleep is important!', 'Healthy habits matter!', 'You\'ll thank yourself tomorrow!'], 15);
+            if (!countdownResult) {
+                document.getElementById('sleepBlocking').value = 'enabled';
+                return;
+            }
+            
             this.showNotification('Sleep blocking disabled. Remember to maintain healthy sleep habits.', 'warning');
+            
+            // Explicitly disable blocking when turning off sleep blocking
+            await chrome.runtime.sendMessage({ action: 'disableScheduledBlocking' }).catch(() => { });
         } else {
             this.showNotification('Sleep blocking enabled — sweet dreams and better rest!', 'success');
         }
@@ -1584,9 +1612,18 @@ class OptionsManager {
             notification.style.background = '#10b981'; // Emerald 500
         }
 
+        // Stack notifications vertically to prevent overlapping
+        const existingNotifications = document.querySelectorAll('.notification');
+        const offset = existingNotifications.length * 70; // 70px spacing per notification
+        notification.style.top = `${24 + offset}px`;
+
         document.body.appendChild(notification);
         setTimeout(() => {
             if (notification.parentNode) notification.remove();
+            // Re-stack remaining notifications
+            document.querySelectorAll('.notification').forEach((notif, index) => {
+                notif.style.top = `${24 + index * 70}px`;
+            });
         }, 3000);
     }
 

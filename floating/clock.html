@@ -88,6 +88,36 @@
             align-items: center;
             gap: calc(6px * var(--ts-scale));
             transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .timer-close-btn {
+            position: absolute;
+            top: calc(-8px * var(--ts-scale));
+            right: calc(-8px * var(--ts-scale));
+            width: calc(24px * var(--ts-scale));
+            height: calc(24px * var(--ts-scale));
+            background: rgba(244, 63, 94, 0.9);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: calc(14px * var(--ts-scale));
+            font-weight: bold;
+            color: white;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .timer-close-btn:hover {
+            background: rgba(244, 63, 94, 1);
+            transform: scale(1.1);
+        }
+
+        .focus-indicator.has-timer .timer-close-btn {
+            display: flex;
         }
 
         .status-only .focus-indicator {
@@ -159,7 +189,9 @@
         </div>
         <div class="date-display" id="dateDisplay"></div>
         <div class="timezone-display" id="tzDisplay"></div>
-        <div class="focus-indicator" id="focusIndicator"></div>
+        <div class="focus-indicator" id="focusIndicator">
+            <button class="timer-close-btn" id="timerCloseBtn" title="Stop Timer/Focus">×</button>
+        </div>
     </div>
 
     <div id="view-toggle" title="Toggle Clock View">

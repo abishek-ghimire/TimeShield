@@ -22,6 +22,23 @@ const SYNC_EXCLUDED_KEYS = new Set([
     "lastFilterUpdate"
 ]);
 
+const SYNC_KEYS = [
+    "settings",
+    "focusBlockedSites",
+    "scheduledBlockedSites",
+    "scheduledBlocking",
+    "timeLimits",
+    "timeLimitsEnabled",
+    "filterLists",
+    "customFilters",
+    "globalLimit",
+    "whitelist",
+    "todos",
+    "siteUsageData",
+    "siteCategories",
+    "customCategories"
+];
+
 // Default configuration placeholders. Can be overridden in settings UI.
 const DEFAULT_CONFIG = {
     apiKey: "AIzaSyD-placeholder-key-replace-in-settings",
