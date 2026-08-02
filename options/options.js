@@ -1273,15 +1273,7 @@ class OptionsManager {
                 document.getElementById('scheduledBlocking').value = 'enabled';
                 return;
             }
-            
-            // Show countdown before disabling
-            const countdownResult = await this.showCountdown('Disabling Scheduled Blocking', 
-                ['Stay focused, you can do it!', 'Your goals are worth it!', 'Don\'t give up now!'], 15);
-            if (!countdownResult) {
-                document.getElementById('scheduledBlocking').value = 'enabled';
-                return;
-            }
-            
+
             this.showNotification('Scheduled blocking disabled. Stay focused!', 'warning');
         } else {
             this.showNotification('Scheduled blocking enabled — protect your focus time!', 'success');
@@ -1303,15 +1295,7 @@ class OptionsManager {
                 document.getElementById('sleepBlocking').value = 'enabled';
                 return;
             }
-            
-            // Show countdown before disabling
-            const countdownResult = await this.showCountdown('Disabling Sleep Blocking', 
-                ['Your sleep is important!', 'Healthy habits matter!', 'You\'ll thank yourself tomorrow!'], 15);
-            if (!countdownResult) {
-                document.getElementById('sleepBlocking').value = 'enabled';
-                return;
-            }
-            
+
             this.showNotification('Sleep blocking disabled. Remember to maintain healthy sleep habits.', 'warning');
             
             // Explicitly disable blocking when turning off sleep blocking
