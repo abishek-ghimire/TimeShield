@@ -201,6 +201,9 @@ class PopupController {
         if (result.focusState?.isActive) {
             this.elements.startFocusBtn.classList.add('active');
             this.startFocusInterval(result.focusState);
+        } else if (result.pendingFocusActivation?.activationAt) {
+            this.elements.startFocusBtn.classList.add('active');
+            this.startPendingFocusInterval(result.pendingFocusActivation.activationAt);
         }
 
         // Check if we need to show the "Restore" buttons
@@ -209,7 +212,7 @@ class PopupController {
         const restoreTimerBtn = document.getElementById('restoreTimerBtn');
 
         if (restoreFocusBtn) {
-            restoreFocusBtn.style.display = (result.focusState?.isActive && !clockRes.clockVisible) ? 'flex' : 'none';
+            restoreFocusBtn.style.display = ((result.focusState?.isActive || result.pendingFocusActivation) && !clockRes.clockVisible) ? 'flex' : 'none';
         }
         if (restoreTimerBtn) {
             restoreTimerBtn.style.display = (result.timerState?.isRunning && !clockRes.clockVisible) ? 'flex' : 'none';
@@ -231,6 +234,26 @@ class PopupController {
                 const mins = Math.floor(remaining / 60);
                 const secs = remaining % 60;
                 this.elements.startFocusBtn.textContent = `Focus: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                this.elements.startFocusBtn.textContent = 'Focus Mode';
+                this.elements.startFocusBtn.classList.remove('active');
+                clearInterval(this.state.focusInterval);
+            }
+        };
+
+        updateText();
+        this.state.focusInterval = setInterval(updateText, 1000);
+    }
+
+    startPendingFocusInterval(activationAt) {
+        if (this.state.focusInterval) clearInterval(this.state.focusInterval);
+
+        const updateText = () => {
+            const remaining = Math.max(0, Math.floor((activationAt - Date.now()) / 1000));
+            if (remaining > 0) {
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                this.elements.startFocusBtn.textContent = `Starts: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             } else {
                 this.elements.startFocusBtn.textContent = 'Focus Mode';
                 this.elements.startFocusBtn.classList.remove('active');
@@ -316,7 +339,7 @@ class PopupController {
     }
 
     async handleFocusMode() {
-        const result = await chrome.storage.local.get(['focusState']);
+        const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
         if (result.focusState?.isActive) {
             const canStop = await this.runProtectionSequence('Stop Focus Mode');
             if (!canStop) return;
@@ -330,49 +353,83 @@ class PopupController {
             } else {
                 alert('Focus protection is active. Please complete verification and try again.');
             }
+        } else if (result.pendingFocusActivation) {
+            const canCancel = await this.runProtectionSequence('Cancel pending Focus Mode');
+            if (!canCancel) return;
+
+            await chrome.runtime.sendMessage({ action: 'authorizeDisableActions', ttlMs: 45000 });
+            const response = await chrome.runtime.sendMessage({ action: 'cancelPendingFocusMode' });
+            if (response?.success) {
+                if (this.state.focusInterval) clearInterval(this.state.focusInterval);
+                this.elements.startFocusBtn.textContent = 'Focus Mode';
+                this.elements.startFocusBtn.classList.remove('active');
+            } else {
+                alert('Focus protection is active. Please complete verification and try again.');
+            }
         } else {
             const mins = prompt('Focus duration (minutes):', '25');
             if (mins && !isNaN(mins)) {
-                await chrome.runtime.sendMessage({ action: 'startFocusMode', duration: parseInt(mins) * 60 });
+                await chrome.runtime.sendMessage({
+                    action: 'startFocusMode',
+                    duration: parseInt(mins) * 60,
+                    startAfterMinutes: 1
+                });
                 window.close();
             }
         }
     }
 
     async blockSocialMedia() {
-        const result = await chrome.storage.local.get(['focusState']);
+        const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
         const focusState = result.focusState || {};
+        const pendingFocus = result.pendingFocusActivation || null;
+        const pendingSites = Array.isArray(pendingFocus?.focusBlockedSites) ? pendingFocus.focusBlockedSites : [];
         
         // Check if social media blocking is currently active
-        const isSocialMediaBlocked = focusState.isActive && 
-            focusState.focusBlockedSites && 
-            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site));
+        const isSocialMediaBlocked = (focusState.isActive &&
+            focusState.focusBlockedSites &&
+            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site))) ||
+            (pendingFocus && this.socialMediaSites.every(site => pendingSites.includes(site)));
 
         if (isSocialMediaBlocked) {
-            // Disable social media blocking by stopping focus mode
-            await chrome.runtime.sendMessage({ action: 'stopFocusMode' });
-            this.showToast('Social media block disabled.');
-            this.updateSocialMediaButton(false);
+            const canStop = await this.runProtectionSequence('Disable Social Media Focus Block');
+            if (!canStop) return;
+
+            await chrome.runtime.sendMessage({ action: 'authorizeDisableActions', ttlMs: 45000 });
+            const response = focusState.isActive
+                ? await chrome.runtime.sendMessage({ action: 'stopFocusMode' })
+                : await chrome.runtime.sendMessage({ action: 'cancelPendingFocusMode' });
+            if (response?.success) {
+                this.showToast('Social media block disabled.');
+                this.updateSocialMediaButton(false);
+            } else {
+                alert('Focus protection is active. Please complete verification and try again.');
+                return;
+            }
         } else {
             // Enable social media blocking
             await chrome.runtime.sendMessage({
                 action: 'startFocusMode',
                 duration: 25 * 60,
-                focusBlockedSites: this.socialMediaSites
+                focusBlockedSites: this.socialMediaSites,
+                startAfterMinutes: 1
             });
-            this.showToast('Social media block started for 25 minutes.');
+            this.showToast('Social media block will start in 1 minute.');
             this.updateSocialMediaButton(true);
         }
         window.close();
     }
 
     async checkSocialMediaBlockState() {
-        const result = await chrome.storage.local.get(['focusState']);
+        const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
         const focusState = result.focusState || {};
+        const pendingFocus = result.pendingFocusActivation || null;
+        const pendingSites = Array.isArray(pendingFocus?.focusBlockedSites) ? pendingFocus.focusBlockedSites : [];
         
-        const isSocialMediaBlocked = focusState.isActive && 
-            focusState.focusBlockedSites && 
-            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site));
+        const isSocialMediaBlocked = (focusState.isActive &&
+            focusState.focusBlockedSites &&
+            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site))) ||
+            (pendingFocus && this.socialMediaSites.every(site => pendingSites.includes(site)));
         
         this.updateSocialMediaButton(isSocialMediaBlocked);
     }

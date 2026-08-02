@@ -19,7 +19,9 @@ const SYNC_EXCLUDED_KEYS = new Set([
     "sessionOverlayDismissed",
     "shortPauseUsage",
     "adBlockStats",
-    "lastFilterUpdate"
+    "lastFilterUpdate",
+    "pendingFocusActivation",
+    "preActivationWarningCache"
 ]);
 
 const SYNC_KEYS = [
@@ -35,6 +37,20 @@ const SYNC_KEYS = [
     "whitelist",
     "todos",
     "siteUsageData",
+    "siteCategories",
+    "customCategories"
+];
+
+const CHROME_SYNC_SNAPSHOT_KEY = "timeShieldSyncSnapshotV1";
+const CHROME_SYNC_KEYS = [
+    "settings",
+    "focusBlockedSites",
+    "scheduledBlockedSites",
+    "scheduledBlocking",
+    "timeLimits",
+    "timeLimitsEnabled",
+    "globalLimit",
+    "whitelist",
     "siteCategories",
     "customCategories"
 ];
@@ -57,6 +73,7 @@ export class SyncService {
         };
         this.isSyncing = false;
         this.debounceTimeout = null;
+        this.chromeSyncDebounceTimeout = null;
         this.initialized = false;
     }
 
@@ -92,6 +109,9 @@ export class SyncService {
         } else {
             this.updateStatus("offline", null);
         }
+
+        await this.restoreFromChromeSyncSnapshotIfNeeded();
+        await this.saveChromeSyncSnapshot();
 
         this.initialized = true;
         console.log("☁️ Sync Service initialized. User logged in:", !!this.user);
@@ -207,6 +227,17 @@ export class SyncService {
                 console.error("TimeShield Sync: Auto-sync failed", e);
             }
         }, 4000);
+    }
+
+    scheduleChromeSyncSnapshot() {
+        if (this.chromeSyncDebounceTimeout) {
+            clearTimeout(this.chromeSyncDebounceTimeout);
+        }
+        this.chromeSyncDebounceTimeout = setTimeout(() => {
+            this.saveChromeSyncSnapshot().catch((e) => {
+                console.error("TimeShield Sync: Failed to save chrome.storage.sync snapshot", e);
+            });
+        }, 2000);
     }
 
     async syncNow(force = false) {
@@ -331,6 +362,7 @@ export class SyncService {
         chrome.alarms.clear("syncUploadBackup").catch(() => {});
         this.syncStatus.lastSynced = lastSyncTime;
         this.updateStatus("synced");
+        await this.saveChromeSyncSnapshot();
         console.log("☁️ Settings successfully uploaded to cloud database.");
     }
 
@@ -366,11 +398,52 @@ export class SyncService {
             chrome.alarms.clear("syncUploadBackup").catch(() => {});
             this.syncStatus.lastSynced = lastSyncTime;
             this.updateStatus("synced");
+            await this.saveChromeSyncSnapshot();
             console.log("☁️ Settings successfully restored from cloud database.");
             
             // Notify other extension scripts
             chrome.runtime.sendMessage({ action: "settingsRestored" }).catch(() => {});
         });
+    }
+
+    async saveChromeSyncSnapshot() {
+        const localData = await chrome.storage.local.get(CHROME_SYNC_KEYS);
+        const data = {};
+        CHROME_SYNC_KEYS.forEach((key) => {
+            if (localData[key] !== undefined) {
+                data[key] = localData[key];
+            }
+        });
+
+        const snapshot = {
+            schemaVersion: 1,
+            lastUpdated: new Date().toISOString(),
+            data
+        };
+
+        await chrome.storage.sync.set({ [CHROME_SYNC_SNAPSHOT_KEY]: snapshot });
+    }
+
+    async restoreFromChromeSyncSnapshotIfNeeded() {
+        const localData = await chrome.storage.local.get(CHROME_SYNC_KEYS);
+        const hasLocalSettings = CHROME_SYNC_KEYS.some((key) => localData[key] !== undefined);
+        if (hasLocalSettings) return;
+
+        const syncData = await chrome.storage.sync.get([CHROME_SYNC_SNAPSHOT_KEY]);
+        const snapshot = syncData[CHROME_SYNC_SNAPSHOT_KEY];
+        if (!snapshot || !snapshot.data) return;
+
+        const restorePayload = {};
+        CHROME_SYNC_KEYS.forEach((key) => {
+            if (snapshot.data[key] !== undefined) {
+                restorePayload[key] = snapshot.data[key];
+            }
+        });
+
+        if (Object.keys(restorePayload).length === 0) return;
+
+        await chrome.storage.local.set(restorePayload);
+        console.log("☁️ Restored settings from chrome.storage.sync snapshot.");
     }
 
     async configureFirebase(apiKey, projectId) {
