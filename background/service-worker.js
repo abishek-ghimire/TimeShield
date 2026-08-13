@@ -413,8 +413,9 @@ class BackgroundService {
             });
         });
 
-        // NEW: Daily filter update alarm
-        chrome.alarms.create('updateFilters', { periodInMinutes: 1440 }); // Every 24 hours
+        // Daily maintenance alarms survive service-worker suspension.
+        chrome.alarms.create('updateFilters', { periodInMinutes: 1440 });
+        chrome.alarms.create('usageRetentionCleanup', { periodInMinutes: 1440 });
 
         // Check and apply scheduled blocking every minute
         chrome.alarms.create('scheduledBlockingCheck', { periodInMinutes: 1 });
@@ -436,9 +437,13 @@ class BackgroundService {
                 this.sendBreakReminder();
                 break;
 
-            // NEW: Handle filter update alarm
+            // Handle filter update alarm
             case 'updateFilters':
                 await this.updateFilters();
+                break;
+
+            case 'usageRetentionCleanup':
+                await this.cleanupUsageHistory();
                 break;
 
             case 'scheduledBlockingCheck':
@@ -591,6 +596,21 @@ class BackgroundService {
                     pendingFocusActivation: s.pendingFocusActivation || null
                 });
                 break;
+            case 'getProtectionStatus': {
+                const status = await this.getProtectionStatus();
+                sendResponse({ success: true, status });
+                break;
+            }
+            case 'getDiagnostics': {
+                const diagnostics = await this.getDiagnostics();
+                sendResponse({ success: true, diagnostics });
+                break;
+            }
+            case 'runRetentionCleanup': {
+                const cleanup = await this.cleanupUsageHistory();
+                sendResponse({ success: true, ...cleanup });
+                break;
+            }
             case 'toggleClock':
                 await this.toggleFloatingClock(message.visible);
                 // Ensure scripts are injected after toggle to make it work immediately everywhere
@@ -787,6 +807,11 @@ class BackgroundService {
             case 'getSyncStatus':
                 sendResponse({ syncStatus: this.syncService.syncStatus });
                 break;
+            case 'resolveSyncConflict':
+                this.syncService.resolveConflict(message.preference || 'cloud')
+                    .then((result) => sendResponse(result))
+                    .catch((err) => sendResponse({ success: false, error: err.message }));
+                break;
             default:
                 sendResponse({ success: false, error: 'Unknown action' });
                 break;
@@ -894,9 +919,14 @@ class BackgroundService {
 
     async checkScheduledBlocking() {
         const paused = await this.isPaused();
+        const settings = await this.getSettings();
         if (paused) {
             await this.disableScheduledBlocking();
             await this.checkPreActivationWarnings();
+            return;
+        }
+        if (settings.safeModeEnabled === true) {
+            await this.disableScheduledBlocking();
             return;
         }
 
@@ -914,7 +944,7 @@ class BackgroundService {
         // protection is actually going to resume.
         if (await this.isPaused()) return;
 
-        const result = await chrome.storage.local.get(['scheduledBlocking', 'sleepBlocking', 'preActivationWarningCache']);
+        const result = await chrome.storage.local.get(['scheduledBlocking', 'sleepBlocking', 'preActivationWarningCache', 'settings']);
         this.preActivationWarningCache = result.preActivationWarningCache || {};
         const now = new Date();
 
@@ -922,25 +952,29 @@ class BackgroundService {
             'scheduled',
             'Scheduled Blocking',
             result.scheduledBlocking,
-            now
+            now,
+            result.settings || {}
         );
         await this.checkSinglePreActivationWarning(
             'sleep',
             'Sleep Mode',
             result.sleepBlocking,
-            now
+            now,
+            result.settings || {}
         );
     }
 
-    async checkSinglePreActivationWarning(cacheKey, label, config, now) {
+    async checkSinglePreActivationWarning(cacheKey, label, config, now, settings = {}) {
         const nextStart = this.getNextActivationStart(config, now);
         if (!nextStart) return;
 
         const msUntilStart = nextStart.getTime() - now.getTime();
-        if (msUntilStart <= 0 || msUntilStart > 5 * 60000) return;
+        const firstWarningMinutes = Math.max(1, Number(settings.scheduleWarningFirstMinutes || 5));
+        const finalWarningMinutes = Math.max(1, Math.min(firstWarningMinutes, Number(settings.scheduleWarningFinalMinutes || 1)));
+        if (msUntilStart <= 0 || msUntilStart > firstWarningMinutes * 60000) return;
 
         const minutesUntilStart = Math.ceil(msUntilStart / 60000);
-        const warningMinutes = minutesUntilStart <= 1 ? 1 : 5;
+        const warningMinutes = minutesUntilStart <= finalWarningMinutes ? finalWarningMinutes : firstWarningMinutes;
         const warningToken = `${cacheKey}:${nextStart.toISOString().slice(0, 16)}`;
         const cacheEntry = this.preActivationWarningCache[cacheKey];
         const alreadyWarned = typeof cacheEntry === 'object'
@@ -948,17 +982,26 @@ class BackgroundService {
             : warningMinutes === 1 && cacheEntry === warningToken;
 
         if (!alreadyWarned) {
-            await this.sendNotification(
-                `${label} starts in ${warningMinutes} minute${warningMinutes === 1 ? '' : 's'}`,
-                'Save your work now to avoid interruption.',
-                warningMinutes === 1,
-                `preactivation-${cacheKey}-${warningMinutes}-${Date.now()}`
-            );
-            await this.sendActiveTabMessage({
+            const title = `${label} starts in ${warningMinutes} minute${warningMinutes === 1 ? '' : 's'}`;
+            const message = 'Save your work now to avoid interruption.';
+            let notificationSent = false;
+            if (settings.notificationsEnabled !== false) {
+                await this.sendNotification(
+                    title,
+                    message,
+                    warningMinutes <= finalWarningMinutes,
+                    `preactivation-${cacheKey}-${warningMinutes}-${Date.now()}`
+                );
+                notificationSent = true;
+            }
+            const delivered = await this.sendActiveTabMessage({
                 action: 'showBlockingWarning',
                 label,
                 remainingMinutes: warningMinutes
             });
+            if (!delivered && !notificationSent && settings.notificationFallbackEnabled !== false) {
+                await this.sendNotification(title, message, warningMinutes <= finalWarningMinutes);
+            }
 
             const nextCacheEntry = typeof cacheEntry === 'object' && cacheEntry !== null
                 ? cacheEntry
@@ -970,7 +1013,7 @@ class BackgroundService {
 
         // Start one compact in-page countdown during the final minute. The
         // content script owns the one-second tick and removes itself at zero.
-        if (msUntilStart <= 60000) {
+        if (settings.showBlockingCountdown !== false && msUntilStart <= finalWarningMinutes * 60000) {
             await this.sendActiveTabMessage({
                 action: 'showBlockingCountdown',
                 label,
@@ -1682,14 +1725,106 @@ class BackgroundService {
         // Statistics tracking disabled as per user request
     }
 
+    async getProtectionStatus() {
+        const result = await chrome.storage.local.get([
+            'pauseBlockingUntil', 'focusState', 'timerState', 'todayStats',
+            'siteUsageData', 'scheduledBlocking', 'settings'
+        ]);
+        const settings = { ...this.getDefaultSettings(), ...(result.settings || {}) };
+        const today = new Date().toDateString();
+        const todayUsage = result.siteUsageData?.[today] || {};
+        const todaySeconds = Object.values(todayUsage).reduce((sum, value) => sum + (Number(value) || 0), 0);
+        const pauseUntil = Number(result.pauseBlockingUntil);
+        return {
+            active: Boolean(result.focusState?.isActive || result.timerState?.isActive || await this.isScheduledBlockingActive()),
+            paused: pauseUntil === -1 || (Number.isFinite(pauseUntil) && pauseUntil > Date.now()),
+            pauseUntil: pauseUntil > 0 ? pauseUntil : null,
+            scheduleActive: await this.isScheduledBlockingActive(),
+            focusActive: Boolean(result.focusState?.isActive),
+            timerActive: Boolean(result.timerState?.isActive),
+            safeMode: settings.safeModeEnabled === true,
+            todaySeconds,
+            updatedAt: Date.now()
+        };
+    }
+
+    async getDiagnostics() {
+        const alarms = await chrome.alarms.getAll();
+        const tabs = await chrome.tabs.query({});
+        const storage = await chrome.storage.local.get([
+            'settings', 'pauseBlockingUntil', 'focusState', 'timerState',
+            'scheduledBlocking', 'sleepBlocking', 'timeLimits', 'globalLimit',
+            'siteUsageData', 'timeLimitWarningCache', 'preActivationWarningCache',
+            'syncStatus', 'lastSyncTime'
+        ]);
+        const status = await this.getProtectionStatus();
+        return {
+            generatedAt: new Date().toISOString(),
+            status,
+            alarms: alarms.map(alarm => ({ name: alarm.name, scheduledTime: alarm.scheduledTime, periodInMinutes: alarm.periodInMinutes || null })),
+            tabCount: tabs.length,
+            webTabCount: tabs.filter(tab => /^https?:\/\//.test(tab.url || '')).length,
+            configuredTimeLimitCount: Array.isArray(storage.timeLimits) ? storage.timeLimits.length : 0,
+            globalLimitEnabled: Boolean(storage.globalLimit?.enabled),
+            scheduledBlockingEnabled: Boolean(storage.scheduledBlocking?.enabled),
+            sleepBlockingEnabled: Boolean(storage.sleepBlocking?.enabled),
+            warningCacheDomains: Object.keys(storage.timeLimitWarningCache || {}).length,
+            syncStatus: storage.syncStatus || null,
+            lastSyncTime: storage.lastSyncTime || null
+        };
+    }
+
+    async cleanupUsageHistory() {
+        const settings = { ...this.getDefaultSettings(), ...(await this.getSettings()) };
+        const retentionDays = Math.min(730, Math.max(7, Number(settings.usageRetentionDays || 90)));
+        const cutoff = new Date();
+        cutoff.setHours(0, 0, 0, 0);
+        cutoff.setDate(cutoff.getDate() - retentionDays);
+        const cutoffTimestamp = cutoff.getTime();
+        const cutoffKey = cutoff.toDateString();
+        const result = await chrome.storage.local.get(['siteUsageData', 'siteUsageTimeline', 'siteOpenCounts', 'timeLimitWarningCache']);
+        const isRecentDateKey = (key) => {
+            const timestamp = Date.parse(String(key));
+            return Number.isFinite(timestamp) && timestamp >= cutoffTimestamp;
+        };
+        const prune = (source = {}) => Object.fromEntries(Object.entries(source).filter(([day]) => isRecentDateKey(day)));
+        const nextData = prune(result.siteUsageData);
+        const nextTimeline = prune(result.siteUsageTimeline);
+        const nextOpenCounts = prune(result.siteOpenCounts);
+        const nextWarningCache = Object.fromEntries(Object.entries(result.timeLimitWarningCache || {}).filter(([key, value]) => {
+            if (key === '__global__') return true;
+            return value && Object.values(value).some(token => {
+                const tokenDate = String(token).split(':')[0];
+                return isRecentDateKey(tokenDate);
+            });
+        }));
+        const removedDays = Math.max(0, Object.keys(result.siteUsageData || {}).length - Object.keys(nextData).length);
+        await chrome.storage.local.set({
+            siteUsageData: nextData,
+            siteUsageTimeline: nextTimeline,
+            siteOpenCounts: nextOpenCounts,
+            timeLimitWarningCache: nextWarningCache
+        });
+        return { removedDays, retentionDays, cutoffKey };
+    }
+
+    getDefaultSettings() {
+        return {
+            notificationsEnabled: true,
+            notificationFallbackEnabled: true,
+            showBlockingCountdown: true,
+            siteWarningFirstMinutes: 2,
+            siteWarningFinalMinutes: 1,
+            scheduleWarningFirstMinutes: 5,
+            scheduleWarningFinalMinutes: 1,
+            usageRetentionDays: 90,
+            safeModeEnabled: false
+        };
+    }
+
     async getSettings() {
         const result = await chrome.storage.local.get(['settings']);
-        return result.settings || {
-            theme: 'default',
-            soundEnabled: true,
-            notificationsEnabled: true,
-            breakReminders: true
-        };
+        return { ...this.getDefaultSettings(), ...(result.settings || {}) };
     }
 
     async playSound(soundName) {

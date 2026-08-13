@@ -53,6 +53,7 @@ class PopupController {
             ['timer state', () => this.restoreTimerState()],
             ['current site', () => this.loadCurrentSite()],
             ['pause state', () => this.checkPauseState()],
+            ['protection status', () => this.refreshProtectionStatus()],
             ['sync status', () => this.refreshSyncStatus()]
         ];
         const results = await Promise.allSettled(tasks.map(([, task]) => task()));
@@ -64,6 +65,36 @@ class PopupController {
     }
 
 
+
+    async refreshProtectionStatus() {
+        const response = await chrome.runtime.sendMessage({ action: 'getProtectionStatus' }).catch(() => null);
+        const status = response?.status;
+        const main = document.getElementById('popupProtectionStatus');
+        const meta = document.getElementById('popupProtectionMeta');
+        const dot = document.getElementById('protectionStatusDot');
+        if (!main || !meta || !dot) return;
+
+        dot.className = 'status-dot';
+        if (status?.paused) {
+            dot.classList.add('is-paused');
+            main.textContent = 'Protection paused';
+            meta.textContent = status.pauseUntil ? `Resumes ${new Date(status.pauseUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Paused until resumed';
+        } else if (status?.safeMode) {
+            dot.classList.add('is-safe');
+            main.textContent = 'Safe mode enabled';
+            meta.textContent = 'Automatic redirects are paused';
+        } else if (status?.focusActive) {
+            main.textContent = 'Focus Mode active';
+            meta.textContent = 'Distraction protection is running';
+        } else if (status?.scheduleActive) {
+            main.textContent = 'Scheduled protection active';
+            meta.textContent = 'Your current schedule is enforcing';
+        } else {
+            dot.classList.add('is-idle');
+            main.textContent = 'Protection ready';
+            meta.textContent = `${Math.round((status?.todaySeconds || 0) / 60)} minutes tracked today`;
+        }
+    }
 
     setupEventListeners() {
         const bind = (id, fn) => {
@@ -99,6 +130,7 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
+        bind('refreshPopupStatus', () => this.refreshProtectionStatus());
 
         // Quick-add current site buttons
         const addToFocusBtn = document.getElementById('addToFocus');
@@ -164,7 +196,7 @@ class PopupController {
                 offline: 'Offline',
                 failed: 'Sync Failed'
             };
-            this.elements.syncStatusText.textContent = labelMap[status?.state] || 'Offline';
+            this.elements.syncStatusText.textContent = status?.conflict ? 'Conflict Needs Review' : (labelMap[status?.state] || 'Offline');
         }
 
         if (this.elements.syncLastSyncedText) {

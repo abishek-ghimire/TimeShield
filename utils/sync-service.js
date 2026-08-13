@@ -6,6 +6,7 @@ import { FirebaseAuth } from "./firebase-auth.js";
 const SYNC_EXCLUDED_KEYS = new Set([
     "firebaseUser",
     "syncStatus",
+    "syncConflict",
     "syncDirty",
     "__isRestoring",
     "defaultFirebaseConfig",
@@ -69,7 +70,8 @@ export class SyncService {
             state: "offline", // "synced", "syncing", "offline", "failed"
             lastSynced: null,
             email: null,
-            error: null
+            error: null,
+            conflict: null
         };
         this.isSyncing = false;
         this.debounceTimeout = null;
@@ -117,12 +119,14 @@ export class SyncService {
         console.log("☁️ Sync Service initialized. User logged in:", !!this.user);
     }
 
-    updateStatus(state, error = null) {
+    updateStatus(state, error = null, options = {}) {
+        const preserveConflict = options.preserveConflict !== false;
         this.syncStatus = {
             state,
             lastSynced: this.syncStatus.lastSynced || null,
             email: this.user ? this.user.email : null,
-            error
+            error,
+            conflict: preserveConflict ? (this.syncStatus.conflict || null) : null
         };
         chrome.storage.local.set({ syncStatus: this.syncStatus }).catch(() => {});
     }
@@ -275,8 +279,28 @@ export class SyncService {
                     // Local is newer, upload settings
                     await this.uploadSettings();
                 } else if (cloudTime > localTime) {
-                    // Cloud is newer, restore cloud settings locally
+                    // Cloud is newer. Preserve the local snapshot before restoring
+                    // cloud data so the user can explicitly choose local or cloud.
+                    let conflict = null;
+                    if (isLocalDirty) {
+                        const localData = await this.getSyncableData();
+                        conflict = {
+                            detectedAt: new Date().toISOString(),
+                            localLastSyncTime: localTimeResult.lastSyncTime || null,
+                            cloudLastSyncTime: cloudDoc.fields.lastSyncTime.stringValue,
+                            localData
+                        };
+                        await chrome.storage.local.set({ syncConflict: conflict });
+                    }
                     await this.restoreLocalSettings(cloudData, cloudDoc.fields.lastSyncTime.stringValue);
+                    if (conflict) {
+                        this.syncStatus.conflict = {
+                            detectedAt: conflict.detectedAt,
+                            localLastSyncTime: conflict.localLastSyncTime,
+                            cloudLastSyncTime: conflict.cloudLastSyncTime
+                        };
+                        this.updateStatus("conflict", "Cloud settings were newer; local settings were preserved for review.");
+                    }
                 } else {
                     // In sync
                     await chrome.storage.local.remove(["syncDirty"]);
@@ -328,8 +352,8 @@ export class SyncService {
         return data;
     }
 
-    async uploadSettings() {
-        const localData = await this.getSyncableData();
+    async uploadSettings(dataOverride = null) {
+        const localData = dataOverride || await this.getSyncableData();
         const lastSyncTime = new Date().toISOString();
 
         const url = `https://firestore.googleapis.com/v1/projects/${this.user.config.projectId}/databases/(default)/documents/users/${this.user.localId}?updateMask.fieldPaths=data&updateMask.fieldPaths=lastSyncTime`;
@@ -358,10 +382,11 @@ export class SyncService {
         }
 
         await chrome.storage.local.set({ lastSyncTime });
-        await chrome.storage.local.remove(["syncDirty"]);
+        await chrome.storage.local.remove(["syncDirty", "syncConflict"]);
+        this.syncStatus.conflict = null;
         chrome.alarms.clear("syncUploadBackup").catch(() => {});
         this.syncStatus.lastSynced = lastSyncTime;
-        this.updateStatus("synced");
+        this.updateStatus("synced", null, { preserveConflict: false });
         await this.saveChromeSyncSnapshot();
         console.log("☁️ Settings successfully uploaded to cloud database.");
     }
@@ -379,6 +404,19 @@ export class SyncService {
         return syncableData;
     }
 
+    async resolveConflict(preference = 'cloud') {
+        const result = await chrome.storage.local.get(['syncConflict']);
+        const conflict = result.syncConflict;
+        if (!conflict) return { success: false, error: 'No sync conflict is waiting for resolution.' };
+        if (preference === 'local' && conflict.localData) {
+            await this.uploadSettings(conflict.localData);
+        }
+        await chrome.storage.local.remove(['syncConflict']);
+        this.syncStatus.conflict = null;
+        this.updateStatus('synced', null, { preserveConflict: false });
+        return { success: true, preference };
+    }
+
     async restoreLocalSettings(cloudData, lastSyncTime) {
         // Build restore payload
         const restorePayload = {};
@@ -391,19 +429,20 @@ export class SyncService {
         restorePayload.lastSyncTime = lastSyncTime;
         restorePayload.syncDirty = false;
 
-        // Temporal bypass of chrome.storage listeners during restoration
-        chrome.storage.local.set({ __isRestoring: true }).then(async () => {
+        // Temporal bypass of chrome.storage listeners during restoration.
+        await chrome.storage.local.set({ __isRestoring: true });
+        try {
             await chrome.storage.local.set(restorePayload);
             await chrome.storage.local.remove(["__isRestoring", "syncDirty"]);
-            chrome.alarms.clear("syncUploadBackup").catch(() => {});
-            this.syncStatus.lastSynced = lastSyncTime;
-            this.updateStatus("synced");
-            await this.saveChromeSyncSnapshot();
-            console.log("☁️ Settings successfully restored from cloud database.");
-            
-            // Notify other extension scripts
-            chrome.runtime.sendMessage({ action: "settingsRestored" }).catch(() => {});
-        });
+        } finally {
+            await chrome.storage.local.remove(["__isRestoring"]);
+        }
+        chrome.alarms.clear("syncUploadBackup").catch(() => {});
+        this.syncStatus.lastSynced = lastSyncTime;
+        this.updateStatus("synced");
+        await this.saveChromeSyncSnapshot();
+        console.log("☁️ Settings successfully restored from cloud database.");
+        chrome.runtime.sendMessage({ action: "settingsRestored" }).catch(() => {});
     }
 
     async saveChromeSyncSnapshot() {
