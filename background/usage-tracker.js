@@ -151,6 +151,21 @@ class UsageTracker {
         const limitObj = timeLimits.find(l => l.site === domain);
         if (limitObj && limitObj.minutes > 0) {
             const limitSeconds = limitObj.minutes * 60;
+            const remaining = limitSeconds - data[today][domain];
+            
+            // alert 1 minute before
+            if (remaining > 59 && remaining <= 65) {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (tabs[0]) {
+                        chrome.tabs.sendMessage(tabs[0].id, { 
+                            action: 'showTimeLimitWarning', 
+                            site: domain, 
+                            remaining: 1 
+                        }).catch(() => {});
+                    }
+                });
+            }
+
             if (data[today][domain] >= limitSeconds) {
                 shouldBlock = true;
             }
