@@ -565,7 +565,10 @@ if (
     !window.location.protocol.startsWith('chrome-extension')
 ) {
     if (document.body) {
-        new ContentBlocker();
+        if (!window.hasInitializedBlocker) {
+    window.hasInitializedBlocker = true;
+    new ContentBlocker();
+}
     } else {
         document.addEventListener('DOMContentLoaded', () => new ContentBlocker());
     }

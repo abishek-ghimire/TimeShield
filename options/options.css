@@ -18,13 +18,13 @@
 }
 
 .light-theme {
-    --bg-page: #f8fafc;
-    --bg-card: rgba(255, 255, 255, 0.8);
-    --bg-sidebar: rgba(241, 245, 249, 0.9);
-    --border: rgba(0, 0, 0, 0.05);
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+    --bg-page: #ffffff;
+    --bg-card: #ffffff;
+    --bg-sidebar: #eeeeee;
+    --border: rgba(0, 0, 0, 0.15);
+    --text-main: #000000;
+    --text-muted: #333333;
+    --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -465,6 +465,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .footer-link:hover {
     color: var(--text-main);
+}
+
+.footer-tagline {
+    color: #cbd5e1; /* Increased contrast for better visibility */
+    font-size: 14px;
+    margin-top: 8px;
+    font-style: italic;
+    opacity: 0.8;
 }
 
 /* ── SCROLLBAR ────────────────────────────────────────────────────────────── */
