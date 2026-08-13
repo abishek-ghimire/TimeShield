@@ -5,6 +5,7 @@ class UsageTracker {
     constructor() {
         this.activeDomain = null;
         this.intervalId = null;
+        this.injectionPromises = new Map();
         this.init();
     }
 
@@ -97,6 +98,47 @@ class UsageTracker {
         this.activeDomain = null;
     }
 
+    async sendToActiveTab(message) {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs?.[0];
+        if (!tab?.id || !/^https?:/i.test(tab.url || '')) return false;
+
+        try {
+            const response = await chrome.tabs.sendMessage(tab.id, message);
+            if (response?.success !== true) throw new Error('Content script did not acknowledge message');
+            return true;
+        } catch {
+            // A tab can be active before the content script has initialized.
+            // Inject once, then retry the message so warnings/countdowns are
+            // visible instead of failing silently.
+            try {
+                let injectionPromise = this.injectionPromises.get(tab.id);
+                if (!injectionPromise) {
+                    injectionPromise = Promise.allSettled([
+                        chrome.scripting.executeScript({
+                            target: { tabId: tab.id },
+                            files: ['content/blocker.js', 'content/anti-antiblock.js']
+                        }),
+                        chrome.scripting.insertCSS({
+                            target: { tabId: tab.id },
+                            files: ['content/adblock-styles.css']
+                        })
+                    ]).finally(() => {
+                        if (this.injectionPromises.get(tab.id) === injectionPromise) {
+                            this.injectionPromises.delete(tab.id);
+                        }
+                    });
+                    this.injectionPromises.set(tab.id, injectionPromise);
+                }
+                await injectionPromise;
+                const response = await chrome.tabs.sendMessage(tab.id, message);
+                return response?.success === true;
+            } catch {
+                return false;
+            }
+        }
+    }
+
     async incrementUsage(domain, { countOpen = false } = {}) {
         // Skip internal Chrome pages and extension pages (but NOT file:// PDFs)
         if (domain.startsWith('chrome://') || domain.startsWith('chrome-extension://')) {
@@ -163,14 +205,10 @@ class UsageTracker {
             if (remaining > 0 && remaining <= 120) {
                 const warningMinutes = remaining <= 60 ? 1 : 2;
                 if (domainWarningCache[warningMinutes] !== warningToken) {
-                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                        const tab = tabs?.[0];
-                        if (!tab?.id) return;
-                        chrome.tabs.sendMessage(tab.id, {
-                            action: 'showTimeLimitWarning',
-                            site: domain,
-                            remaining: warningMinutes
-                        }).catch(() => undefined);
+                    await this.sendToActiveTab({
+                        action: 'showTimeLimitWarning',
+                        site: domain,
+                        remaining: warningMinutes
                     });
                     domainWarningCache[warningMinutes] = warningToken;
                     warningCache[domain] = domainWarningCache;
@@ -180,14 +218,10 @@ class UsageTracker {
                 // Keep the compact corner countdown synchronized once per
                 // second during the final minute. It removes itself at zero.
                 if (remaining <= 60) {
-                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                        const tab = tabs?.[0];
-                        if (!tab?.id) return;
-                        chrome.tabs.sendMessage(tab.id, {
-                            action: 'showBlockingCountdown',
-                            label: `${domain} limit`,
-                            endAt: Date.now() + (remaining * 1000)
-                        }).catch(() => undefined);
+                    await this.sendToActiveTab({
+                        action: 'showBlockingCountdown',
+                        label: `${domain} limit`,
+                        endAt: Date.now() + (remaining * 1000)
                     });
                 }
             }

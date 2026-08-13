@@ -530,7 +530,7 @@ class ContentBlocker {
     }
 
     showTimeLimitWarning(site, remaining) {
-        this.showBlockingWarning(`${site} screen limit`, remaining, 'remaining today');
+        this.showBlockingWarning(`${site} screen limit`, remaining, 'until blocking');
     }
 
     showBlockingWarning(label, remainingMinutes, suffix = 'until blocking') {
@@ -547,7 +547,7 @@ class ContentBlocker {
         const div = document.createElement('div');
         div.id = 'ts-time-limit-warning';
         div.style.cssText = `
-            position: fixed; bottom: 18px; right: 18px; max-width: min(320px, calc(100vw - 36px));
+            position: fixed; top: 74px; right: 12px; max-width: min(320px, calc(100vw - 24px));
             background: rgba(10,15,30,0.97); color: white; padding: 10px 13px;
             border-radius: 11px; border: 1px solid rgba(244,63,94,0.42);
             z-index: 2147483646; font-family: Inter, -apple-system, sans-serif;
