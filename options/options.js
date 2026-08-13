@@ -28,7 +28,10 @@ class OptionsManager {
             'firebaseUser', 'customFirebaseConfig', 'syncStatus', 'siteCategories', 'customCategories'
         ]);
 
-        this.settings = result.settings || this.getDefaultSettings();
+        this.settings = {
+            ...this.getDefaultSettings(),
+            ...(result.settings || {})
+        };
         this.focusBlockedSites = result.focusBlockedSites || [];
         this.scheduledBlockedSites = result.scheduledBlockedSites || this.getDefaultBlockedSites();
         this.scheduledBlocking = result.scheduledBlocking || this.getDefaultScheduledBlocking();
@@ -283,6 +286,40 @@ class OptionsManager {
         on('importData', () => this.importData());
         on('resetSettings', () => this.resetSettings());
         on('clearAllData', () => this.clearAllData());
+        on('refreshProtectionStatus', () => this.refreshProtectionStatus());
+        on('runDiagnostics', () => this.runDiagnostics());
+        on('cleanupUsageNow', () => this.cleanupUsageNow());
+        this.refreshProtectionStatus();
+    }
+
+    async refreshProtectionStatus() {
+        const response = await chrome.runtime.sendMessage({ action: 'getProtectionStatus' }).catch(() => null);
+        if (!response?.success) return;
+        const status = response.status || {};
+        const setText = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        };
+        setText('protectionStatusValue', status.safeMode ? 'Safe mode' : (status.paused ? 'Paused' : (status.active ? 'Protected' : 'Ready')));
+        setText('protectionPauseValue', status.pauseUntil ? new Date(status.pauseUntil).toLocaleString() : '—');
+        setText('protectionScheduleValue', status.scheduleActive ? 'Active' : 'Inactive');
+        setText('protectionUsageValue', `${Math.round((status.todaySeconds || 0) / 60)} min`);
+    }
+
+    async runDiagnostics() {
+        const output = document.getElementById('diagnosticsOutput');
+        const response = await chrome.runtime.sendMessage({ action: 'getDiagnostics' }).catch(() => null);
+        if (!output) return;
+        output.hidden = false;
+        output.textContent = response?.success
+            ? JSON.stringify(response.diagnostics, null, 2)
+            : `Diagnostics failed: ${response?.error || 'background unavailable'}`;
+    }
+
+    async cleanupUsageNow() {
+        const response = await chrome.runtime.sendMessage({ action: 'runRetentionCleanup' }).catch(() => null);
+        this.showNotification(response?.success ? `Removed ${response.removedDays || 0} old usage day(s).` : 'Usage cleanup failed.', response?.success ? 'success' : 'error');
+        await this.refreshProtectionStatus();
     }
 
 
@@ -482,6 +519,8 @@ class OptionsManager {
         const signUpButton = document.getElementById('syncSignUp');
         const logoutButton = document.getElementById('syncLogout');
         const syncNowButton = document.getElementById('syncNow');
+        const keepLocalButton = document.getElementById('keepLocalSync');
+        const keepCloudButton = document.getElementById('keepCloudSync');
 
         if (saveConfigButton) {
             saveConfigButton.addEventListener('click', () => this.saveSyncConfig());
@@ -498,6 +537,12 @@ class OptionsManager {
         if (syncNowButton) {
             syncNowButton.addEventListener('click', () => this.syncNow());
         }
+        if (keepLocalButton) {
+            keepLocalButton.addEventListener('click', () => this.resolveSyncConflict('local'));
+        }
+        if (keepCloudButton) {
+            keepCloudButton.addEventListener('click', () => this.resolveSyncConflict('cloud'));
+        }
 
         const syncPassword = document.getElementById('syncPassword');
         if (syncPassword) {
@@ -507,6 +552,18 @@ class OptionsManager {
                 }
             });
         }
+    }
+
+    async resolveSyncConflict(preference) {
+        const response = await chrome.runtime.sendMessage({ action: 'resolveSyncConflict', preference }).catch(() => null);
+        if (!response?.success) {
+            this.showNotification(response?.error || 'Unable to resolve sync conflict.', 'error');
+            return;
+        }
+        this.showNotification(preference === 'local' ? 'Local settings kept and uploaded.' : 'Cloud settings restored locally.', 'success');
+        await this.loadData();
+        this.populateForm();
+        await this.refreshSyncStatus();
     }
 
     async refreshSyncStatus() {
@@ -535,13 +592,23 @@ class OptionsManager {
                 syncing: 'Syncing',
                 synced: 'Synced',
                 offline: 'Offline',
-                failed: 'Sync Failed'
+                failed: 'Sync Failed',
+                conflict: 'Conflict Needs Review'
             };
-            value.textContent = labelMap[status?.state] || 'Offline';
+            value.textContent = status?.conflict ? 'Conflict Needs Review' : (labelMap[status?.state] || 'Offline');
+            value.classList.toggle('status-conflict', Boolean(status?.conflict));
         }
 
         if (lastSynced) {
             lastSynced.textContent = status?.lastSynced ? new Date(status.lastSynced).toLocaleString() : 'Never';
+        }
+        const conflictPanel = document.getElementById('syncConflictPanel');
+        const conflictMessage = document.getElementById('syncConflictMessage');
+        if (conflictPanel) conflictPanel.hidden = !status?.conflict;
+        if (conflictMessage && status?.conflict) {
+            const localTime = status.conflict.localLastSyncTime ? new Date(status.conflict.localLastSyncTime).toLocaleString() : 'unknown';
+            const cloudTime = status.conflict.cloudLastSyncTime ? new Date(status.conflict.cloudLastSyncTime).toLocaleString() : 'unknown';
+            conflictMessage.textContent = `Local settings from ${localTime} and cloud settings from ${cloudTime} differ. Choose which copy to keep.`;
         }
     }
 
@@ -984,6 +1051,12 @@ class OptionsManager {
         chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
     }
 
+    clampSetting(value, min, max, fallback) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return fallback;
+        return Math.min(max, Math.max(min, Math.round(numeric)));
+    }
+
     async saveSettings() {
         const formElements = document.querySelectorAll('input, select');
         const newSettings = {};
@@ -1001,6 +1074,19 @@ class OptionsManager {
         });
 
         this.settings = { ...this.settings, ...newSettings };
+        this.settings.siteWarningFirstMinutes = this.clampSetting(this.settings.siteWarningFirstMinutes, 1, 30, 2);
+        this.settings.siteWarningFinalMinutes = this.clampSetting(this.settings.siteWarningFinalMinutes, 1, 10, 1);
+        this.settings.scheduleWarningFirstMinutes = this.clampSetting(this.settings.scheduleWarningFirstMinutes, 1, 60, 5);
+        this.settings.scheduleWarningFinalMinutes = this.clampSetting(this.settings.scheduleWarningFinalMinutes, 1, 10, 1);
+        this.settings.usageRetentionDays = this.clampSetting(this.settings.usageRetentionDays, 7, 730, 90);
+        // Keep legacy keys synchronized so older background code and exported settings remain compatible.
+        this.settings.warningFirstMinutes = this.settings.siteWarningFirstMinutes;
+        this.settings.warningFinalMinutes = Math.min(this.settings.siteWarningFinalMinutes, this.settings.siteWarningFirstMinutes);
+        const notificationFallback = this.settings.notificationFallbackEnabled !== false
+            && this.settings.notificationsFallbackEnabled !== false;
+        this.settings.notificationFallbackEnabled = notificationFallback;
+        this.settings.notificationsFallbackEnabled = notificationFallback;
+        this.settings.settingsRevision = Number(this.settings.settingsRevision || 0) + 1;
 
         // NEW: Save ad blocker specific settings
         await this.saveAdBlockSettings();
@@ -1114,7 +1200,21 @@ class OptionsManager {
             challengePasswordEnabled: false,
             challengePasswordValue: 'focus',
             challengeDelayEnabled: false,
-            challengeDelaySeconds: 8
+            challengeDelaySeconds: 8,
+            siteWarningFirstMinutes: 2,
+            siteWarningFinalMinutes: 1,
+            scheduleWarningFirstMinutes: 5,
+            scheduleWarningFinalMinutes: 1,
+            showBlockingCountdown: true,
+            notificationFallbackEnabled: true,
+            safeModeEnabled: false,
+            usageRetentionDays: 90,
+            notificationsFallbackEnabled: true,
+            diagnosticsEnabled: true,
+            warningSoundEnabled: false,
+            warningFirstMinutes: 2,
+            warningFinalMinutes: 1,
+            settingsRevision: 0
         };
     }
 
