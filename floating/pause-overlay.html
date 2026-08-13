@@ -210,13 +210,6 @@
                 <input type="password" id="passwordInput" placeholder="Enter your password">
             </div>
 
-            <div id="challengeBlock" class="form-group" style="display:none;">
-                <label>Typing Challenge</label>
-                <div class="challenge-text" id="challengeTextDisplay"></div>
-                <input type="text" id="challengeInput" placeholder="Type the exact text above" autocomplete="off"
-                    onpaste="return false;" ondrop="return false;">
-            </div>
-
             <button class="btn" id="verifyBtn">Verify & Proceed</button>
             <div id="errorMsg" class="error-msg">Verification failed. Try again.</div>
         </div>
@@ -240,17 +233,17 @@
         <!-- Motivation View -->
         <div id="motivationView" class="section">
             <h1>Final Verification</h1>
-            <p class="message" style="color:var(--primary);">Type the sentence below to confirm and proceed.</p>
+            <p class="message" style="color:var(--primary);">Type the 25-letter lowercase word below to confirm and proceed.</p>
 
             <div class="form-group">
-                <div class="challenge-text" id="motivationText" style="font-size: 0.95rem;">I choose discipline over distraction, for my dreams are worth more than temporary comfort.</div>
-                    <input type="text" id="motivationInput" placeholder="Type the exact sentence above" autocomplete="off"
+                <div class="challenge-text" id="motivationText" style="font-size: 0.95rem;"></div>
+                    <input type="text" id="motivationInput" maxlength="25" placeholder="Type the exact lowercase word above" autocomplete="off" autocapitalize="off" spellcheck="false"
                         onpaste="return false;" ondrop="return false;" style="margin-bottom: 12px; font-size:0.9rem;">
             </div>
 
             <button class="btn" id="confirmPauseBtn"
                 style="background:#0f172a; border:1px solid rgba(255,255,255,0.1);">Unlock Access</button>
-            <div id="motivationErrorMsg" class="error-msg">Text does not match. Try again.</div>
+            <div id="motivationErrorMsg" class="error-msg">The word does not match. Try again.</div>
             <button class="btn" id="cancelBtn2" style="background:rgba(255,255,255,0.1); margin-top: 12px;">Nevermind, Keep
                 Me
                 Focused</button>

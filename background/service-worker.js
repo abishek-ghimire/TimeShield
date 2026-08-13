@@ -662,33 +662,58 @@ class BackgroundService {
                 await this.updateFilters();
                 sendResponse({ success: true });
                 break;
-            case 'pauseBlocking':
-                console.log('🔍 Pause request received:', { durationMs: message.durationMs, currentCount: this.shortPauseUsage.count });
-                const isShortPause = message.durationMs === 300000; // 5 minutes = 300000ms
-                const requiresPassword = !isShortPause || this.shortPauseUsage.count >= 2;
-                console.log('🔍 Pause logic:', { isShortPause, requiresPassword, durationCheck: message.durationMs === 300000 });
+            case 'pauseBlocking': {
+                const durationMs = Number(message.durationMs);
+                if (!Number.isFinite(durationMs) || durationMs <= 0) {
+                    sendResponse({ success: false, error: 'Pause duration must be greater than zero' });
+                    break;
+                }
 
+                const isShortPause = durationMs === 300000;
+                const requiresPassword = !isShortPause || this.shortPauseUsage.count >= 2;
                 if (!requiresPassword) {
-                    await this.incrementShortPause();
-                    await this.pauseBlocking(message.durationMs);
-                    sendResponse({ success: true, requiresPassword: false });
+                    const paused = await this.pauseBlocking(durationMs);
+                    if (paused) await this.incrementShortPause();
+                    sendResponse(paused
+                        ? { success: true, requiresPassword: false }
+                        : { success: false, error: 'Pausing is unavailable while Focus Mode is active' });
                 } else {
-                    sendResponse({ success: false, requiresPassword: true, remainingShortPauses: Math.max(0, 2 - this.shortPauseUsage.count) });
+                    const challenge = this.generatePauseChallenge();
+                    await chrome.storage.local.set({
+                        pauseChallenge: {
+                            value: challenge,
+                            durationMs,
+                            expiresAt: Date.now() + (10 * 60 * 1000)
+                        }
+                    });
+                    sendResponse({
+                        success: false,
+                        requiresPassword: true,
+                        challenge,
+                        remainingShortPauses: Math.max(0, 2 - this.shortPauseUsage.count)
+                    });
                 }
                 break;
-            case 'pauseBlockingWithPassword':
-                // Get user settings to verify text challenge
-                const pauseSettingsResult = await chrome.storage.local.get(['settings']);
-                const pauseSettings = pauseSettingsResult.settings || {};
-                const userChallengeText = pauseSettings.challengeTextValue || '';
+            }
+            case 'pauseBlockingWithPassword': {
+                const challengeResult = await chrome.storage.local.get(['pauseChallenge']);
+                const challenge = challengeResult.pauseChallenge;
+                const submitted = String(message.password || '');
+                const isValid = challenge && Date.now() < challenge.expiresAt && submitted === challenge.value;
+                if (!isValid) {
+                    sendResponse({ success: false, error: 'Incorrect challenge word or expired challenge' });
+                    break;
+                }
 
-                if (message.password === userChallengeText) {
-                    await this.pauseBlocking(message.durationMs);
+                const paused = await this.pauseBlocking(challenge.durationMs);
+                if (paused) {
+                    await chrome.storage.local.remove('pauseChallenge');
                     sendResponse({ success: true });
                 } else {
-                    sendResponse({ success: false, error: 'Incorrect text' });
+                    sendResponse({ success: false, error: 'Pausing is unavailable while Focus Mode is active' });
                 }
                 break;
+            }
             case 'resumeBlocking':
                 await this.resumeBlocking();
                 sendResponse({ success: true });
@@ -744,21 +769,28 @@ class BackgroundService {
         return false;
     }
 
+    generatePauseChallenge() {
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        const values = new Uint32Array(25);
+        globalThis.crypto.getRandomValues(values);
+        return Array.from(values, value => alphabet[value % alphabet.length]).join('');
+    }
+
     async pauseBlocking(durationMs) {
-        // Deep Work Strict Mode: Prevent pausing during active focus
+        // Deep Work Strict Mode: Prevent pausing during active focus.
         const focusResult = await chrome.storage.local.get(['focusState']);
         const focusState = focusResult.focusState || {};
         if (focusState.isActive && focusState.deepWorkMode) {
-            return; // Silently ignore pause request during Deep Work Mode
+            return false;
         }
 
-        if (durationMs === -1) {
-            await chrome.storage.local.set({ pauseBlockingUntil: -1 });
-        } else {
-            const expire = Date.now() + durationMs;
-            await chrome.storage.local.set({ pauseBlockingUntil: expire });
-            chrome.alarms.create('pauseExpires', { when: expire });
-        }
+        const pauseDurationMs = Number(durationMs);
+        if (!Number.isFinite(pauseDurationMs) || pauseDurationMs <= 0) return false;
+
+        const expire = Date.now() + pauseDurationMs;
+        await chrome.storage.local.set({ pauseBlockingUntil: expire });
+        await chrome.alarms.clear('pauseExpires');
+        chrome.alarms.create('pauseExpires', { when: expire });
         // Remove ALL active blocking rules immediately (focus: 101-200, scheduled: 201-300, sleep: 301-400, time limits: 401-500)
         await this.disableSiteBlockingRange(101, 500);
         chrome.action.setBadgeText({ text: '' });
@@ -767,6 +799,7 @@ class BackgroundService {
         await this.redirectTabsBack('floating/schedule-block.html');
         await this.redirectTabsBack('floating/sleep-block.html');
         await this.redirectTabsBack('floating/limit-block.html');
+        return true;
     }
 
     async resumeBlocking() {
@@ -835,6 +868,10 @@ class BackgroundService {
     }
 
     async checkPreActivationWarnings() {
+        // A pause means blocking will not start, so do not alarm the user until
+        // protection is actually going to resume.
+        if (await this.isPaused()) return;
+
         const result = await chrome.storage.local.get(['scheduledBlocking', 'sleepBlocking', 'preActivationWarningCache']);
         this.preActivationWarningCache = result.preActivationWarningCache || {};
         const now = new Date();
@@ -858,21 +895,58 @@ class BackgroundService {
         if (!nextStart) return;
 
         const msUntilStart = nextStart.getTime() - now.getTime();
+        if (msUntilStart <= 0 || msUntilStart > 5 * 60000) return;
+
         const minutesUntilStart = Math.ceil(msUntilStart / 60000);
-        if (minutesUntilStart !== 1) return;
-
+        const warningMinutes = minutesUntilStart <= 1 ? 1 : 5;
         const warningToken = `${cacheKey}:${nextStart.toISOString().slice(0, 16)}`;
-        if (this.preActivationWarningCache[cacheKey] === warningToken) return;
+        const cacheEntry = this.preActivationWarningCache[cacheKey];
+        const alreadyWarned = typeof cacheEntry === 'object'
+            ? cacheEntry[warningMinutes] === warningToken
+            : warningMinutes === 1 && cacheEntry === warningToken;
 
-        await this.sendNotification(
-            `${label} starts in 1 minute`,
-            'Save your work now to avoid interruption.',
-            true,
-            `preactivation-${cacheKey}-${Date.now()}`
-        );
+        if (!alreadyWarned) {
+            await this.sendNotification(
+                `${label} starts in ${warningMinutes} minute${warningMinutes === 1 ? '' : 's'}`,
+                'Save your work now to avoid interruption.',
+                warningMinutes === 1,
+                `preactivation-${cacheKey}-${warningMinutes}-${Date.now()}`
+            );
+            await this.sendActiveTabMessage({
+                action: 'showBlockingWarning',
+                label,
+                remainingMinutes: warningMinutes
+            });
 
-        this.preActivationWarningCache[cacheKey] = warningToken;
-        await chrome.storage.local.set({ preActivationWarningCache: this.preActivationWarningCache });
+            const nextCacheEntry = typeof cacheEntry === 'object' && cacheEntry !== null
+                ? cacheEntry
+                : {};
+            nextCacheEntry[warningMinutes] = warningToken;
+            this.preActivationWarningCache[cacheKey] = nextCacheEntry;
+            await chrome.storage.local.set({ preActivationWarningCache: this.preActivationWarningCache });
+        }
+
+        // Start one compact in-page countdown during the final minute. The
+        // content script owns the one-second tick and removes itself at zero.
+        if (msUntilStart <= 60000) {
+            await this.sendActiveTabMessage({
+                action: 'showBlockingCountdown',
+                label,
+                endAt: nextStart.getTime()
+            });
+        }
+    }
+
+    async sendActiveTabMessage(message) {
+        try {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tab = tabs?.[0];
+            if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) return false;
+            await chrome.tabs.sendMessage(tab.id, message);
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     getNextActivationStart(config, now = new Date()) {

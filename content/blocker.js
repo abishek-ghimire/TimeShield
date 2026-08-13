@@ -11,6 +11,8 @@ class ContentBlocker {
             iframe: null,
             grip: null
         };
+        this.blockingCountdownTimer = null;
+        this.blockingCountdownEndAt = 0;
         this.init();
     }
 
@@ -36,6 +38,14 @@ class ContentBlocker {
                     break;
                 case 'showTimeLimitWarning':
                     this.showTimeLimitWarning(message.site, message.remaining);
+                    sendResponse({ success: true });
+                    break;
+                case 'showBlockingWarning':
+                    this.showBlockingWarning(message.label, message.remainingMinutes);
+                    sendResponse({ success: true });
+                    break;
+                case 'showBlockingCountdown':
+                    this.showBlockingCountdown(message.label, message.endAt);
                     sendResponse({ success: true });
                     break;
                 case 'refreshVisibility':
@@ -520,37 +530,85 @@ class ContentBlocker {
     }
 
     showTimeLimitWarning(site, remaining) {
-        const existing = document.getElementById('ts-time-limit-warning');
-        if (existing) existing.remove();
+        this.showBlockingWarning(`${site} screen limit`, remaining, 'remaining today');
+    }
 
+    showBlockingWarning(label, remainingMinutes, suffix = 'until blocking') {
         if (!document.getElementById('ts-warning-style')) {
             const style = document.createElement('style');
             style.id = 'ts-warning-style';
-            style.textContent = `
-                @keyframes ts-slide-up { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-                #ts-time-limit-warning { animation: ts-slide-up 0.3s ease; }
-            `;
+            style.textContent = '@keyframes ts-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }';
             document.head.appendChild(style);
         }
+
+        const existing = document.getElementById('ts-time-limit-warning');
+        if (existing) existing.remove();
 
         const div = document.createElement('div');
         div.id = 'ts-time-limit-warning';
         div.style.cssText = `
-            position: fixed; bottom: 24px; right: 24px;
-            background: rgba(10,15,30,0.97);
-            color: white; padding: 14px 20px;
-            border-radius: 16px;
-            border: 1px solid rgba(244,63,94,0.3);
-            z-index: 2147483646;
-            font-family: 'Inter', -apple-system, sans-serif;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            display: flex; align-items: center; gap: 10px;
-            font-size: 13px; font-weight: 500;
-            backdrop-filter: blur(12px);
+            position: fixed; bottom: 18px; right: 18px; max-width: min(320px, calc(100vw - 36px));
+            background: rgba(10,15,30,0.97); color: white; padding: 10px 13px;
+            border-radius: 11px; border: 1px solid rgba(244,63,94,0.42);
+            z-index: 2147483646; font-family: Inter, -apple-system, sans-serif;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.34); display: flex;
+            align-items: center; gap: 8px; font-size: 12px; line-height: 1.35;
+            font-weight: 500; backdrop-filter: blur(12px); animation: ts-slide-up 0.25s ease;
         `;
-        div.innerHTML = `<span style="font-size:18px;">⏰</span><span><strong style="color:#f43f5e;">${site}</strong>: ${remaining} min remaining today</span>`;
+        const icon = document.createElement('span');
+        icon.textContent = '⏰';
+        icon.style.fontSize = '16px';
+        const text = document.createElement('span');
+        text.textContent = `${label}: ${remainingMinutes} minute${Number(remainingMinutes) === 1 ? '' : 's'} ${suffix}. Save your work now.`;
+        div.append(icon, text);
         document.body.appendChild(div);
-        setTimeout(() => div.remove(), 5000);
+        window.setTimeout(() => div.remove(), 8000);
+    }
+
+    showBlockingCountdown(label, endAt) {
+        const endTime = Number(endAt);
+        if (!Number.isFinite(endTime)) return;
+
+        let div = document.getElementById('ts-blocking-countdown');
+        if (!div) {
+            div = document.createElement('div');
+            div.id = 'ts-blocking-countdown';
+            div.style.cssText = `
+                position: fixed; top: 12px; right: 12px; width: 154px;
+                box-sizing: border-box; padding: 8px 10px; border-radius: 9px;
+                background: rgba(15,23,42,0.96); color: #fff;
+                border: 1px solid rgba(251,146,60,0.58); z-index: 2147483647;
+                font: 500 11px/1.25 Inter, -apple-system, sans-serif;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.3); text-align: center;
+                pointer-events: none;
+            `;
+            document.body.appendChild(div);
+        }
+
+        this.blockingCountdownEndAt = endTime;
+        const render = () => {
+            const remainingSeconds = Math.max(0, Math.ceil((this.blockingCountdownEndAt - Date.now()) / 1000));
+            if (remainingSeconds <= 0) {
+                this.removeBlockingCountdown();
+                return;
+            }
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = String(remainingSeconds % 60).padStart(2, '0');
+            div.textContent = `${label} in ${minutes}:${seconds}`;
+        };
+
+        render();
+        if (this.blockingCountdownTimer) return;
+        this.blockingCountdownTimer = window.setInterval(render, 1000);
+    }
+
+    removeBlockingCountdown() {
+        if (this.blockingCountdownTimer) {
+            window.clearInterval(this.blockingCountdownTimer);
+            this.blockingCountdownTimer = null;
+        }
+        this.blockingCountdownEndAt = 0;
+        document.getElementById('ts-blocking-countdown')?.remove();
     }
 
     playSound(sound) {

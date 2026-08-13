@@ -112,7 +112,8 @@ class UsageTracker {
             'siteUsageTimeline',
             'siteOpenCounts',
             'timeLimits',
-            'globalLimit'
+            'globalLimit',
+            'timeLimitWarningCache'
         ]);
 
         let data = result.siteUsageData || {};
@@ -149,24 +150,49 @@ class UsageTracker {
 
         // 1. Check individual time limit
         const limitObj = timeLimits.find(l => l.site === domain);
-        if (limitObj && limitObj.minutes > 0) {
-            const limitSeconds = limitObj.minutes * 60;
-            const remaining = limitSeconds - data[today][domain];
-            
-            // alert 1 minute before
-            if (remaining > 59 && remaining <= 65) {
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    if (tabs[0]) {
-                        chrome.tabs.sendMessage(tabs[0].id, { 
-                            action: 'showTimeLimitWarning', 
-                            site: domain, 
-                            remaining: 1 
-                        }).catch(() => {});
-                    }
-                });
+        if (limitObj && Number(limitObj.minutes) > 0) {
+            const limitSeconds = Math.floor(Number(limitObj.minutes) * 60);
+            const usedSeconds = data[today][domain];
+            const remaining = limitSeconds - usedSeconds;
+            const warningToken = `${today}:${limitSeconds}`;
+            const warningCache = result.timeLimitWarningCache || {};
+            const domainWarningCache = warningCache[domain] || {};
+
+            // Deliver each warning once per day and per configured limit. If
+            // the limit is changed, the token changes and warnings start over.
+            if (remaining > 0 && remaining <= 120) {
+                const warningMinutes = remaining <= 60 ? 1 : 2;
+                if (domainWarningCache[warningMinutes] !== warningToken) {
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        const tab = tabs?.[0];
+                        if (!tab?.id) return;
+                        chrome.tabs.sendMessage(tab.id, {
+                            action: 'showTimeLimitWarning',
+                            site: domain,
+                            remaining: warningMinutes
+                        }).catch(() => undefined);
+                    });
+                    domainWarningCache[warningMinutes] = warningToken;
+                    warningCache[domain] = domainWarningCache;
+                    await chrome.storage.local.set({ timeLimitWarningCache: warningCache });
+                }
+
+                // Keep the compact corner countdown synchronized once per
+                // second during the final minute. It removes itself at zero.
+                if (remaining <= 60) {
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        const tab = tabs?.[0];
+                        if (!tab?.id) return;
+                        chrome.tabs.sendMessage(tab.id, {
+                            action: 'showBlockingCountdown',
+                            label: `${domain} limit`,
+                            endAt: Date.now() + (remaining * 1000)
+                        }).catch(() => undefined);
+                    });
+                }
             }
 
-            if (data[today][domain] >= limitSeconds) {
+            if (usedSeconds >= limitSeconds) {
                 shouldBlock = true;
             }
         }
