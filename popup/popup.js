@@ -60,19 +60,28 @@ class PopupController {
 
 
     setupEventListeners() {
-        document.getElementById('toggleClock').addEventListener('click', () => this.toggleFloatingClock());
-        document.getElementById('flipClockMode').addEventListener('click', () => this.openFlipClockTab());
-        document.getElementById('pauseProtectionMode').addEventListener('click', () => this.handlePauseProtection());
-        document.getElementById('blockSocialMedia').addEventListener('click', () => this.blockSocialMedia());
-        document.getElementById('syncNowButton').addEventListener('click', () => this.syncNow());
-        document.getElementById('openSyncSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
-        this.elements.startFocusBtn.addEventListener('click', () => this.handleFocusMode());
-        document.getElementById('openSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
-        this.elements.startTimerBtn.addEventListener('click', () => this.toggleTimer());
-        document.getElementById('addTask').addEventListener('click', () => this.addTask());
-        document.getElementById('blockElement').addEventListener('click', () => this.startElementPicker());
-        document.getElementById('toggleFormat').addEventListener('click', () => this.toggleTimeFormat());
-        document.getElementById('updateFilters').addEventListener('click', () => this.updateFilters());
+        const bind = (id, fn) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', () => { console.log('Clicked:', id); fn(); });
+            } else {
+                console.warn('Button not found:', id);
+            }
+        };
+
+        bind('toggleClock', () => this.toggleFloatingClock());
+        bind('flipClockMode', () => this.openFlipClockTab());
+        bind('pauseProtectionMode', () => this.handlePauseProtection());
+        bind('blockSocialMedia', () => this.blockSocialMedia());
+        bind('syncNowButton', () => this.syncNow());
+        bind('openSyncSettings', () => chrome.runtime.openOptionsPage());
+        bind('startFocus', () => this.handleFocusMode());
+        bind('openSettings', () => chrome.runtime.openOptionsPage());
+        bind('startTimer', () => this.toggleTimer());
+        bind('addTask', () => this.addTask());
+        bind('blockElement', () => this.startElementPicker());
+        bind('toggleFormat', () => this.toggleTimeFormat());
+        bind('updateFilters', () => this.updateFilters());
 
         // Quick-add current site buttons
         const addToFocusBtn = document.getElementById('addToFocus');
@@ -859,4 +868,11 @@ class PopupController {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => new PopupController());
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        new PopupController();
+        console.log('PopupController initialized');
+    } catch (e) {
+        console.error('Failed to initialize PopupController:', e);
+    }
+});
