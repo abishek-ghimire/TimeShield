@@ -57,7 +57,6 @@ class OptionsManager {
         this.setupAdBlockListeners(); // NEW
         this.setupEnhancedInteractions();
         this.setupScreenTimeListeners(); // NEW
-        this.setupSyncListeners();
         this.setupAccordion(); // Schedules & Limits collapsible panels
     }
 
@@ -494,176 +493,6 @@ class OptionsManager {
         this.showNotification('Custom category removed.', 'warning');
     }
 
-    populateSyncSettings() {
-        const apiKeyInput = document.getElementById('firebaseApiKey');
-        const projectIdInput = document.getElementById('firebaseProjectId');
-        const emailInput = document.getElementById('syncEmail');
-        const passwordInput = document.getElementById('syncPassword');
-
-        if (apiKeyInput) apiKeyInput.value = this.customFirebaseConfig?.apiKey || '';
-        if (projectIdInput) projectIdInput.value = this.customFirebaseConfig?.projectId || '';
-        if (emailInput) emailInput.value = this.firebaseUser?.email || '';
-        if (passwordInput) passwordInput.value = '';
-
-        this.renderSyncStatus(this.syncStatus);
-    }
-
-    setupSyncListeners() {
-        const saveConfigButton = document.getElementById('saveSyncConfig');
-        const loginButton = document.getElementById('syncLogin');
-        const signUpButton = document.getElementById('syncSignUp');
-        const logoutButton = document.getElementById('syncLogout');
-        const syncNowButton = document.getElementById('syncNow');
-
-        if (saveConfigButton) {
-            saveConfigButton.addEventListener('click', () => this.saveSyncConfig());
-        }
-        if (loginButton) {
-            loginButton.addEventListener('click', () => this.loginToSync());
-        }
-        if (signUpButton) {
-            signUpButton.addEventListener('click', () => this.signUpForSync());
-        }
-        if (logoutButton) {
-            logoutButton.addEventListener('click', () => this.logoutOfSync());
-        }
-        if (syncNowButton) {
-            syncNowButton.addEventListener('click', () => this.syncNow());
-        }
-
-        const syncPassword = document.getElementById('syncPassword');
-        if (syncPassword) {
-            syncPassword.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    this.loginToSync();
-                }
-            });
-        }
-    }
-
-    async refreshSyncStatus() {
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'getSyncStatus' });
-            if (response?.syncStatus) {
-                this.syncStatus = response.syncStatus;
-                this.renderSyncStatus(this.syncStatus);
-            }
-        } catch (error) {
-            this.renderSyncStatus({ state: 'offline', lastSynced: null, error: error.message || 'Sync service unavailable' });
-        }
-    }
-
-    startSyncStatusPolling() {
-        if (this._syncStatusTimer) clearInterval(this._syncStatusTimer);
-        this._syncStatusTimer = setInterval(() => this.refreshSyncStatus(), 30000);
-    }
-
-    renderSyncStatus(status) {
-        const value = document.getElementById('syncStatusValue');
-        const lastSynced = document.getElementById('syncLastSyncedValue');
-
-        if (value) {
-            const labelMap = {
-                syncing: 'Syncing',
-                synced: 'Synced',
-                offline: 'Offline',
-                failed: 'Sync Failed'
-            };
-            value.textContent = labelMap[status?.state] || 'Offline';
-        }
-
-        if (lastSynced) {
-            lastSynced.textContent = status?.lastSynced ? new Date(status.lastSynced).toLocaleString() : 'Never';
-        }
-    }
-
-    async saveSyncConfig() {
-        try {
-            const apiKey = document.getElementById('firebaseApiKey')?.value.trim();
-            const projectId = document.getElementById('firebaseProjectId')?.value.trim();
-
-            if (!apiKey || !projectId) {
-                this.showNotification('Enter both Firebase API key and project ID.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'configureFirebase', apiKey, projectId });
-            if (response?.success) {
-                this.customFirebaseConfig = { apiKey, projectId };
-                await chrome.storage.local.set({ customFirebaseConfig: this.customFirebaseConfig });
-                this.showNotification('Sync configuration saved.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Failed to save sync configuration');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Unable to save sync configuration.', 'error');
-        }
-    }
-
-    async loginToSync() {
-        try {
-            const email = document.getElementById('syncEmail')?.value.trim();
-            const password = document.getElementById('syncPassword')?.value || '';
-
-            if (!email || !password) {
-                this.showNotification('Enter both email and password.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'login', email, password });
-            if (response?.success) {
-                const stored = await chrome.storage.local.get(['firebaseUser']);
-                this.firebaseUser = stored.firebaseUser || null;
-                this.showNotification('Signed in and syncing settings.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Login failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Login failed.', 'error');
-        }
-    }
-
-    async signUpForSync() {
-        try {
-            const email = document.getElementById('syncEmail')?.value.trim();
-            const password = document.getElementById('syncPassword')?.value || '';
-
-            if (!email || !password) {
-                this.showNotification('Enter both email and password.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'signUp', email, password });
-            if (response?.success) {
-                const stored = await chrome.storage.local.get(['firebaseUser']);
-                this.firebaseUser = stored.firebaseUser || null;
-                this.showNotification('Account created and synced.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Sign up failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Sign up failed.', 'error');
-        }
-    }
-
-    async logoutOfSync() {
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'logout' });
-            if (response?.success) {
-                this.firebaseUser = null;
-                this.syncStatus = { state: 'offline', lastSynced: this.syncStatus.lastSynced || null, email: null, error: null };
-                this.renderSyncStatus(this.syncStatus);
-                this.showNotification('Signed out from cloud sync.', 'success');
-            } else {
-                throw new Error(response?.error || 'Logout failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Logout failed.', 'error');
-        }
-    }
 
     setDayGroupChecked(dayIds, checked) {
         dayIds.forEach((id) => {
@@ -1198,15 +1027,6 @@ class OptionsManager {
 
 
 
-    async resetSettings() {
-        if (confirm('Are you sure you want to reset all settings to defaults?')) {
-            await chrome.storage.local.remove(['settings']);
-            this.settings = this.getDefaultSettings();
-            this.populateForm();
-            this.showNotification('Settings reset to defaults', 'success');
-        }
-    }
-
     async clearAllData() {
         if (confirm('Are you sure you want to clear ALL data? This includes settings, tasks, analytics, and everything else. This action cannot be undone!')) {
             if (confirm('This is your final warning. All data will be permanently deleted. Continue?')) {
@@ -1674,6 +1494,7 @@ class OptionsManager {
         });
     }
 
+<<<<<<< HEAD
     async showDisableCountdown(actionLabel, seconds = 60) {
         const messages = [
             'Take a breath and keep your momentum.',
@@ -1681,44 +1502,51 @@ class OptionsManager {
             'Small pauses protect big goals.',
             'Focus first, distractions later.',
             'You are building a better default.'
+=======
+    async showFocusWarning(actionLabel) {
+        const warnings = [
+            "You are not being focused; this will reduce your productivity.",
+            "Distraction is the enemy of progress. Stay focused.",
+            "Don't lose your rhythm now, stay on task.",
+            "Your goals deserve your full attention.",
+            "Breaking your focus will set you back.",
+            "Stay committed to the work you started.",
+            "Don't quit now; finish what you started.",
+            "Your productivity is precious; don't waste it."
+>>>>>>> 5e524c8 (Fixed the issue of sleep schedule always being active)
         ];
+        const randomWarning = warnings[Math.floor(Math.random() * warnings.length)];
 
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
                 position: fixed; inset: 0; z-index: 100000;
-                background: rgba(2, 6, 23, 0.8);
+                background: rgba(2, 6, 23, 0.85);
                 display: flex; align-items: center; justify-content: center;
-                backdrop-filter: blur(6px);
+                backdrop-filter: blur(8px);
             `;
 
             const modal = document.createElement('div');
             modal.style.cssText = `
-                width: min(540px, calc(100vw - 32px));
-                background: linear-gradient(180deg, #0f172a, #111827);
+                width: min(500px, calc(100vw - 32px));
+                background: #0f172a;
                 color: #e5e7eb;
-                border: 1px solid rgba(99,102,241,0.35);
-                border-radius: 18px;
-                padding: 22px;
-                box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+                border: 2px solid #6366f1;
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.6);
             `;
 
             modal.innerHTML = `
-                <div style="font-size:0.8rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Protection Countdown</div>
-                <div style="font-size:1.15rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
-                <div id="ts-countdown-message" style="font-size:0.95rem;line-height:1.55;color:#cbd5e1;margin-bottom:18px;"></div>
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
-                    <div id="ts-countdown-value" style="font-family:'Outfit',sans-serif;font-size:3rem;font-weight:800;color:#818cf8;min-width:96px;">${seconds}</div>
-                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
-                        <div id="ts-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
-                    </div>
-                </div>
-                <div style="display:flex;justify-content:flex-end;gap:10px;">
-                    <button id="ts-countdown-cancel" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
-                    <button id="ts-countdown-continue" disabled style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue</button>
+                <div style="font-size:1.2rem; font-weight:700; color:#f59e0b; margin-bottom:12px;">Pause for a second?</div>
+                <div style="font-size:1rem; color:#cbd5e1; margin-bottom:24px;">${randomWarning}</div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button id="ts-resume" style="padding:12px; border-radius:8px; border:none; background:#22c55e; color:white; font-weight:600; cursor:pointer;">Resume Focusing</button>
+                    <button id="ts-unfocus" disabled style="padding:12px; border-radius:8px; border:1px solid #475569; background:transparent; color:#94a3b8; cursor:not-allowed;">Continue Anyway (Wait 8s)</button>
                 </div>
             `;
 
+<<<<<<< HEAD
             const cleanup = () => {
                 clearInterval(timerId);
                 document.removeEventListener('keydown', escHandler, true);
@@ -1774,17 +1602,40 @@ class OptionsManager {
             let timerId = null;
 
             overlay.appendChild(modal);
+=======
+>>>>>>> 5e524c8 (Fixed the issue of sleep schedule always being active)
             document.body.appendChild(overlay);
-            document.addEventListener('keydown', escHandler, true);
+            overlay.appendChild(modal);
 
-            cancelBtn.addEventListener('click', () => resolveAndCleanup(false));
-            continueBtn.addEventListener('click', () => {
-                if (continueBtn.disabled) return;
-                resolveAndCleanup(true);
+            const resumeBtn = modal.querySelector('#ts-resume');
+            const unfocusBtn = modal.querySelector('#ts-unfocus');
+
+            let countdown = 8;
+            const timer = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    unfocusBtn.textContent = `Continue Anyway (Wait ${countdown}s)`;
+                } else {
+                    clearInterval(timer);
+                    unfocusBtn.disabled = false;
+                    unfocusBtn.style.cursor = 'pointer';
+                    unfocusBtn.style.color = '#ef4444';
+                    unfocusBtn.style.borderColor = '#ef4444';
+                    unfocusBtn.textContent = "Continue Anyway";
+                }
+            }, 1000);
+
+            resumeBtn.addEventListener('click', () => {
+                clearInterval(timer);
+                overlay.remove();
+                resolve(true); // Treat as 'resume' (do NOT disable)
             });
 
-            update();
-            timerId = setInterval(update, 1000);
+            unfocusBtn.addEventListener('click', () => {
+                if (unfocusBtn.disabled) return;
+                overlay.remove();
+                resolve(false); // Treat as 'proceed to disable'
+            });
         });
     }
 
@@ -1818,8 +1669,14 @@ class OptionsManager {
     }
 
     async runProtectionSequence(actionLabel) {
+<<<<<<< HEAD
         const countdownAllowed = await this.showDisableCountdown(actionLabel, 60);
         if (!countdownAllowed) return false;
+=======
+        const allowedToDisable = await this.showFocusWarning(actionLabel);
+        // If allowedToDisable is true, it means the user clicked "Resume Focus", so we return false
+        if (allowedToDisable) return false;
+>>>>>>> 5e524c8 (Fixed the issue of sleep schedule always being active)
 
         const challengeResult = await this.runChallengeChecks(actionLabel);
         if (!challengeResult.ok) {
