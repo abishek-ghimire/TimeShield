@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const errorMsg = document.getElementById('errorMsg');
 
     let selectedDurationMs = 0;
+    let selectedIsRestOfDay = false;
 
     // 0. Grace Pause Check
     const graceStatus = await chrome.runtime.sendMessage({ action: 'getGracePauseStatus' });
@@ -44,11 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 durationView.classList.add('active');
             } else {
                 errorMsg.style.display = 'block';
-                if (passInput) passInput.value = '';
-                if (chlInput) {
-                    chlInput.value = '';
-                    // Clear error on typing
-                    chlInput.addEventListener('input', () => {
+                if (passInput) {
+                    passInput.value = '';
+                    passInput.focus();
+                    passInput.addEventListener('input', () => {
                         errorMsg.style.display = 'none';
                     }, { once: true });
                 }
@@ -60,8 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const dur = btn.dataset.minutes;
+            const isRestOfDay = dur === 'eod';
+            selectedIsRestOfDay = isRestOfDay;
 
-            if (dur === 'eod') {
+            if (isRestOfDay) {
                 const now = new Date();
                 const eod = new Date();
                 eod.setHours(23, 59, 59, 999);
@@ -78,7 +80,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.disabled = true;
             const response = await chrome.runtime.sendMessage({
                 action: 'pauseBlocking',
-                durationMs: selectedDurationMs
+                durationMs: selectedDurationMs,
+                restOfDay: isRestOfDay
             });
             btn.disabled = false;
 
@@ -135,7 +138,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const response = await chrome.runtime.sendMessage({
                 action: 'pauseBlockingWithPassword',
                 durationMs: selectedDurationMs,
-                password: value
+                password: value,
+                restOfDay: selectedIsRestOfDay
             });
             confirmBtn.disabled = false;
 

@@ -58,6 +58,7 @@
                 chrome.runtime.sendMessage({
                     action: 'pauseBlockingWithPassword',
                     durationMs,
+                    restOfDay: response?.restOfDay === true,
                     password: value
                 }, (result) => {
                     if (chrome.runtime.lastError || !result?.success) {

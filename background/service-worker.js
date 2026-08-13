@@ -268,6 +268,22 @@ class BackgroundService {
         this.gracePauses = graceResult.gracePauses || { count: 0, lastResetDate: new Date().toDateString() };
         await this.checkGracePauseReset();
 
+        // Restore pause state. A finite pause (including Rest of Day) must
+        // survive a worker restart and continue to expire at its stored local
+        // midnight timestamp. Expired pauses are cleared and protection is
+        // evaluated immediately.
+        const pauseResult = await chrome.storage.local.get(['pauseBlockingUntil']);
+        const pauseUntil = Number(pauseResult.pauseBlockingUntil);
+        if (pauseUntil === -1) {
+            await this.disableSiteBlockingRange(101, 500);
+        } else if (Number.isFinite(pauseUntil) && pauseUntil > Date.now()) {
+            chrome.alarms.create('pauseExpires', { when: pauseUntil });
+            await this.disableSiteBlockingRange(101, 500);
+        } else if (pauseResult.pauseBlockingUntil !== undefined) {
+            await chrome.storage.local.remove('pauseBlockingUntil');
+            await this.resumeBlocking();
+        }
+
         // Restore sleep blocking state - deprecated
 
         // Restore short pause usage
@@ -427,6 +443,17 @@ class BackgroundService {
             case 'scheduledBlockingCheck':
                 await this.checkScheduledBlocking();
                 break;
+            case 'pauseExpires': {
+                const pauseResult = await chrome.storage.local.get(['pauseBlockingUntil']);
+                const pauseUntil = Number(pauseResult.pauseBlockingUntil);
+                if (pauseUntil === -1) break;
+                if (Number.isFinite(pauseUntil) && pauseUntil > Date.now()) {
+                    chrome.alarms.create('pauseExpires', { when: pauseUntil });
+                    break;
+                }
+                await this.resumeBlocking();
+                break;
+            }
             case 'focusModeActivation':
                 await this.activatePendingFocusMode();
                 break;
@@ -663,7 +690,9 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             case 'pauseBlocking': {
-                const durationMs = Number(message.durationMs);
+                const durationMs = message.restOfDay === true
+                    ? this.getRestOfDayDurationMs()
+                    : Number(message.durationMs);
                 if (!Number.isFinite(durationMs) || durationMs <= 0) {
                     sendResponse({ success: false, error: 'Pause duration must be greater than zero' });
                     break;
@@ -683,6 +712,7 @@ class BackgroundService {
                         pauseChallenge: {
                             value: challenge,
                             durationMs,
+                            restOfDay: message.restOfDay === true,
                             expiresAt: Date.now() + (10 * 60 * 1000)
                         }
                     });
@@ -690,6 +720,7 @@ class BackgroundService {
                         success: false,
                         requiresPassword: true,
                         challenge,
+                        restOfDay: message.restOfDay === true,
                         remainingShortPauses: Math.max(0, 2 - this.shortPauseUsage.count)
                     });
                 }
@@ -705,7 +736,10 @@ class BackgroundService {
                     break;
                 }
 
-                const paused = await this.pauseBlocking(challenge.durationMs);
+                const durationMs = challenge.restOfDay === true
+                    ? this.getRestOfDayDurationMs()
+                    : Number(challenge.durationMs);
+                const paused = await this.pauseBlocking(durationMs);
                 if (paused) {
                     await chrome.storage.local.remove('pauseChallenge');
                     sendResponse({ success: true });
@@ -767,6 +801,13 @@ class BackgroundService {
         // Expired
         await chrome.storage.local.remove('pauseBlockingUntil');
         return false;
+    }
+
+    getRestOfDayDurationMs(now = new Date()) {
+        const nextLocalMidnight = new Date(now);
+        // Setting hour 24 preserves local timezone and daylight-saving behavior.
+        nextLocalMidnight.setHours(24, 0, 0, 0);
+        return nextLocalMidnight.getTime() - now.getTime();
     }
 
     generatePauseChallenge() {
