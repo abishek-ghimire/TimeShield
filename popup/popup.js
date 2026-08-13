@@ -24,8 +24,6 @@ class PopupController {
             todoList: document.getElementById('todoList'),
             startTimerBtn: document.getElementById('startTimer'),
             startFocusBtn: document.getElementById('startFocus'),
-            syncStatusText: document.getElementById('syncStatusText'),
-            syncLastSyncedText: document.getElementById('syncLastSyncedText')
         };
 
         this.state = {
@@ -53,8 +51,7 @@ class PopupController {
             ['timer state', () => this.restoreTimerState()],
             ['current site', () => this.loadCurrentSite()],
             ['pause state', () => this.checkPauseState()],
-            ['protection status', () => this.refreshProtectionStatus()],
-            ['sync status', () => this.refreshSyncStatus()]
+            ['protection status', () => this.refreshProtectionStatus()]
         ];
         const results = await Promise.allSettled(tasks.map(([, task]) => task()));
         results.forEach((result, index) => {
@@ -124,8 +121,6 @@ class PopupController {
         bind('flipClockMode', () => this.openFlipClockTab());
         bind('pauseProtectionMode', () => this.handlePauseProtection());
         bind('blockSocialMedia', () => this.blockSocialMedia());
-        bind('syncNowButton', () => this.syncNow());
-        bind('openSyncSettings', () => chrome.runtime.openOptionsPage());
         bind('startFocus', () => this.handleFocusMode());
         bind('openSettings', () => chrome.runtime.openOptionsPage());
         bind('startTimer', () => this.toggleTimer());
@@ -179,56 +174,6 @@ class PopupController {
                 console.error('Failed to update timer widget setting:', error);
             });
         });
-    }
-
-    async refreshSyncStatus() {
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'getSyncStatus' });
-            const status = response?.syncStatus || { state: 'offline', lastSynced: null, error: null };
-            this.renderSyncStatus(status);
-        } catch (error) {
-            this.renderSyncStatus({ state: 'offline', lastSynced: null, error: error.message || 'Sync unavailable' });
-        }
-    }
-
-    renderSyncStatus(status) {
-        if (this.elements.syncStatusText) {
-            const labelMap = {
-                syncing: 'Syncing',
-                synced: 'Synced',
-                offline: 'Offline',
-                failed: 'Sync Failed'
-            };
-            this.elements.syncStatusText.textContent = status?.conflict ? 'Conflict Needs Review' : (labelMap[status?.state] || 'Offline');
-        }
-
-        if (this.elements.syncLastSyncedText) {
-            this.elements.syncLastSyncedText.textContent = status?.lastSynced
-                ? `Last synced: ${new Date(status.lastSynced).toLocaleString()}`
-                : 'Last synced: never';
-        }
-    }
-
-    async syncNow() {
-        const button = document.getElementById('syncNowButton');
-        const originalText = button?.textContent;
-        if (button) {
-            button.textContent = 'Syncing...';
-            button.disabled = true;
-        }
-
-        try {
-            await chrome.runtime.sendMessage({ action: 'syncNow', force: true });
-            await this.refreshSyncStatus();
-            this.showToast('Cloud sync started.');
-        } catch (error) {
-            this.showToast('Sync failed. Open settings to check your account.');
-        } finally {
-            if (button) {
-                button.textContent = originalText || 'Sync Now';
-                button.disabled = false;
-            }
-        }
     }
 
     async updateWidgetSetting(key, enabled) {
@@ -336,25 +281,28 @@ class PopupController {
     async startClock() {
         if (this.state.clockInterval) clearInterval(this.state.clockInterval);
 
-        const update = async () => {
-            try {
-                const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-                const is12h = settings?.timeFormat === '12h';
-                if (this.elements.currentTime) {
-                    this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
-                        hour12: is12h,
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                }
-                const formatButton = document.getElementById('toggleFormat');
-                if (formatButton) formatButton.textContent = is12h ? '12H' : '24H';
-            } catch (error) {
-                console.error('Failed to update popup clock:', error);
+        const render = (is12h = false) => {
+            if (this.elements.currentTime) {
+                this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
+                    hour12: is12h,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
             }
+            const formatButton = document.getElementById('toggleFormat');
+            if (formatButton) formatButton.textContent = is12h ? '12H' : '24H';
         };
-        await update();
+
+        const update = () => {
+            // Render immediately so service-worker startup can never leave a 00:00:00 placeholder visible.
+            render(false);
+            chrome.runtime.sendMessage({ action: 'getSettings' })
+                .then((settings) => render(settings?.timeFormat === '12h'))
+                .catch(() => {});
+        };
+
+        update();
         this.state.clockInterval = setInterval(update, 1000);
     }
 
