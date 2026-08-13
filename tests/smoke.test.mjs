@@ -85,17 +85,19 @@ test('Status and retention use local calendar-day usage keys', async () => {
     assert.match(worker, /const tokenDate = String\(token\)\.split\('\:'\)\[0\]/);
 });
 
-test('Reliability controls and conflict-resolution UI are wired', async () => {
+test('Reliability controls remain local-only and cloud sync interfaces are absent', async () => {
     const html = await read('options/options.html');
     const options = await read('options/options.js');
-    const sync = await read('utils/sync-service.js');
+    const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.js');
-    for (const id of ['siteWarningFirstMinutes', 'showBlockingCountdown', 'safeModeEnabled', 'usageRetentionDays', 'runDiagnostics', 'cleanupUsageNow', 'syncConflictPanel', 'keepLocalSync', 'keepCloudSync']) {
+    for (const id of ['siteWarningFirstMinutes', 'showBlockingCountdown', 'safeModeEnabled', 'usageRetentionDays', 'runDiagnostics', 'cleanupUsageNow']) {
         assert.match(html, new RegExp(`id=["']${id}["']`), `missing ${id}`);
     }
-    assert.match(options, /resolveSyncConflict/);
+    for (const source of [html, options, worker, popup]) {
+        assert.doesNotMatch(source, /syncConflictPanel|keepLocalSync|keepCloudSync|Cloud Sync|Account Access|syncService/);
+    }
+    assert.doesNotMatch(html, /Pomodoro Timer/);
     assert.match(options, /getDiagnostics/);
-    assert.match(sync, /preserveConflict/);
     assert.match(popup, /popupProtectionStatus/);
 });
 
@@ -119,6 +121,9 @@ test('Category blocking, independent sleep enforcement, and delayed focus confir
     assert.match(options, /blockingCategories/);
     assert.match(options, /renderBlockingCategoryControls/);
     assert.match(options, /Disable \$\{category\.name\} category protection/);
+    assert.match(options, /getSocialMediaPreset/);
+    assert.doesNotMatch(options, /entertainment:\s*\[/);
+    assert.match(options, /target === 'schedule' \? 'scheduleCategoryPreset' : 'categoryPreset'/);
     assert.match(optionsCss, /\.ts-category-panel/);
     assert.match(optionsCss, /\.ts-category-card\.is-enabled/);
 
@@ -134,4 +139,6 @@ test('Category blocking, independent sleep enforcement, and delayed focus confir
         assert.match(source, /Stay Focused/);
         assert.match(source, /This is the final check/);
     }
+    assert.match(popup, /Render immediately so service-worker startup can never leave a 00:00:00 placeholder visible/);
+    assert.doesNotMatch(popup, /syncNow/);
 });

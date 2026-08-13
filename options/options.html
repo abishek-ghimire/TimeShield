@@ -1948,44 +1948,6 @@
                 <h2>Focus Mode Settings</h2>
                 <div class="accordion">
 
-                    <!-- Pomodoro Timer -->
-                    <div class="accordion-item open" id="acc-foc-timer">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-foc-timer">
-                            <span class="accordion-icon">🍅</span>
-                            <span class="accordion-title-wrap">
-                                <span class="accordion-title">Pomodoro Timer</span>
-                                <span class="accordion-subtitle">Focus &amp; break durations, auto-start</span>
-                            </span>
-                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg></span>
-                        </button>
-                        <div class="accordion-body">
-                            <div class="accordion-inner">
-                                <div class="accordion-divider"></div>
-                                <div class="form-group"><label for="focusDuration">Default Focus Duration
-                                        (minutes)</label><input type="number" id="focusDuration" min="1" max="180"
-                                        value="25"></div>
-                                <div class="form-group"><label for="breakDuration">Short Break Duration
-                                        (minutes)</label><input type="number" id="breakDuration" min="1" max="30"
-                                        value="5"></div>
-                                <div class="form-group"><label for="longBreakDuration">Long Break Duration
-                                        (minutes)</label><input type="number" id="longBreakDuration" min="1" max="60"
-                                        value="15"></div>
-                                <div class="form-group"><label for="pomodoroCount">Pomodoro sessions until long
-                                        break</label><input type="number" id="pomodoroCount" min="2" max="10" value="4">
-                                </div>
-                                <div class="checkbox-group"><input type="checkbox" id="autoStartFocus"><label
-                                        for="autoStartFocus">Auto-start focus sessions</label></div>
-                                <div class="checkbox-group"><input type="checkbox" id="autoStartBreaks"><label
-                                        for="autoStartBreaks">Auto-start breaks</label></div>
-                                <div class="checkbox-group"><input type="checkbox" id="focusTimerWidgetEnabled"
-                                        checked><label for="focusTimerWidgetEnabled">Enable integrated display for Focus
-                                        Sessions</label></div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Site Categories -->
                     <div class="accordion-item" id="acc-categories">
                         <button class="accordion-header" aria-expanded="false" data-target="acc-categories">
@@ -2659,57 +2621,6 @@
                         <button class="btn btn-secondary" id="runDiagnostics">Run Diagnostics</button>
                     </div>
                     <pre id="diagnosticsOutput" class="diagnostic-card" hidden style="margin-top:12px; white-space:pre-wrap; overflow:auto; font-size:0.78rem;"></pre>
-                </div>
-
-                <div class="export-import" style="margin-bottom: 22px;">
-                    <div>
-                        <h3>Cloud Sync</h3>
-                        <div class="form-group" style="margin-top: 12px;">
-                            <label for="firebaseApiKey">Firebase API Key</label>
-                            <input type="text" id="firebaseApiKey" placeholder="Enter Firebase API key">
-                        </div>
-                        <div class="form-group">
-                            <label for="firebaseProjectId">Firebase Project ID</label>
-                            <input type="text" id="firebaseProjectId" placeholder="Enter Firebase project ID">
-                        </div>
-                        <button class="btn btn-primary" id="saveSyncConfig" style="margin-top: 10px;">Save Sync Config</button>
-                    </div>
-
-                    <div>
-                        <h3>Account Access</h3>
-                        <div class="form-group" style="margin-top: 12px;">
-                            <label for="syncEmail">Email</label>
-                            <input type="text" id="syncEmail" placeholder="name@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="syncPassword">Password</label>
-                            <input type="password" id="syncPassword" placeholder="Enter password">
-                        </div>
-                        <div class="btn-group" style="margin-top: 10px;">
-                            <button class="btn btn-primary" id="syncLogin">Sign In</button>
-                            <button class="btn btn-secondary" id="syncSignUp">Sign Up</button>
-                            <button class="btn btn-danger" id="syncLogout">Log Out</button>
-                        </div>
-                        <div style="margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted);">
-                            <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom: 6px;">
-                                <span style="font-weight:600;">Status</span>
-                                <span id="syncStatusValue" style="font-weight:700;">Offline</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.9rem; color: var(--text-soft);">
-                                <span>Last synced</span>
-                                <span id="syncLastSyncedValue">Never</span>
-                            </div>
-                            <button class="btn btn-secondary" id="syncNow" style="width:100%; margin-top: 12px;">Sync Now</button>
-                            <div id="syncConflictPanel" class="diagnostic-card" hidden style="margin-top:12px;">
-                                <strong>Sync conflict detected</strong>
-                                <p class="hint" id="syncConflictMessage">Cloud settings were newer. Your local settings are preserved until you choose.</p>
-                                <div class="btn-group" style="margin-top:10px;">
-                                    <button class="btn btn-secondary" id="keepLocalSync">Keep Local</button>
-                                    <button class="btn btn-primary" id="keepCloudSync">Keep Cloud</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="export-import">

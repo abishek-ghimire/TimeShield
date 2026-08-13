@@ -4,7 +4,6 @@ import { FilterListManager } from './filter-lists.js';
 import { RuleCompiler } from './adblock-rules.js';
 import { StorageManager } from '../lib/storage-manager.js';
 import { usageTracker } from './usage-tracker.js';
-import { SyncService } from '../utils/sync-service.js';
 
 class BackgroundService {
     constructor() {
@@ -49,10 +48,10 @@ class BackgroundService {
     }
 
     async init() {
-        this.syncService = new SyncService();
-        await this.syncService.init();
         this.setupMessageHandlers();
         this.setupAlarmHandlers();
+        // Cloud synchronization has been removed; discard obsolete account and sync metadata on upgrade.
+        await chrome.storage.local.remove(['firebaseUser', 'customFirebaseConfig', 'syncStatus', 'syncDirty', 'lastSyncTime', 'syncConflict']);
         await this.initializeStorage();
         await this.migrateOldSettings();
         await this.restoreState();
@@ -372,38 +371,6 @@ class BackgroundService {
             return true;
         });
 
-        // Background Cloud Sync listener
-        chrome.storage.onChanged.addListener(async (changes, areaName) => {
-            if (areaName !== 'local') return;
-            const restoringResult = await chrome.storage.local.get('__isRestoring');
-            if (restoringResult.__isRestoring) return;
-
-            const SYNC_EXCLUDED_KEYS = new Set([
-                'firebaseUser',
-                'syncStatus',
-                'syncDirty',
-                '__isRestoring',
-                'defaultFirebaseConfig',
-                'customFirebaseConfig',
-                'migrationDone',
-                'lastSyncTime',
-                'timerState',
-                'focusState',
-                'pauseBlockingUntil',
-                'disableAuthorizedUntil',
-                'sessionOverlayDismissed',
-                'shortPauseUsage',
-                'adBlockStats',
-                'lastFilterUpdate',
-                'pendingFocusActivation',
-                'preActivationWarningCache'
-            ]);
-            const hasSyncKeyChanged = Object.keys(changes).some(key => !SYNC_EXCLUDED_KEYS.has(key));
-            if (hasSyncKeyChanged && this.syncService) {
-                this.syncService.scheduleChromeSyncSnapshot();
-                this.syncService.scheduleSync();
-            }
-        });
     }
 
     setupAlarmHandlers() {
@@ -462,11 +429,6 @@ class BackgroundService {
             }
             case 'focusModeActivation':
                 await this.activatePendingFocusMode();
-                break;
-            case 'syncUploadBackup':
-                if (this.syncService) {
-                    await this.syncService.syncNow();
-                }
                 break;
 
             default:
@@ -782,41 +744,7 @@ class BackgroundService {
             case 'settingsUpdated':
                 await this.initializeAdBlocking();
                 await this.checkScheduledBlocking();
-                if (this.syncService) this.syncService.scheduleSync();
                 sendResponse({ success: true });
-                break;
-            case 'login':
-                this.syncService.login(message.email, message.password)
-                    .then(() => sendResponse({ success: true }))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
-                break;
-            case 'signUp':
-                this.syncService.signUp(message.email, message.password)
-                    .then(() => sendResponse({ success: true }))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
-                break;
-            case 'logout':
-                this.syncService.logout()
-                    .then(() => sendResponse({ success: true }))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
-                break;
-            case 'configureFirebase':
-                this.syncService.configureFirebase(message.apiKey, message.projectId)
-                    .then(() => sendResponse({ success: true }))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
-                break;
-            case 'syncNow':
-                this.syncService.syncNow(message.force || false)
-                    .then(() => sendResponse({ success: true }))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
-                break;
-            case 'getSyncStatus':
-                sendResponse({ syncStatus: this.syncService.syncStatus });
-                break;
-            case 'resolveSyncConflict':
-                this.syncService.resolveConflict(message.preference || 'cloud')
-                    .then((result) => sendResponse(result))
-                    .catch((err) => sendResponse({ success: false, error: err.message }));
                 break;
             default:
                 sendResponse({ success: false, error: 'Unknown action' });

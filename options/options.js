@@ -4,7 +4,6 @@ class OptionsManager {
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
         this.screenTimeRefDate = new Date();
-        this.syncStatus = { state: 'offline', lastSynced: null, email: null, error: null };
         this.siteCategories = this.getDefaultSiteCategories();
         this.customCategories = [];
         this.blockingCategories = { focus: [], schedule: [] };
@@ -16,8 +15,6 @@ class OptionsManager {
         await this.loadData();
         this.setupEventListeners();
         this.populateForm();
-        await this.refreshSyncStatus();
-        this.startSyncStatusPolling();
         // Update badges after form is populated to ensure correct initial state
         this.updateAccordionBadges();
     }
@@ -26,7 +23,7 @@ class OptionsManager {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites',
             'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist',
-            'firebaseUser', 'customFirebaseConfig', 'syncStatus', 'siteCategories', 'customCategories', 'blockingCategories'
+            'siteCategories', 'customCategories', 'blockingCategories'
         ]);
 
         this.settings = {
@@ -58,10 +55,7 @@ class OptionsManager {
         };
         this.sleepBlocking.enabled = this.toBooleanSetting(this.sleepBlocking.enabled);
         this.whitelist = result.whitelist || [];
-        this.firebaseUser = result.firebaseUser || null;
-        this.customFirebaseConfig = result.customFirebaseConfig || null;
-        this.syncStatus = result.syncStatus || this.syncStatus;
-        this.siteCategories = result.siteCategories || this.getDefaultSiteCategories();
+        this.siteCategories = this.getSocialMediaPreset(result.siteCategories);
         this.customCategories = Array.isArray(result.customCategories) ? result.customCategories : [];
         this.blockingCategories = this.normalizeBlockingCategories(result.blockingCategories);
     }
@@ -77,7 +71,8 @@ class OptionsManager {
             name: String(category.name || `Category ${index + 1}`).trim(),
             sites: this.normalizeCategorySites(category.sites || []),
             enabled: this.toBooleanSetting(category.enabled)
-        })).filter(category => category.name && category.sites.length);
+        })).filter(category => category.name && category.sites.length)
+            .filter(category => !category.id.startsWith('preset:') || category.id === 'preset:socialMedia');
         return { focus: normalize(source.focus), schedule: normalize(source.schedule) };
     }
 
@@ -91,7 +86,6 @@ class OptionsManager {
         this.setupAdBlockListeners(); // NEW
         this.setupEnhancedInteractions();
         this.setupScreenTimeListeners(); // NEW
-        this.setupSyncListeners();
         this.setupAccordion(); // Schedules & Limits collapsible panels
     }
 
@@ -375,7 +369,6 @@ class OptionsManager {
         this.populateTimeLimits();
         this.populateGlobalLimit(); // NEW
         this.populateAdBlockSettings(); // NEW
-        this.populateSyncSettings();
         this.populateSiteCategories();
         this.updateRangeDisplays();
         this.applyTheme();
@@ -396,14 +389,17 @@ class OptionsManager {
                 'threads.net',
                 'discord.com',
                 'youtube.com'
-            ],
-            entertainment: ['netflix.com', 'hulu.com', 'primevideo.com', 'disneyplus.com', 'hbomax.com', 'twitch.tv'],
-            movies: ['imdb.com', 'rottentomatoes.com', 'letterboxd.com', 'fandango.com'],
-            gaming: ['steamcommunity.com', 'store.steampowered.com', 'epicgames.com', 'roblox.com', 'minecraft.net', 'twitch.tv'],
-            shopping: ['amazon.com', 'ebay.com', 'walmart.com', 'etsy.com', 'aliexpress.com'],
-            news: ['news.google.com', 'cnn.com', 'bbc.com', 'nytimes.com', 'foxnews.com', 'reuters.com'],
-            adult: ['pornhub.com', 'xvideos.com', 'xhamster.com', 'onlyfans.com']
+            ]
         };
+    }
+
+
+    getSocialMediaPreset(storedCategories) {
+        const defaultSites = this.getDefaultSiteCategories().socialMedia;
+        const storedSites = Array.isArray(storedCategories?.socialMedia) && storedCategories.socialMedia.length
+            ? storedCategories.socialMedia
+            : defaultSites;
+        return { socialMedia: this.normalizeCategorySites(storedSites) };
     }
 
     getAllCategoryEntries() {
@@ -431,14 +427,15 @@ class OptionsManager {
         
         [focusSelect, scheduleSelect].forEach(select => {
             if (!select) return;
-            select.innerHTML = '';
-            entries.forEach((entry, index) => {
+            const selectedValue = select.value;
+            select.innerHTML = '<option value="">Select a category...</option>';
+            entries.forEach((entry) => {
                 const option = document.createElement('option');
                 option.value = entry.value;
                 option.textContent = entry.label;
-                if (index === 0) option.selected = true;
                 select.appendChild(option);
             });
+            select.value = entries.some(entry => entry.value === selectedValue) ? selectedValue : '';
         });
 
         if (customList) {
@@ -606,7 +603,7 @@ class OptionsManager {
     }
 
     async applyCategoryToList(target) {
-        const select = document.getElementById('categoryPreset');
+        const select = document.getElementById(target === 'schedule' ? 'scheduleCategoryPreset' : 'categoryPreset');
         if (!select) return;
 
         const selected = this.getAllCategoryEntries().find(entry => entry.value === select.value);
@@ -665,206 +662,6 @@ class OptionsManager {
         this.showNotification('Custom category removed.', 'warning');
     }
 
-    populateSyncSettings() {
-        const apiKeyInput = document.getElementById('firebaseApiKey');
-        const projectIdInput = document.getElementById('firebaseProjectId');
-        const emailInput = document.getElementById('syncEmail');
-        const passwordInput = document.getElementById('syncPassword');
-
-        if (apiKeyInput) apiKeyInput.value = this.customFirebaseConfig?.apiKey || '';
-        if (projectIdInput) projectIdInput.value = this.customFirebaseConfig?.projectId || '';
-        if (emailInput) emailInput.value = this.firebaseUser?.email || '';
-        if (passwordInput) passwordInput.value = '';
-
-        this.renderSyncStatus(this.syncStatus);
-    }
-
-    setupSyncListeners() {
-        const saveConfigButton = document.getElementById('saveSyncConfig');
-        const loginButton = document.getElementById('syncLogin');
-        const signUpButton = document.getElementById('syncSignUp');
-        const logoutButton = document.getElementById('syncLogout');
-        const syncNowButton = document.getElementById('syncNow');
-        const keepLocalButton = document.getElementById('keepLocalSync');
-        const keepCloudButton = document.getElementById('keepCloudSync');
-
-        if (saveConfigButton) {
-            saveConfigButton.addEventListener('click', () => this.saveSyncConfig());
-        }
-        if (loginButton) {
-            loginButton.addEventListener('click', () => this.loginToSync());
-        }
-        if (signUpButton) {
-            signUpButton.addEventListener('click', () => this.signUpForSync());
-        }
-        if (logoutButton) {
-            logoutButton.addEventListener('click', () => this.logoutOfSync());
-        }
-        if (syncNowButton) {
-            syncNowButton.addEventListener('click', () => this.syncNow());
-        }
-        if (keepLocalButton) {
-            keepLocalButton.addEventListener('click', () => this.resolveSyncConflict('local'));
-        }
-        if (keepCloudButton) {
-            keepCloudButton.addEventListener('click', () => this.resolveSyncConflict('cloud'));
-        }
-
-        const syncPassword = document.getElementById('syncPassword');
-        if (syncPassword) {
-            syncPassword.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    this.loginToSync();
-                }
-            });
-        }
-    }
-
-    async resolveSyncConflict(preference) {
-        const response = await chrome.runtime.sendMessage({ action: 'resolveSyncConflict', preference }).catch(() => null);
-        if (!response?.success) {
-            this.showNotification(response?.error || 'Unable to resolve sync conflict.', 'error');
-            return;
-        }
-        this.showNotification(preference === 'local' ? 'Local settings kept and uploaded.' : 'Cloud settings restored locally.', 'success');
-        await this.loadData();
-        this.populateForm();
-        await this.refreshSyncStatus();
-    }
-
-    async refreshSyncStatus() {
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'getSyncStatus' });
-            if (response?.syncStatus) {
-                this.syncStatus = response.syncStatus;
-                this.renderSyncStatus(this.syncStatus);
-            }
-        } catch (error) {
-            this.renderSyncStatus({ state: 'offline', lastSynced: null, error: error.message || 'Sync service unavailable' });
-        }
-    }
-
-    startSyncStatusPolling() {
-        if (this._syncStatusTimer) clearInterval(this._syncStatusTimer);
-        this._syncStatusTimer = setInterval(() => this.refreshSyncStatus(), 30000);
-    }
-
-    renderSyncStatus(status) {
-        const value = document.getElementById('syncStatusValue');
-        const lastSynced = document.getElementById('syncLastSyncedValue');
-
-        if (value) {
-            const labelMap = {
-                syncing: 'Syncing',
-                synced: 'Synced',
-                offline: 'Offline',
-                failed: 'Sync Failed',
-                conflict: 'Conflict Needs Review'
-            };
-            value.textContent = status?.conflict ? 'Conflict Needs Review' : (labelMap[status?.state] || 'Offline');
-            value.classList.toggle('status-conflict', Boolean(status?.conflict));
-        }
-
-        if (lastSynced) {
-            lastSynced.textContent = status?.lastSynced ? new Date(status.lastSynced).toLocaleString() : 'Never';
-        }
-        const conflictPanel = document.getElementById('syncConflictPanel');
-        const conflictMessage = document.getElementById('syncConflictMessage');
-        if (conflictPanel) conflictPanel.hidden = !status?.conflict;
-        if (conflictMessage && status?.conflict) {
-            const localTime = status.conflict.localLastSyncTime ? new Date(status.conflict.localLastSyncTime).toLocaleString() : 'unknown';
-            const cloudTime = status.conflict.cloudLastSyncTime ? new Date(status.conflict.cloudLastSyncTime).toLocaleString() : 'unknown';
-            conflictMessage.textContent = `Local settings from ${localTime} and cloud settings from ${cloudTime} differ. Choose which copy to keep.`;
-        }
-    }
-
-    async saveSyncConfig() {
-        try {
-            const apiKey = document.getElementById('firebaseApiKey')?.value.trim();
-            const projectId = document.getElementById('firebaseProjectId')?.value.trim();
-
-            if (!apiKey || !projectId) {
-                this.showNotification('Enter both Firebase API key and project ID.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'configureFirebase', apiKey, projectId });
-            if (response?.success) {
-                this.customFirebaseConfig = { apiKey, projectId };
-                await chrome.storage.local.set({ customFirebaseConfig: this.customFirebaseConfig });
-                this.showNotification('Sync configuration saved.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Failed to save sync configuration');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Unable to save sync configuration.', 'error');
-        }
-    }
-
-    async loginToSync() {
-        try {
-            const email = document.getElementById('syncEmail')?.value.trim();
-            const password = document.getElementById('syncPassword')?.value || '';
-
-            if (!email || !password) {
-                this.showNotification('Enter both email and password.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'login', email, password });
-            if (response?.success) {
-                const stored = await chrome.storage.local.get(['firebaseUser']);
-                this.firebaseUser = stored.firebaseUser || null;
-                this.showNotification('Signed in and syncing settings.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Login failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Login failed.', 'error');
-        }
-    }
-
-    async signUpForSync() {
-        try {
-            const email = document.getElementById('syncEmail')?.value.trim();
-            const password = document.getElementById('syncPassword')?.value || '';
-
-            if (!email || !password) {
-                this.showNotification('Enter both email and password.', 'warning');
-                return;
-            }
-
-            const response = await chrome.runtime.sendMessage({ action: 'signUp', email, password });
-            if (response?.success) {
-                const stored = await chrome.storage.local.get(['firebaseUser']);
-                this.firebaseUser = stored.firebaseUser || null;
-                this.showNotification('Account created and synced.', 'success');
-                await this.refreshSyncStatus();
-            } else {
-                throw new Error(response?.error || 'Sign up failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Sign up failed.', 'error');
-        }
-    }
-
-    async logoutOfSync() {
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'logout' });
-            if (response?.success) {
-                this.firebaseUser = null;
-                this.syncStatus = { state: 'offline', lastSynced: this.syncStatus.lastSynced || null, email: null, error: null };
-                this.renderSyncStatus(this.syncStatus);
-                this.showNotification('Signed out from cloud sync.', 'success');
-            } else {
-                throw new Error(response?.error || 'Logout failed');
-            }
-        } catch (error) {
-            this.showNotification(error.message || 'Logout failed.', 'error');
-        }
-    }
 
     setDayGroupChecked(dayIds, checked) {
         dayIds.forEach((id) => {
@@ -2599,13 +2396,6 @@ class OptionsManager {
         if (themeBadge) {
             const theme = document.getElementById('theme')?.value || 'Solar';
             themeBadge.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
-        }
-
-        // Pomodoro Badge
-        const pomoBadge = document.getElementById('badge-focus-pomodoro');
-        if (pomoBadge) {
-            const dur = document.getElementById('focusDuration')?.value || '25';
-            pomoBadge.textContent = `${dur} min`;
         }
 
         // Ad Stats Badge
