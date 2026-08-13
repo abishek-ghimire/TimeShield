@@ -230,7 +230,7 @@ class BackgroundService {
             this.focusState = focusResult.focusState;
             if (this.focusState.isActive) {
                 // If focus was active, ensure site blocking is re-enabled with correct sites
-                const sites = await this.getActiveBlockingSites('focus', focusResult.focusBlockedSites || []);
+                const sites = focusResult.focusBlockedSites || [];
                 await this.enableSiteBlocking(sites, 101, 'focus');
 
                 // Set badge and color
@@ -815,7 +815,7 @@ class BackgroundService {
         // Re-evaluate focus mode
         const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
         if (focusResult.focusState && focusResult.focusState.isActive) {
-            const sites = await this.getActiveBlockingSites('focus', focusResult.focusBlockedSites || []);
+            const sites = focusResult.focusBlockedSites || [];
             await this.enableSiteBlocking(sites, 101, 'focus');
             await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
             chrome.action.setBadgeText({ text: '🎯' });
@@ -887,7 +887,7 @@ class BackgroundService {
         const result = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
         if (!result.focusState?.isActive) return { active: false, sites: [] };
 
-        const sites = await this.getActiveBlockingSites('focus', result.focusBlockedSites || []);
+        const sites = result.focusBlockedSites || [];
         if (!await this.isPaused()) {
             await this.enableSiteBlocking(sites, 101, 'focus');
             await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
@@ -1044,19 +1044,6 @@ class BackgroundService {
         return null;
     }
 
-    async getActiveBlockingSites(target, manualSites = []) {
-        const result = await chrome.storage.local.get(['blockingCategories']);
-        const categories = result.blockingCategories && Array.isArray(result.blockingCategories[target])
-            ? result.blockingCategories[target]
-            : [];
-        const categorySites = categories
-            .filter(category => category && (category.enabled === true || category.enabled === 'enabled' || category.enabled === 'true' || category.enabled === 1 || category.enabled === '1'))
-            .flatMap(category => Array.isArray(category.sites) ? category.sites : [])
-            .map(site => String(site).toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').split('/')[0].trim())
-            .filter(Boolean);
-        return [...new Set([...(Array.isArray(manualSites) ? manualSites : []), ...categorySites])];
-    }
-
     async isSleepBlockingActive() {
         const result = await chrome.storage.local.get(['sleepBlocking']);
         const sleep = result.sleepBlocking;
@@ -1107,7 +1094,7 @@ class BackgroundService {
             chrome.action.setBadgeText({ text: '😴' });
             chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' }); // Purple color for "sleep/block all"
         } else {
-            const sites = await this.getActiveBlockingSites('schedule', result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites());
+            const sites = result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites();
             await this.enableSiteBlocking(sites, 201, 'schedule');
             await this.redirectTabsOnBlock(sites, 'floating/schedule-block.html');
             chrome.action.setBadgeText({ text: '🚫' });
@@ -1217,8 +1204,8 @@ class BackgroundService {
         // Check if site is in any blocklist
         const result = await chrome.storage.local.get(['focusBlockedSites', 'scheduledBlockedSites', 'timeLimits', 'timeLimitsEnabled', 'globalLimit', 'scheduledBlocking', 'sleepBlocking']);
         
-        const focusSites = await this.getActiveBlockingSites('focus', result.focusBlockedSites || []);
-        const scheduledSites = await this.getActiveBlockingSites('schedule', result.scheduledBlockedSites || []);
+        const focusSites = result.focusBlockedSites || [];
+        const scheduledSites = result.scheduledBlockedSites || [];
         const timeLimits = result.timeLimits || [];
         const timeLimitsEnabled = result.timeLimitsEnabled || false;
         const globalLimit = result.globalLimit || { enabled: false, domains: [] };
@@ -1431,7 +1418,7 @@ class BackgroundService {
 
     async activateFocusMode(duration, focusBlockedSites = []) {
         await this.ensureContentScriptInjected();
-        const effectiveFocusSites = await this.getActiveBlockingSites('focus', focusBlockedSites);
+        const effectiveFocusSites = focusBlockedSites;
         const endTime = Date.now() + (duration * 1000);
         // Deep Work Strict Mode: automatically enabled during Focus Mode
         this.focusState = { isActive: true, startTime: Date.now(), duration, endTime, deepWorkMode: true };

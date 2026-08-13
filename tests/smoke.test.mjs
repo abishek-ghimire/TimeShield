@@ -112,20 +112,16 @@ test('Light theme defines readable surfaces and visible focus states', async () 
 });
 
 
-test('Category blocking, independent sleep enforcement, and delayed focus confirmations are wired', async () => {
+test('Manual blocking lists, independent sleep enforcement, and delayed focus confirmations are wired', async () => {
     const options = await read('options/options.js');
-    const optionsCss = await read('options/options.css');
     const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.js');
 
-    assert.match(options, /blockingCategories/);
-    assert.match(options, /renderBlockingCategoryControls/);
-    assert.match(options, /Disable \$\{category\.name\} category protection/);
-    assert.match(options, /getSocialMediaPreset/);
-    assert.doesNotMatch(options, /entertainment:\s*\[/);
-    assert.match(options, /target === 'schedule' \? 'scheduleCategoryPreset' : 'categoryPreset'/);
-    assert.match(optionsCss, /\.ts-category-panel/);
-    assert.match(optionsCss, /\.ts-category-card\.is-enabled/);
+    assert.doesNotMatch(options, /categoryPreset|scheduleCategoryPreset|renderBlockingCategoryControls|getCategoryEntriesForTarget|saveBlockingCategories/);
+    assert.doesNotMatch(worker, /blockingCategories|getActiveBlockingSites/);
+    assert.match(options, /'scheduledBlockedSites'/);
+    assert.match(popup, /renderClock\(\)/);
+    assert.match(popup, /timeFormat: '12h'/);
 
     assert.match(worker, /refreshActiveFocusBlocking/);
     assert.match(worker, /isSleepBlockingActive/);
@@ -139,6 +135,5 @@ test('Category blocking, independent sleep enforcement, and delayed focus confir
         assert.match(source, /Stay Focused/);
         assert.match(source, /This is the final check/);
     }
-    assert.match(popup, /Render immediately so service-worker startup can never leave a 00:00:00 placeholder visible/);
     assert.doesNotMatch(popup, /syncNow/);
 });

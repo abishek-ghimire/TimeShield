@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeShield - Settings</title>
+    <title>TimeShield</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
         rel="stylesheet">
@@ -277,6 +277,27 @@
         body:not(.light-theme) select option {
             background: #0b1220;
             color: #d3dcea;
+        }
+
+
+        /* Keep native menus interactive and readable in every theme. */
+        select {
+            -webkit-appearance: menulist !important;
+            appearance: auto !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        select option {
+            pointer-events: auto;
+        }
+
+        .accordion-body,
+        .accordion-inner,
+        .form-group {
+            pointer-events: auto;
         }
 
         .light-theme select option {
@@ -1948,34 +1969,6 @@
                 <h2>Focus Mode Settings</h2>
                 <div class="accordion">
 
-                    <!-- Site Categories -->
-                    <div class="accordion-item" id="acc-categories">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-categories">
-                            <span class="accordion-icon">🏷️</span>
-                            <span class="accordion-title-wrap">
-                                <span class="accordion-title">Site Categories</span>
-                                <span class="accordion-subtitle">Add and manage domains inside any category</span>
-                            </span>
-                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg></span>
-                        </button>
-                        <div class="accordion-body">
-                            <div class="accordion-inner">
-                                <div class="accordion-divider"></div>
-                                <p class="hint" style="margin-bottom:12px;">Pick a category tab, then add or remove domains for that category.</p>
-                                <div class="category-manager-grid">
-                                    <div class="category-tabs" id="categoryTabs"></div>
-                                    <div class="category-editor">
-                                        <input type="text" id="category-site-input" placeholder="Enter domain (e.g., imdb.com)">
-                                        <button class="btn btn-primary" id="add-category-site-btn">Add Site</button>
-                                    </div>
-                                    <div class="category-tag-list" id="categorySitesList"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Focus Mode Blocklist (Moved up - core focus feature) -->
                     <div class="accordion-item" id="acc-foc-blocklist">
                         <button class="accordion-header" aria-expanded="false" data-target="acc-foc-blocklist">
@@ -1994,13 +1987,6 @@
                                 <div class="accordion-divider"></div>
                                 <p class="hint" style="margin-bottom:12px;">Sites here are blocked only during an active
                                     Focus Session.</p>
-                                <div class="form-group" style="margin-bottom:12px;">
-                                    <label for="categoryPreset">Quick Add from Category</label>
-                                    <select id="categoryPreset">
-                                        <option value="">Select a category...</option>
-                                    </select>
-                                    <button class="btn btn-secondary" id="addCategoryToFocus" style="margin-top:8px;">Add Category Sites</button>
-                                </div>
                                 <div class="site-list" id="focusSitesList"></div>
                                 <div class="add-site-form" style="margin-top:12px;">
                                     <input type="text" id="newFocusSite" placeholder="Enter domain (e.g., youtube.com)">
@@ -2272,13 +2258,6 @@
                         <div class="accordion-body">
                             <div class="accordion-inner">
                                 <div class="accordion-divider"></div>
-                                <div class="form-group" style="margin-bottom:12px;">
-                                    <label for="scheduleCategoryPreset">Quick Add from Category</label>
-                                    <select id="scheduleCategoryPreset">
-                                        <option value="">Select a category...</option>
-                                    </select>
-                                    <button class="btn btn-secondary" id="addCategoryToSchedule" style="margin-top:8px;">Add Category Sites</button>
-                                </div>
                                 <div class="site-list" id="scheduledSitesList"></div>
                                 <div class="add-site-form" style="margin-top:12px;">
                                     <input type="text" id="newScheduledSite"
