@@ -86,6 +86,9 @@ class PopupController {
         } else if (status?.focusActive) {
             main.textContent = 'Focus Mode active';
             meta.textContent = 'Distraction protection is running';
+        } else if (status?.sleepActive) {
+            main.textContent = 'Sleep protection active';
+            meta.textContent = 'Your sleep window is enforcing';
         } else if (status?.scheduleActive) {
             main.textContent = 'Scheduled protection active';
             meta.textContent = 'Your current schedule is enforcing';
@@ -756,16 +759,8 @@ class PopupController {
         return true;
     }
 
-    async runProtectionSequence(actionLabel) {
-        const messages = [
-            'Stay with the task a little longer.',
-            'Your attention is already invested here.',
-            'Breaks are easier to start than momentum is to rebuild.',
-            'Hold the line and protect the session.',
-            'This pause exists to prevent accidental disengagement.'
-        ];
-
-        const allowed = await new Promise((resolve) => {
+    async showProtectionStep(actionLabel, step, totalSteps, message, delaySeconds = 8) {
+        return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
                 position: fixed; inset: 0; z-index: 100000;
@@ -775,6 +770,8 @@ class PopupController {
             `;
 
             const modal = document.createElement('div');
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
             modal.style.cssText = `
                 width: min(460px, calc(100vw - 32px));
                 background: linear-gradient(180deg, #0f172a, #111827);
@@ -785,25 +782,30 @@ class PopupController {
                 box-shadow: 0 24px 60px rgba(0,0,0,0.5);
                 font-family: 'Inter', sans-serif;
             `;
-
             modal.innerHTML = `
-                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Protection Countdown</div>
-                <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
-                <div id="popup-countdown-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
+                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection · Step <span id="popup-protection-step"></span></div>
+                <div id="popup-protection-action" style="font-size:1.05rem;font-weight:800;margin-bottom:8px;"></div>
+                <div id="popup-protection-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                    <div id="popup-countdown-value" style="font-family:'Outfit',sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:80px;">01:00</div>
+                    <div id="popup-protection-countdown" style="font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:800;color:#818cf8;min-width:68px;">8s</div>
                     <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
-                        <div id="popup-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
+                        <div id="popup-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
                     </div>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;">
-                    <button id="popup-countdown-cancel" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
-                    <button id="popup-countdown-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Wait</button>
+                    <button id="popup-protection-stay" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
+                    <button id="popup-protection-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue Anyway (8s)</button>
                 </div>
             `;
 
-            const totalSeconds = 60;
-            const totalMs = totalSeconds * 1000;
+            modal.querySelector('#popup-protection-step').textContent = `${step} of ${totalSteps}`;
+            modal.querySelector('#popup-protection-action').textContent = actionLabel;
+            modal.querySelector('#popup-protection-message').textContent = message;
+            const countdownEl = modal.querySelector('#popup-protection-countdown');
+            const barEl = modal.querySelector('#popup-protection-bar');
+            const stayBtn = modal.querySelector('#popup-protection-stay');
+            const continueBtn = modal.querySelector('#popup-protection-continue');
+            const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
             const endAt = Date.now() + totalMs;
             let timerId = null;
 
@@ -812,64 +814,60 @@ class PopupController {
                 document.removeEventListener('keydown', escHandler, true);
                 overlay.remove();
             };
-
             const settle = (value) => {
                 cleanup();
                 resolve(value);
             };
-
-            const escHandler = (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    settle(false);
-                }
+            const escHandler = (event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                settle(false);
             };
-
-            const messageEl = modal.querySelector('#popup-countdown-message');
-            const valueEl = modal.querySelector('#popup-countdown-value');
-            const barEl = modal.querySelector('#popup-countdown-bar');
-            const cancelBtn = modal.querySelector('#popup-countdown-cancel');
-            const continueBtn = modal.querySelector('#popup-countdown-continue');
-
-            const formatCountdown = (value) => {
-                const total = Math.max(0, Number(value) || 0);
-                const mins = Math.floor(total / 60);
-                const secs = total % 60;
-                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            };
-
             const tick = () => {
-                const remaining = Math.max(0, endAt - Date.now());
-                const remainingSeconds = Math.ceil(remaining / 1000);
-                valueEl.textContent = formatCountdown(remainingSeconds);
-                messageEl.textContent = messages[remainingSeconds % messages.length];
-                barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
-
-                if (remainingSeconds <= 0) {
-                    continueBtn.disabled = false;
-                    continueBtn.style.opacity = '1';
-                    continueBtn.style.cursor = 'pointer';
-                    continueBtn.textContent = 'Continue';
-                    clearInterval(timerId);
-                } else {
-                    continueBtn.textContent = `Wait ${remainingSeconds}s`;
+                const remainingMs = Math.max(0, endAt - Date.now());
+                const remainingSeconds = Math.ceil(remainingMs / 1000);
+                countdownEl.textContent = remainingSeconds > 0 ? `${remainingSeconds}s` : 'Ready';
+                barEl.style.width = `${(remainingMs / totalMs) * 100}%`;
+                if (remainingSeconds > 0) {
+                    continueBtn.textContent = `Continue Anyway (${remainingSeconds}s)`;
+                    return;
                 }
+                continueBtn.disabled = false;
+                continueBtn.style.opacity = '1';
+                continueBtn.style.cursor = 'pointer';
+                continueBtn.textContent = 'Continue Anyway';
+                clearInterval(timerId);
             };
-
-            cancelBtn.addEventListener('click', () => settle(false));
-            continueBtn.addEventListener('click', () => {
-                if (continueBtn.disabled) return;
-                settle(true);
-            });
 
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
             document.addEventListener('keydown', escHandler, true);
+            stayBtn.addEventListener('click', () => settle(false));
+            continueBtn.addEventListener('click', () => {
+                if (!continueBtn.disabled) settle(true);
+            });
             tick();
-            timerId = setInterval(tick, 1000);
+            timerId = setInterval(tick, 200);
+            stayBtn.focus();
         });
+    }
 
-        if (!allowed) return false;
+    async runProtectionSequence(actionLabel) {
+        const messages = [
+            'Your current focus is valuable. You can keep it with one click.',
+            'Small distractions can turn into much longer detours.',
+            'Finish the next meaningful step before changing your protection.',
+            'Momentum is difficult to rebuild once it is broken.',
+            'A short pause now can protect your goals for the rest of the day.',
+            'Choose deliberately: protect your attention or continue anyway.',
+            'This is the final check. Make the choice you will be proud of later.'
+        ];
+
+        for (let index = 0; index < messages.length; index += 1) {
+            const allowed = await this.showProtectionStep(actionLabel, index + 1, messages.length, messages[index], 8);
+            if (!allowed) return false;
+        }
 
         const challengeOk = await this.runChallengeChecks(actionLabel);
         if (!challengeOk) {

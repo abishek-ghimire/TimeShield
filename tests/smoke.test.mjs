@@ -108,3 +108,30 @@ test('Light theme defines readable surfaces and visible focus states', async () 
     assert.match(optionsHtml, /prefers-reduced-motion/);
     assert.match(optionsHtml, /color-scheme:\s*light/);
 });
+
+
+test('Category blocking, independent sleep enforcement, and delayed focus confirmations are wired', async () => {
+    const options = await read('options/options.js');
+    const optionsCss = await read('options/options.css');
+    const worker = await read('background/service-worker.js');
+    const popup = await read('popup/popup.js');
+
+    assert.match(options, /blockingCategories/);
+    assert.match(options, /renderBlockingCategoryControls/);
+    assert.match(options, /Disable \$\{category\.name\} category protection/);
+    assert.match(optionsCss, /\.ts-category-panel/);
+    assert.match(optionsCss, /\.ts-category-card\.is-enabled/);
+
+    assert.match(worker, /refreshActiveFocusBlocking/);
+    assert.match(worker, /isSleepBlockingActive/);
+    assert.match(worker, /enableSleepBlocking/);
+    assert.match(worker, /sleepActive/);
+
+    for (const source of [options, popup]) {
+        assert.match(source, /showProtectionStep\(actionLabel, step, totalSteps, message, delaySeconds = 8\)/);
+        assert.match(source, /Focus protection · Step/);
+        assert.match(source, /Continue Anyway \(\$\{remainingSeconds\}s\)/);
+        assert.match(source, /Stay Focused/);
+        assert.match(source, /This is the final check/);
+    }
+});

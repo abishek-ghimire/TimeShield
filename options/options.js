@@ -7,6 +7,7 @@ class OptionsManager {
         this.syncStatus = { state: 'offline', lastSynced: null, email: null, error: null };
         this.siteCategories = this.getDefaultSiteCategories();
         this.customCategories = [];
+        this.blockingCategories = { focus: [], schedule: [] };
 
         this.init();
     }
@@ -25,7 +26,7 @@ class OptionsManager {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites',
             'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist',
-            'firebaseUser', 'customFirebaseConfig', 'syncStatus', 'siteCategories', 'customCategories'
+            'firebaseUser', 'customFirebaseConfig', 'syncStatus', 'siteCategories', 'customCategories', 'blockingCategories'
         ]);
 
         this.settings = {
@@ -34,20 +35,50 @@ class OptionsManager {
         };
         this.focusBlockedSites = result.focusBlockedSites || [];
         this.scheduledBlockedSites = result.scheduledBlockedSites || this.getDefaultBlockedSites();
-        this.scheduledBlocking = result.scheduledBlocking || this.getDefaultScheduledBlocking();
-        this.timeLimits = result.timeLimits || [];
-        this.timeLimitsEnabled = result.timeLimitsEnabled || false;
+        this.scheduledBlocking = {
+            ...this.getDefaultScheduledBlocking(),
+            ...(result.scheduledBlocking || {})
+        };
+        this.scheduledBlocking.enabled = this.toBooleanSetting(this.scheduledBlocking.enabled);
+        this.timeLimits = Array.isArray(result.timeLimits) ? result.timeLimits : [];
+        this.timeLimitsEnabled = this.toBooleanSetting(result.timeLimitsEnabled);
         this.filterLists = result.filterLists || this.getDefaultFilterLists();
         this.customFilters = result.customFilters || [];
-        this.globalLimit = result.globalLimit || { enabled: false, minutes: 60, domains: [] };
+        this.globalLimit = {
+            enabled: false,
+            minutes: 60,
+            domains: [],
+            ...(result.globalLimit || {})
+        };
+        this.globalLimit.enabled = this.toBooleanSetting(this.globalLimit.enabled);
         this.adBlockStats = result.adBlockStats || { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0 };
-        this.sleepBlocking = result.sleepBlocking || this.getDefaultSleepBlocking();
+        this.sleepBlocking = {
+            ...this.getDefaultSleepBlocking(),
+            ...(result.sleepBlocking || {})
+        };
+        this.sleepBlocking.enabled = this.toBooleanSetting(this.sleepBlocking.enabled);
         this.whitelist = result.whitelist || [];
         this.firebaseUser = result.firebaseUser || null;
         this.customFirebaseConfig = result.customFirebaseConfig || null;
         this.syncStatus = result.syncStatus || this.syncStatus;
         this.siteCategories = result.siteCategories || this.getDefaultSiteCategories();
-        this.customCategories = result.customCategories || [];
+        this.customCategories = Array.isArray(result.customCategories) ? result.customCategories : [];
+        this.blockingCategories = this.normalizeBlockingCategories(result.blockingCategories);
+    }
+
+    toBooleanSetting(value) {
+        return value === true || value === 1 || value === '1' || value === 'true' || value === 'enabled' || value === 'on';
+    }
+
+    normalizeBlockingCategories(value) {
+        const source = value && typeof value === 'object' ? value : {};
+        const normalize = (list) => (Array.isArray(list) ? list : []).map((category, index) => ({
+            id: String(category.id || `${Date.now()}-${index}`),
+            name: String(category.name || `Category ${index + 1}`).trim(),
+            sites: this.normalizeCategorySites(category.sites || []),
+            enabled: this.toBooleanSetting(category.enabled)
+        })).filter(category => category.name && category.sites.length);
+        return { focus: normalize(source.focus), schedule: normalize(source.schedule) };
     }
 
     setupEventListeners() {
@@ -302,7 +333,7 @@ class OptionsManager {
         };
         setText('protectionStatusValue', status.safeMode ? 'Safe mode' : (status.paused ? 'Paused' : (status.active ? 'Protected' : 'Ready')));
         setText('protectionPauseValue', status.pauseUntil ? new Date(status.pauseUntil).toLocaleString() : '—');
-        setText('protectionScheduleValue', status.scheduleActive ? 'Active' : 'Inactive');
+        setText('protectionScheduleValue', status.sleepActive ? 'Sleep active' : (status.scheduleActive ? 'Active' : 'Inactive'));
         setText('protectionUsageValue', `${Math.round((status.todaySeconds || 0) / 60)} min`);
     }
 
@@ -378,7 +409,7 @@ class OptionsManager {
     getAllCategoryEntries() {
         const presets = Object.entries(this.siteCategories || {}).map(([key, sites]) => ({
             value: `preset:${key}`,
-            label: key,
+            label: key.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase()).trim(),
             sites
         }));
 
@@ -437,6 +468,141 @@ class OptionsManager {
 
     normalizeCategorySites(sites) {
         return [...new Set((sites || []).map(site => site.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]).filter(Boolean))];
+    }
+
+    getCategoryEntriesForTarget(target) {
+        const state = this.blockingCategories?.[target] || [];
+        const baseEntries = this.getAllCategoryEntries().map(entry => ({
+            id: entry.value,
+            name: entry.label,
+            sites: this.normalizeCategorySites(entry.sites),
+            enabled: false
+        }));
+        const savedEntries = (Array.isArray(state) ? state : []).map(category => ({
+            id: String(category.id),
+            name: String(category.name || 'Category').trim(),
+            sites: this.normalizeCategorySites(category.sites),
+            enabled: this.toBooleanSetting(category.enabled)
+        })).filter(category => category.name && category.sites.length);
+        const merged = [...baseEntries];
+        savedEntries.forEach(saved => {
+            const existing = merged.find(entry => entry.id === saved.id);
+            if (existing) Object.assign(existing, saved);
+            else merged.push(saved);
+        });
+        return merged;
+    }
+
+    async saveBlockingCategories() {
+        this.blockingCategories = this.normalizeBlockingCategories(this.blockingCategories);
+        await chrome.storage.local.set({ blockingCategories: this.blockingCategories });
+        chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => {});
+        this.updateAccordionBadges();
+    }
+
+    async setBlockingCategoryEnabled(target, categoryId, enabled) {
+        const entries = this.getCategoryEntriesForTarget(target);
+        const category = entries.find(entry => entry.id === categoryId);
+        if (!category) return;
+
+        const wantsEnable = Boolean(enabled);
+        if (category.enabled && !wantsEnable) {
+            const allowed = await this.runProtectionSequence(`Disable ${category.name} category protection`);
+            if (!allowed) {
+                this.updateSiteLists();
+                return;
+            }
+        }
+
+        category.enabled = wantsEnable;
+        this.blockingCategories[target] = entries;
+        await this.saveBlockingCategories();
+        this.showNotification(`${category.name} ${wantsEnable ? 'enabled' : 'disabled'} for ${target === 'focus' ? 'Focus Mode' : 'scheduled blocking'}.`, wantsEnable ? 'success' : 'warning');
+        this.updateSiteLists();
+    }
+
+    async addSiteToBlockingCategory(target, categoryId) {
+        const entries = this.getCategoryEntriesForTarget(target);
+        const category = entries.find(entry => entry.id === categoryId);
+        if (!category) return;
+        const input = prompt(`Add a domain to ${category.name}:`, '');
+        const site = this.normalizeCategorySites([input || ''])[0];
+        if (!site) return;
+        if (!category.sites.includes(site)) category.sites.push(site);
+        this.blockingCategories[target] = entries;
+        await this.saveBlockingCategories();
+        this.updateSiteLists();
+        this.showNotification(`${site} added to ${category.name}.`, 'success');
+    }
+
+    async removeSiteFromBlockingCategory(target, categoryId, site) {
+        const allowed = await this.runProtectionSequence(`Remove ${site} from category protection`);
+        if (!allowed) return;
+        const entries = this.getCategoryEntriesForTarget(target);
+        const category = entries.find(entry => entry.id === categoryId);
+        if (!category) return;
+        category.sites = category.sites.filter(item => item !== site);
+        this.blockingCategories[target] = entries.filter(entry => entry.sites.length);
+        await this.saveBlockingCategories();
+        this.updateSiteLists();
+        this.showNotification(`${site} removed from ${category.name}.`, 'warning');
+    }
+
+    async createBlockingCategory(target) {
+        const name = (prompt('Category name (for example, Movies):', '') || '').trim();
+        if (!name) return;
+        const sites = this.normalizeCategorySites((prompt('Domains separated by commas or spaces:', '') || '').split(/[\\s,]+/));
+        if (!sites.length) {
+            this.showNotification('Add at least one domain to create the category.', 'warning');
+            return;
+        }
+        const entries = this.getCategoryEntriesForTarget(target);
+        const id = `user:${Date.now()}`;
+        entries.push({ id, name, sites, enabled: false });
+        this.blockingCategories[target] = entries;
+        await this.saveBlockingCategories();
+        this.updateSiteLists();
+        this.showNotification(`${name} category created. Enable it when you want to use it.`, 'success');
+    }
+
+    renderBlockingCategoryControls(target, listElement) {
+        if (!listElement) return;
+        const panelId = `${target}BlockingCategoriesPanel`;
+        let panel = document.getElementById(panelId);
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = panelId;
+            panel.className = 'ts-category-panel';
+            listElement.parentElement.insertBefore(panel, listElement);
+        }
+        const entries = this.getCategoryEntriesForTarget(target);
+        panel.innerHTML = `
+            <div class="ts-category-heading">
+                <div><strong>Active categories</strong><small>Enable categories independently; their sites join this protection list.</small></div>
+                <button type="button" class="btn btn-secondary ts-add-category">New category</button>
+            </div>
+            <div class="ts-category-grid">
+                ${entries.map(category => `
+                    <div class="ts-category-card ${category.enabled ? 'is-enabled' : ''}" data-category-id="${category.id}">
+                        <label class="checkbox-group ts-category-toggle"><input type="checkbox" ${category.enabled ? 'checked' : ''} aria-label="Enable ${category.name}"><span>${category.name}</span><em>${category.sites.length} site${category.sites.length === 1 ? '' : 's'}</em></label>
+                        <div class="ts-category-sites">${category.sites.map(site => `<span class="ts-category-site">${site}<button type="button" aria-label="Remove ${site} from ${category.name}" data-site="${site}">×</button></span>`).join('')}</div>
+                        <button type="button" class="btn btn-secondary ts-add-category-site">Add site</button>
+                    </div>
+                `).join('') || '<p class="hint">No categories yet. Create one to group sites by context.</p>'}
+            </div>
+        `;
+        panel.querySelector('.ts-add-category')?.addEventListener('click', () => this.createBlockingCategory(target));
+        panel.querySelectorAll('.ts-category-card').forEach(card => {
+            const categoryId = card.dataset.categoryId;
+            card.querySelector('input[type="checkbox"]')?.addEventListener('change', (event) => this.setBlockingCategoryEnabled(target, categoryId, event.target.checked));
+            card.querySelector('.ts-add-category-site')?.addEventListener('click', () => this.addSiteToBlockingCategory(target, categoryId));
+            card.querySelectorAll('.ts-category-site button').forEach(button => button.addEventListener('click', () => this.removeSiteFromBlockingCategory(target, categoryId, button.dataset.site)));
+        });
+    }
+
+    getActiveBlockingSites(target, manualSites = []) {
+        const categorySites = this.getCategoryEntriesForTarget(target).filter(category => category.enabled).flatMap(category => category.sites);
+        return [...new Set([...(manualSites || []), ...categorySites])];
     }
 
     async applyCategoryToList(target) {
@@ -719,6 +885,8 @@ class OptionsManager {
         const select = document.getElementById('globalLimitEnabled');
         const settings = document.getElementById('globalLimitSettings');
         const minInput = document.getElementById('globalLimitMinutes');
+        if (!select || !settings || !minInput) return;
+        this.globalLimit.enabled = this.toBooleanSetting(this.globalLimit.enabled);
 
         select.value = this.globalLimit.enabled ? 'enabled' : 'disabled';
         settings.style.display = this.globalLimit.enabled ? 'block' : 'none';
@@ -752,10 +920,24 @@ class OptionsManager {
         });
     }
 
-    toggleGlobalLimit(value) {
-        this.globalLimit.enabled = (value === 'enabled');
-        this.saveGlobalLimit();
+    async toggleGlobalLimit(value) {
+        const wantsEnable = value === 'enabled';
+        if (!wantsEnable) {
+            const allowed = await this.runProtectionSequence('Disable Global Daily Limit');
+            if (!allowed) {
+                this.populateGlobalLimit();
+                this.updateAccordionBadges();
+                return;
+            }
+            this.showNotification('Global daily limit disabled. Keep your boundaries where possible.', 'warning');
+        } else {
+            this.showNotification('Global daily limit enabled — shared browsing is now protected.', 'success');
+        }
+
+        this.globalLimit.enabled = wantsEnable;
+        await this.saveGlobalLimit();
         this.populateGlobalLimit();
+        this.updateAccordionBadges();
     }
 
     addGlobalLimitSite() {
@@ -770,19 +952,14 @@ class OptionsManager {
         }
     }
 
-    removeGlobalLimitSite(site) {
-        const proceed = this.runProtectionSequence(`Remove ${site} from global shared limit`);
-        if (!proceed) {
-            return;
-        }
+    async removeGlobalLimitSite(site) {
+        const allowed = await this.runProtectionSequence(`Remove ${site} from global shared limit`);
+        if (!allowed) return;
 
-        Promise.resolve(proceed).then((ok) => {
-            if (!ok) return;
-            this.globalLimit.domains = this.globalLimit.domains.filter(d => d !== site);
-            this.saveGlobalLimit();
-            this.populateGlobalLimit();
-            this.showNotification('Site removed from global pool', 'warning');
-        });
+        this.globalLimit.domains = this.globalLimit.domains.filter(d => d !== site);
+        await this.saveGlobalLimit();
+        this.populateGlobalLimit();
+        this.showNotification('Site removed from global pool', 'warning');
     }
 
     async saveGlobalLimit() {
@@ -853,6 +1030,8 @@ class OptionsManager {
     populateScheduledBlocking() {
         const scheduledBlockingSelect = document.getElementById('scheduledBlocking');
         const scheduledSettings = document.getElementById('scheduledBlockingSettings');
+        if (!scheduledBlockingSelect || !scheduledSettings) return;
+        this.scheduledBlocking.enabled = this.toBooleanSetting(this.scheduledBlocking.enabled);
 
         if (this.scheduledBlocking.enabled) {
             scheduledBlockingSelect.value = 'enabled';
@@ -877,6 +1056,8 @@ class OptionsManager {
     populateSleepBlocking() {
         const sleepBlockingSelect = document.getElementById('sleepBlocking');
         const sleepSettings = document.getElementById('sleepBlockingSettings');
+        if (!sleepBlockingSelect || !sleepSettings) return;
+        this.sleepBlocking.enabled = this.toBooleanSetting(this.sleepBlocking.enabled);
 
         if (this.sleepBlocking.enabled) {
             sleepBlockingSelect.value = 'enabled';
@@ -908,6 +1089,8 @@ class OptionsManager {
     populateTimeLimits() {
         const timeLimitsSelect = document.getElementById('timeLimits');
         const timeLimitsSettings = document.getElementById('timeLimitsSettings');
+        if (!timeLimitsSelect || !timeLimitsSettings) return;
+        this.timeLimitsEnabled = this.toBooleanSetting(this.timeLimitsEnabled);
 
         timeLimitsSelect.value = this.timeLimitsEnabled ? 'enabled' : 'disabled';
         timeLimitsSettings.style.display = this.timeLimitsEnabled ? 'block' : 'none';
@@ -957,12 +1140,14 @@ class OptionsManager {
         const focusSitesList = document.getElementById('focusSitesList');
         const scheduledSitesList = document.getElementById('scheduledSitesList');
 
+        this.renderBlockingCategoryControls('focus', focusSitesList);
         focusSitesList.innerHTML = '';
         this.focusBlockedSites.forEach(site => {
             const siteItem = this.createSiteItem(site, 'focus');
             focusSitesList.appendChild(siteItem);
         });
 
+        this.renderBlockingCategoryControls('schedule', scheduledSitesList);
         scheduledSitesList.innerHTML = '';
         this.scheduledBlockedSites.forEach(site => {
             const siteItem = this.createSiteItem(site, 'scheduled');
@@ -1045,6 +1230,7 @@ class OptionsManager {
         await chrome.storage.local.set({
             focusBlockedSites: this.focusBlockedSites,
             scheduledBlockedSites: this.scheduledBlockedSites,
+            blockingCategories: this.blockingCategories,
             whitelist: this.whitelist
         });
         // Trigger immediate check in service worker
@@ -1320,7 +1506,8 @@ class OptionsManager {
         if (!wantsEnable) {
             const allowed = await this.runProtectionSequence('Disable Daily Time Limits');
             if (!allowed) {
-                document.getElementById('timeLimits').value = 'enabled';
+                this.populateTimeLimits();
+                this.updateAccordionBadges();
                 return;
             }
             this.showNotification('Daily limits disabled. Try a shorter break instead of removing guardrails.', 'warning');
@@ -1329,8 +1516,9 @@ class OptionsManager {
         }
 
         this.timeLimitsEnabled = wantsEnable;
-        chrome.storage.local.set({ timeLimitsEnabled: this.timeLimitsEnabled });
+        await chrome.storage.local.set({ timeLimitsEnabled: this.timeLimitsEnabled });
         this.populateTimeLimits();
+        this.updateAccordionBadges();
     }
 
     async toggleScheduledBlocking(value) {
@@ -1338,7 +1526,8 @@ class OptionsManager {
         if (!wantsEnable) {
             const allowed = await this.runProtectionSequence('Disable Scheduled Blocking');
             if (!allowed) {
-                document.getElementById('scheduledBlocking').value = 'enabled';
+                this.populateScheduledBlocking();
+                this.updateAccordionBadges();
                 return;
             }
 
@@ -1348,8 +1537,9 @@ class OptionsManager {
         }
 
         this.scheduledBlocking.enabled = wantsEnable;
-        this.saveScheduledBlocking();
+        await this.saveScheduledBlocking();
         this.populateScheduledBlocking();
+        this.updateAccordionBadges();
 
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
@@ -1360,30 +1550,34 @@ class OptionsManager {
         if (!wantsEnable) {
             const allowed = await this.runProtectionSequence('Disable Sleep Time Blocking');
             if (!allowed) {
-                document.getElementById('sleepBlocking').value = 'enabled';
+                this.populateSleepBlocking();
+                this.updateAccordionBadges();
                 return;
             }
 
             this.showNotification('Sleep blocking disabled. Remember to maintain healthy sleep habits.', 'warning');
-            
-            // Explicitly disable blocking when turning off sleep blocking
-            await chrome.runtime.sendMessage({ action: 'disableScheduledBlocking' }).catch(() => { });
         } else {
             this.showNotification('Sleep blocking enabled — sweet dreams and better rest!', 'success');
         }
 
         this.sleepBlocking.enabled = wantsEnable;
-        this.saveSleepBlocking();
+        await this.saveSleepBlocking();
         this.populateSleepBlocking();
+        this.updateAccordionBadges();
 
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
     }
 
     async saveSleepBlocking() {
-        this.sleepBlocking.startTime = document.getElementById('sleepStartTime').value;
-        this.sleepBlocking.endTime = document.getElementById('sleepEndTime').value;
-        this.sleepBlocking.blockAll = document.getElementById('sleepBlockAll').checked;
+        this.sleepBlocking = {
+            ...this.getDefaultSleepBlocking(),
+            ...this.sleepBlocking,
+            enabled: this.toBooleanSetting(this.sleepBlocking.enabled),
+            startTime: document.getElementById('sleepStartTime')?.value || this.sleepBlocking.startTime,
+            endTime: document.getElementById('sleepEndTime')?.value || this.sleepBlocking.endTime,
+            blockAll: document.getElementById('sleepBlockAll')?.checked ?? this.sleepBlocking.blockAll
+        };
 
         // Get selected days
         const days = [];
@@ -1396,16 +1590,7 @@ class OptionsManager {
         this.sleepBlocking.days = days;
         this.updateSelectAllState('sleepSelectAllDays', ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday']);
 
-        this.scheduledBlocking = {
-            enabled: this.sleepBlocking.enabled,
-            startTime: this.sleepBlocking.startTime,
-            endTime: this.sleepBlocking.endTime,
-            days: this.sleepBlocking.days,
-            mode: this.sleepBlocking.blockAll ? 'all' : 'specific',
-            whitelist: this.sleepBlocking.whitelist || []
-        };
-
-        await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking, scheduledBlocking: this.scheduledBlocking });
+        await chrome.storage.local.set({ sleepBlocking: this.sleepBlocking });
 
         // Trigger immediate check in background
         chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => { });
@@ -1856,6 +2041,100 @@ class OptionsManager {
         });
     }
 
+    async showProtectionStep(actionLabel, step, totalSteps, message, delaySeconds = 8) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 100000;
+                background: rgba(2, 6, 23, 0.82);
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(6px);
+            `;
+
+            const modal = document.createElement('div');
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.style.cssText = `
+                width: min(540px, calc(100vw - 32px));
+                background: linear-gradient(180deg, #0f172a, #111827);
+                color: #e5e7eb;
+                border: 1px solid rgba(99,102,241,0.35);
+                border-radius: 18px;
+                padding: 22px;
+                box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+            `;
+            modal.innerHTML = `
+                <div style="font-size:0.8rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection · Step <span id="ts-protection-step"></span></div>
+                <div id="ts-protection-action" style="font-size:1.15rem;font-weight:800;margin-bottom:8px;"></div>
+                <div id="ts-protection-message" style="font-size:0.95rem;line-height:1.55;color:#cbd5e1;margin-bottom:18px;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+                    <div id="ts-protection-countdown" style="font-family:'Outfit',sans-serif;font-size:2.3rem;font-weight:800;color:#818cf8;min-width:76px;">8s</div>
+                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
+                        <div id="ts-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="ts-protection-stay" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
+                    <button id="ts-protection-continue" disabled style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue Anyway (8s)</button>
+                </div>
+            `;
+
+            modal.querySelector('#ts-protection-step').textContent = `${step} of ${totalSteps}`;
+            modal.querySelector('#ts-protection-action').textContent = actionLabel;
+            modal.querySelector('#ts-protection-message').textContent = message;
+
+            const countdownEl = modal.querySelector('#ts-protection-countdown');
+            const barEl = modal.querySelector('#ts-protection-bar');
+            const stayBtn = modal.querySelector('#ts-protection-stay');
+            const continueBtn = modal.querySelector('#ts-protection-continue');
+            const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
+            const endAt = Date.now() + totalMs;
+            let timerId = null;
+
+            const cleanup = () => {
+                clearInterval(timerId);
+                document.removeEventListener('keydown', escHandler, true);
+                overlay.remove();
+            };
+            const settle = (value) => {
+                cleanup();
+                resolve(value);
+            };
+            const escHandler = (event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                settle(false);
+            };
+            const tick = () => {
+                const remainingMs = Math.max(0, endAt - Date.now());
+                const remainingSeconds = Math.ceil(remainingMs / 1000);
+                countdownEl.textContent = remainingSeconds > 0 ? `${remainingSeconds}s` : 'Ready';
+                barEl.style.width = `${(remainingMs / totalMs) * 100}%`;
+                if (remainingSeconds > 0) {
+                    continueBtn.textContent = `Continue Anyway (${remainingSeconds}s)`;
+                    return;
+                }
+                continueBtn.disabled = false;
+                continueBtn.style.opacity = '1';
+                continueBtn.style.cursor = 'pointer';
+                continueBtn.textContent = 'Continue Anyway';
+                clearInterval(timerId);
+            };
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', escHandler, true);
+            stayBtn.addEventListener('click', () => settle(false));
+            continueBtn.addEventListener('click', () => {
+                if (!continueBtn.disabled) settle(true);
+            });
+            tick();
+            timerId = setInterval(tick, 200);
+            stayBtn.focus();
+        });
+    }
+
     async runChallengeChecks(actionLabel) {
         const settings = this.settings || {};
 
@@ -1886,8 +2165,23 @@ class OptionsManager {
     }
 
     async runProtectionSequence(actionLabel) {
-        const countdownAllowed = await this.showDisableCountdown(actionLabel, 60);
-        if (!countdownAllowed) return false;
+        const messages = [
+            'Your current focus is valuable. You can keep it with one click.',
+            'Small distractions can turn into much longer detours.',
+            'Finish the next meaningful step before changing your protection.',
+            'Momentum is difficult to rebuild once it is broken.',
+            'A short pause now can protect your goals for the rest of the day.',
+            'Choose deliberately: protect your attention or continue anyway.',
+            'This is the final check. Make the choice you will be proud of later.'
+        ];
+
+        for (let index = 0; index < messages.length; index += 1) {
+            const allowed = await this.showProtectionStep(actionLabel, index + 1, messages.length, messages[index], 8);
+            if (!allowed) {
+                this.showNotification('Focus protection remains active.', 'success');
+                return false;
+            }
+        }
 
         const challengeResult = await this.runChallengeChecks(actionLabel);
         if (!challengeResult.ok) {
@@ -2241,7 +2535,7 @@ class OptionsManager {
         const schBadge = document.getElementById('badge-schedule');
         if (schBadge) {
             // Read from data object instead of DOM to ensure correct initial state
-            const isEnabled = this.scheduledBlocking && this.scheduledBlocking.enabled;
+            const isEnabled = this.toBooleanSetting(this.scheduledBlocking?.enabled);
             schBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             schBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             schBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -2251,7 +2545,7 @@ class OptionsManager {
         const slBadge = document.getElementById('badge-sleep');
         if (slBadge) {
             // Read from data object instead of DOM to ensure correct initial state
-            const isEnabled = this.sleepBlocking && this.sleepBlocking.enabled;
+            const isEnabled = this.toBooleanSetting(this.sleepBlocking?.enabled);
             slBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             slBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             slBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -2261,7 +2555,7 @@ class OptionsManager {
         const tlBadge = document.getElementById('badge-timelimits');
         if (tlBadge) {
             // Read from data object instead of DOM to ensure correct initial state
-            const isEnabled = this.timeLimitsEnabled;
+            const isEnabled = this.toBooleanSetting(this.timeLimitsEnabled);
             tlBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             tlBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             tlBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
@@ -2271,13 +2565,13 @@ class OptionsManager {
         const glBadge = document.getElementById('badge-global');
         if (glBadge) {
             // Read from data object instead of DOM to ensure correct initial state
-            const isEnabled = this.globalLimit && this.globalLimit.enabled;
+            const isEnabled = this.toBooleanSetting(this.globalLimit?.enabled);
             glBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
             glBadge.style.background = isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.14)';
             glBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
         }
         // Focus Blocklist — count
-        const fblBadge = document.getElementById('badge-focus-blocklist');
+        const fblBadge = document.getElementById('badge-focuslist') || document.getElementById('badge-focus-blocklist');
         if (fblBadge) {
             const n = this.focusBlockedSites ? this.focusBlockedSites.length : 0;
             fblBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
