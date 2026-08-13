@@ -1024,6 +1024,90 @@
             padding: 10px;
         }
 
+        .category-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .category-tab {
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 999px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-soft);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .category-tab:hover {
+            color: var(--text-main);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .category-tab.active {
+            color: white;
+            border-color: rgba(99, 102, 241, 0.8);
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+        }
+
+        .category-manager-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .category-editor {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .category-editor input {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .category-tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .category-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-size: 0.85rem;
+        }
+
+        .category-tag-remove {
+            border: none;
+            background: transparent;
+            color: var(--text-soft);
+            cursor: pointer;
+            font-size: 0.95rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .category-tag-remove:hover {
+            color: #f87171;
+        }
+
+        .category-empty {
+            color: var(--text-soft);
+            font-style: italic;
+        }
+
         .site-item {
             display: flex;
             justify-content: space-between;
@@ -1685,6 +1769,34 @@
                                 <div class="checkbox-group"><input type="checkbox" id="focusTimerWidgetEnabled"
                                         checked><label for="focusTimerWidgetEnabled">Enable integrated display for Focus
                                         Sessions</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Site Categories -->
+                    <div class="accordion-item" id="acc-categories">
+                        <button class="accordion-header" aria-expanded="false" data-target="acc-categories">
+                            <span class="accordion-icon">🏷️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Site Categories</span>
+                                <span class="accordion-subtitle">Add and manage domains inside any category</span>
+                            </span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:12px;">Pick a category tab, then add or remove domains for that category.</p>
+                                <div class="category-manager-grid">
+                                    <div class="category-tabs" id="categoryTabs"></div>
+                                    <div class="category-editor">
+                                        <input type="text" id="category-site-input" placeholder="Enter domain (e.g., imdb.com)">
+                                        <button class="btn btn-primary" id="add-category-site-btn">Add Site</button>
+                                    </div>
+                                    <div class="category-tag-list" id="categorySitesList"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

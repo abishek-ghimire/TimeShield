@@ -24,6 +24,7 @@ class PopupController {
             todoList: document.getElementById('todoList'),
             startTimerBtn: document.getElementById('startTimer'),
             startFocusBtn: document.getElementById('startFocus'),
+            pauseFocusBtn: document.getElementById('pauseFocusMode'),
             syncStatusText: document.getElementById('syncStatusText'),
             syncLastSyncedText: document.getElementById('syncLastSyncedText')
         };
@@ -53,6 +54,7 @@ class PopupController {
             this.restoreTimerState(),
             this.loadCurrentSite(),  // Quick-Add current site
             this.checkPauseState(),
+            this.checkFocusPauseState(),
             this.refreshSyncStatus()
         ]);
     }
@@ -63,6 +65,9 @@ class PopupController {
         document.getElementById('toggleClock').addEventListener('click', () => this.toggleFloatingClock());
         document.getElementById('flipClockMode').addEventListener('click', () => this.openFlipClockTab());
         document.getElementById('pauseProtectionMode').addEventListener('click', () => this.handlePauseProtection());
+        if (this.elements.pauseFocusBtn) {
+            this.elements.pauseFocusBtn.addEventListener('click', () => this.handleFocusPause());
+        }
         document.getElementById('blockSocialMedia').addEventListener('click', () => this.blockSocialMedia());
         document.getElementById('syncNowButton').addEventListener('click', () => this.syncNow());
         document.getElementById('openSyncSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
@@ -376,6 +381,145 @@ class PopupController {
                 });
                 window.close();
             }
+        }
+    }
+
+    async checkFocusPauseState() {
+        const result = await chrome.storage.local.get(['focusPauseUntil', 'focusPausedState', 'focusState']);
+        const pauseBtn = this.elements.pauseFocusBtn;
+        const labelEl = document.getElementById('pauseFocusLabel');
+
+        if (!pauseBtn || !labelEl) return;
+
+        const isPaused = Boolean(result.focusPausedState) && (result.focusPauseUntil === -1 || Date.now() < Number(result.focusPauseUntil || 0));
+        const isActive = Boolean(result.focusState?.isActive);
+
+        if (isPaused) {
+            labelEl.textContent = 'Resume Focus';
+            pauseBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            pauseBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+        } else {
+            labelEl.textContent = 'Pause Focus';
+            pauseBtn.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+            pauseBtn.style.background = '';
+        }
+
+        pauseBtn.disabled = !isActive && !isPaused;
+        pauseBtn.style.opacity = pauseBtn.disabled ? '0.55' : '1';
+        pauseBtn.style.cursor = pauseBtn.disabled ? 'not-allowed' : 'pointer';
+    }
+
+    generateFocusChallenge() {
+        const charset = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        const bytes = crypto.getRandomValues(new Uint8Array(30));
+        let challenge = '';
+        for (let i = 0; i < 30; i += 1) {
+            challenge += charset[bytes[i] % charset.length];
+        }
+        return challenge;
+    }
+
+    showFocusPauseChallenge() {
+        return new Promise((resolve) => {
+            const challenge = this.generateFocusChallenge();
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,0.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'width:min(520px,calc(100vw - 32px));background:linear-gradient(180deg,#0f172a,#111827);color:#e5e7eb;border:1px solid rgba(99,102,241,0.35);border-radius:18px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,0.5);font-family:Inter,sans-serif;';
+            modal.innerHTML = `
+                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Pause Focus Verification</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">Type the 30-character string exactly</div>
+                <div style="font-size:0.9rem;line-height:1.5;color:#cbd5e1;margin-bottom:12px;">Lowercase letters and numbers only. Copy-paste is disabled.</div>
+                <div style="font-family:'Courier New',monospace;letter-spacing:0.12em;word-break:break-all;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.18);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#f8fafc;">${challenge}</div>
+                <input id="focus-pause-challenge-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onpaste="return false;" ondrop="return false;" placeholder="Enter the exact 30-character string" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,0.22);background:#0b1220;color:#e5e7eb;margin-bottom:14px;">
+                <div id="focus-pause-error" style="display:none;color:#fca5a5;font-size:0.86rem;margin-bottom:14px;">The string does not match. Try again.</div>
+                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="focus-pause-cancel" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
+                    <button id="focus-pause-confirm" style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Confirm</button>
+                </div>
+            `;
+
+            const settle = (value) => {
+                overlay.remove();
+                resolve(value);
+            };
+
+            const input = modal.querySelector('#focus-pause-challenge-input');
+            const error = modal.querySelector('#focus-pause-error');
+            const cancelBtn = modal.querySelector('#focus-pause-cancel');
+            const confirmBtn = modal.querySelector('#focus-pause-confirm');
+
+            const verify = () => {
+                if ((input.value || '').trim() === challenge) {
+                    settle(true);
+                } else {
+                    error.style.display = 'block';
+                    input.addEventListener('input', () => { error.style.display = 'none'; }, { once: true });
+                }
+            };
+
+            cancelBtn.addEventListener('click', () => settle(false));
+            confirmBtn.addEventListener('click', verify);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') verify();
+            });
+            input.addEventListener('paste', (e) => e.preventDefault());
+            input.addEventListener('drop', (e) => e.preventDefault());
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) settle(false);
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            input.focus();
+        });
+    }
+
+    async chooseFocusPauseDuration() {
+        const choice = prompt('Pause Focus for how long? Enter 5 or 10 minutes:', '5');
+        if (!choice) return 0;
+        const minutes = Number(choice.trim());
+        if (minutes !== 5 && minutes !== 10) {
+            this.showToast('Choose 5 or 10 minutes.');
+            return 0;
+        }
+        return minutes * 60000;
+    }
+
+    async handleFocusPause() {
+        const result = await chrome.storage.local.get(['focusState', 'focusPauseUntil', 'focusPausedState']);
+        const focusState = result.focusState || {};
+        const isPaused = Boolean(result.focusPausedState) && (result.focusPauseUntil === -1 || Date.now() < Number(result.focusPauseUntil || 0));
+
+        if (isPaused) {
+            const response = await chrome.runtime.sendMessage({ action: 'resumeFocusMode' });
+            if (response?.success) {
+                this.showToast('Focus resumed.');
+                await this.checkFocusPauseState();
+            } else {
+                this.showToast('Unable to resume focus right now.');
+            }
+            return;
+        }
+
+        if (!focusState.isActive) {
+            this.showToast('Start Focus Mode first, then pause it when needed.');
+            return;
+        }
+
+        const verified = await this.showFocusPauseChallenge();
+        if (!verified) return;
+
+        const durationMs = await this.chooseFocusPauseDuration();
+        if (!durationMs) return;
+
+        const response = await chrome.runtime.sendMessage({ action: 'pauseFocusMode', durationMs });
+        if (response?.success) {
+            this.showToast('Focus paused temporarily.');
+            await this.checkFocusPauseState();
+        } else {
+            this.showToast(response?.error || 'Could not pause focus.');
         }
     }
 

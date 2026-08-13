@@ -683,6 +683,14 @@ class BackgroundService {
                     sendResponse({ success: false, error: 'Incorrect text' });
                 }
                 break;
+            case 'pauseFocusMode':
+                await this.pauseFocusMode(message.durationMs);
+                sendResponse({ success: true });
+                break;
+            case 'resumeFocusMode':
+                await this.resumePausedFocusMode();
+                sendResponse({ success: true });
+                break;
             case 'resumeBlocking':
                 await this.resumeBlocking();
                 sendResponse({ success: true });
@@ -797,18 +805,25 @@ class BackgroundService {
         const currentDay = now.getDay();
         const days = scheduled.days || [];
 
-        if (startTime <= endTime) {
-            // Normal schedule: e.g. 09:00 - 17:00
-            return currentTime >= startTime && currentTime <= endTime && days.includes(currentDay);
-        } else {
-            // Overnight schedule: e.g. 22:00 - 02:00
-            const isActiveTime = currentTime >= startTime || currentTime <= endTime;
-            if (!isActiveTime) return false;
+        const isActiveTime = this.isTimeInSleepRange(currentTime, startTime, endTime);
+        if (!isActiveTime) return false;
 
-            // If it's early morning (before end time), it belongs to the previous day's schedule
-            const effectiveDay = currentTime <= endTime ? (currentDay - 1 + 7) % 7 : currentDay;
+        if (startTime > endTime && currentTime < endTime) {
+            const effectiveDay = (currentDay - 1 + 7) % 7;
             return days.includes(effectiveDay);
         }
+
+        return days.includes(currentDay);
+    }
+
+    isTimeInSleepRange(nowMinutes, startMinutes, endMinutes) {
+        if (startMinutes > endMinutes) {
+            // Overnight schedule (e.g. 22:00 to 06:00)
+            return nowMinutes >= startMinutes || nowMinutes < endMinutes;
+        }
+
+        // Same-day schedule (e.g. 01:00 to 05:00)
+        return nowMinutes >= startMinutes && nowMinutes < endMinutes;
     }
 
     async checkScheduledBlocking() {
