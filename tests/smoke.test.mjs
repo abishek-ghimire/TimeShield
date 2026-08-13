@@ -120,6 +120,8 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     assert.doesNotMatch(options, /categoryPreset|scheduleCategoryPreset|renderBlockingCategoryControls|getCategoryEntriesForTarget|saveBlockingCategories/);
     assert.doesNotMatch(worker, /blockingCategories|getActiveBlockingSites/);
     assert.match(options, /'scheduledBlockedSites'/);
+    assert.match(worker, /Every pause duration requires the same visible confirmation word/);
+    assert.match(worker, /requiresPassword: true/);
     assert.match(popup, /renderClock\(\)/);
     assert.match(popup, /timeFormat: '12h'/);
 
@@ -131,7 +133,8 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     for (const source of [options, popup]) {
         assert.match(source, /showProtectionStep\(actionLabel, step, totalSteps, message, delaySeconds = 8\)/);
         assert.match(source, /Focus protection · Step/);
-        assert.match(source, /Continue Anyway \(\$\{remainingSeconds\}s\)/);
+        assert.match(source, /Continue will appear in \$\{remainingSeconds\}s/);
+        assert.match(source, /continueBtn\.hidden = false/);
         assert.match(source, /Stay Focused/);
         assert.match(source, /This is the final check/);
     }
