@@ -31,30 +31,83 @@ class BackgroundService {
         };
 
         this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
+        this.preActivationWarningCache = {};
 
         // NEW: Ad blocker state
         this.adsBlocked = 0;
         this.bandwidthSaved = 0;
         this.timeSaved = 0;
+
+        // Initialize components
         this.filterManager = new FilterListManager();
         this.ruleCompiler = new RuleCompiler();
         this.adBlocker = new AdBlockEngine(this);
+
+        // Track initialization
         this.initPromise = this.init();
     }
 
     async init() {
-        // Force fully disable all blocking schedules
-        await chrome.storage.local.set({ 
-            scheduledBlocking: { enabled: false, startTime: '00:00', endTime: '23:59', days: [] },
-            sleepBlocking: { enabled: false, startTime: '00:00', endTime: '23:59', days: [], blockAll: false }
-        });
-        await this.disableSiteBlockingRange(1, 1000);
-        
+        this.syncService = new SyncService();
+        await this.syncService.init();
         this.setupMessageHandlers();
         this.setupAlarmHandlers();
         await this.initializeStorage();
+        await this.migrateOldSettings();
         await this.restoreState();
-        console.log('🚀 Background Service initialized with forced off-scheduling');
+        await this.initializeAdBlocking();
+        await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
+        // Auto-start floating clock on browser launch if enabled in settings
+        try {
+            const settings = await this.getSettings();
+            if (settings.autoStartClock) {
+                await this.toggleFloatingClock(true);
+                await this.ensureContentScriptInjected();
+            }
+        } catch (e) {
+            console.warn('TimeShield: Failed to auto-start clock on launch', e);
+        }
+        console.log('🚀 Background Service fully initialized');
+    }
+
+    // NEW: Initialize Ad Blocking
+    async initializeAdBlocking() {
+        if (!this.adBlockEnabled) {
+            console.log('🚫 Ad blocker is disabled by user');
+            await this.adBlocker.clearRules();
+            chrome.action.setBadgeText({ text: '' });
+            return;
+        }
+        try {
+            console.log('🔄 Starting ad blocker initialization...');
+
+            // Check if components are properly initialized
+            if (!this.filterManager || !this.ruleCompiler || !this.adBlocker) {
+                console.error('❌ Ad blocker components not properly initialized');
+                return;
+            }
+
+            // Load and compile filter lists
+            const filters = await this.filterManager.loadAllLists();
+            console.log(`📋 Loaded ${filters.length} filters`);
+
+            const rules = await this.ruleCompiler.compile(filters);
+            console.log(`⚙️ Compiled ${rules.length} DNR rules`);
+
+            // Apply DNR rules
+            await this.adBlocker.applyRules(rules);
+
+            console.log(`✅ Ad blocker initialized successfully with ${rules.length} rules`);
+
+            // Setup rule tracking
+            this.setupRuleTracking();
+
+            // Broadcast cosmetic rules to all tabs
+            await this.broadcastCosmeticRules();
+        } catch (error) {
+            console.error('❌ Failed to initialize ad blocker:', error);
+            console.error('Stack trace:', error.stack);
+        }
     }
 
     // NEW: Setup rule tracking for stats
@@ -223,6 +276,12 @@ class BackgroundService {
             this.shortPauseUsage = shortPauseResult.shortPauseUsage;
         }
         await this.checkShortPauseReset();
+
+        const pendingFocusResult = await chrome.storage.local.get(['pendingFocusActivation', 'preActivationWarningCache']);
+        this.preActivationWarningCache = pendingFocusResult.preActivationWarningCache || {};
+        if (pendingFocusResult.pendingFocusActivation?.activationAt) {
+            chrome.alarms.create('focusModeActivation', { when: pendingFocusResult.pendingFocusActivation.activationAt });
+        }
     }
 
     async checkShortPauseReset() {
@@ -260,12 +319,39 @@ class BackgroundService {
     }
 
     setupMessageHandlers() {
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.action === 'pauseBlockingWithPassword') {
-                this.handlePause(message, sendResponse);
-            } else {
-                this.handleMessage(message, sender, sendResponse);
+        chrome.runtime.onInstalled.addListener(async (details) => {
+            if (details.reason === 'install' || details.reason === 'update') {
+                await this.initializeStorage();
+                await this.ensureContentScriptInjected();
+                console.log('🚀 TimeShield initialized and injected into active tabs');
             }
+        });
+
+        chrome.runtime.onStartup.addListener(() => {
+            this.ensureContentScriptInjected();
+        });
+
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            (async () => {
+                try {
+                    await this.initPromise;
+                    if (message.action === 'showStatusWidget') {
+                        await chrome.storage.local.set({ sessionOverlayDismissed: false });
+                        await this.ensureContentScriptInjected();
+                        const tabs = await chrome.tabs.query({});
+                        await Promise.all(tabs.map((tab) => {
+                            if (!tab.id) return Promise.resolve();
+                            return chrome.tabs.sendMessage(tab.id, { action: 'refreshVisibility' }).catch(() => undefined);
+                        }));
+                        sendResponse({ success: true });
+                    } else {
+                        await this.handleMessage(message, sender, sendResponse);
+                    }
+                } catch (error) {
+                    console.error(`TimeShield action failed: ${message?.action || 'unknown'}`, error);
+                    sendResponse({ success: false, error: error?.message || 'Action failed' });
+                }
+            })();
             return true;
         });
 
@@ -291,10 +377,13 @@ class BackgroundService {
                 'sessionOverlayDismissed',
                 'shortPauseUsage',
                 'adBlockStats',
-                'lastFilterUpdate'
+                'lastFilterUpdate',
+                'pendingFocusActivation',
+                'preActivationWarningCache'
             ]);
             const hasSyncKeyChanged = Object.keys(changes).some(key => !SYNC_EXCLUDED_KEYS.has(key));
             if (hasSyncKeyChanged && this.syncService) {
+                this.syncService.scheduleChromeSyncSnapshot();
                 this.syncService.scheduleSync();
             }
         });
@@ -337,6 +426,9 @@ class BackgroundService {
 
             case 'scheduledBlockingCheck':
                 await this.checkScheduledBlocking();
+                break;
+            case 'focusModeActivation':
+                await this.activatePendingFocusMode();
                 break;
             case 'syncUploadBackup':
                 if (this.syncService) {
@@ -386,7 +478,9 @@ class BackgroundService {
                 const fSites = Array.isArray(message.focusBlockedSites) && message.focusBlockedSites.length > 0
                     ? message.focusBlockedSites
                     : (focusBlockedResult.focusBlockedSites || []);
-                await this.startFocusMode(message.duration, fSites);
+                const requestedDelay = message.startAfterMinutes;
+                const startAfterMinutes = requestedDelay === undefined ? 1 : Number(requestedDelay);
+                await this.startFocusMode(message.duration, fSites, startAfterMinutes);
                 sendResponse({ success: true });
                 break;
             case 'stopFocusMode':
@@ -397,6 +491,17 @@ class BackgroundService {
                         break;
                     }
                     await this.stopFocusMode();
+                    sendResponse({ success: true });
+                }
+                break;
+            case 'cancelPendingFocusMode':
+                {
+                    const allowed = await this.canRunProtectedDisable();
+                    if (!allowed) {
+                        sendResponse({ success: false, error: 'PROTECTION_LOCKED' });
+                        break;
+                    }
+                    await this.cancelPendingFocusActivation();
                     sendResponse({ success: true });
                 }
                 break;
@@ -449,12 +554,13 @@ class BackgroundService {
                 }
                 break;
             case 'getState':
-                const s = await chrome.storage.local.get(['timerState', 'focusState', 'todayStats', 'adBlockEnabled']);
+                const s = await chrome.storage.local.get(['timerState', 'focusState', 'todayStats', 'adBlockEnabled', 'pendingFocusActivation']);
                 sendResponse({
                     timerState: s.timerState || this.timerState,
                     focusState: s.focusState || this.focusState,
                     todayStats: s.todayStats || { focusTime: 0, sessionsCompleted: 0, blockedAttempts: 0 },
-                    adBlockEnabled: s.adBlockEnabled !== undefined ? s.adBlockEnabled : this.adBlockEnabled
+                    adBlockEnabled: s.adBlockEnabled !== undefined ? s.adBlockEnabled : this.adBlockEnabled,
+                    pendingFocusActivation: s.pendingFocusActivation || null
                 });
                 break;
             case 'toggleClock':
@@ -715,6 +821,7 @@ class BackgroundService {
         const paused = await this.isPaused();
         if (paused) {
             await this.disableScheduledBlocking();
+            await this.checkPreActivationWarnings();
             return;
         }
 
@@ -724,6 +831,73 @@ class BackgroundService {
         } else {
             await this.disableScheduledBlocking();
         }
+        await this.checkPreActivationWarnings();
+    }
+
+    async checkPreActivationWarnings() {
+        const result = await chrome.storage.local.get(['scheduledBlocking', 'sleepBlocking', 'preActivationWarningCache']);
+        this.preActivationWarningCache = result.preActivationWarningCache || {};
+        const now = new Date();
+
+        await this.checkSinglePreActivationWarning(
+            'scheduled',
+            'Scheduled Blocking',
+            result.scheduledBlocking,
+            now
+        );
+        await this.checkSinglePreActivationWarning(
+            'sleep',
+            'Sleep Mode',
+            result.sleepBlocking,
+            now
+        );
+    }
+
+    async checkSinglePreActivationWarning(cacheKey, label, config, now) {
+        const nextStart = this.getNextActivationStart(config, now);
+        if (!nextStart) return;
+
+        const msUntilStart = nextStart.getTime() - now.getTime();
+        const minutesUntilStart = Math.ceil(msUntilStart / 60000);
+        if (minutesUntilStart !== 1) return;
+
+        const warningToken = `${cacheKey}:${nextStart.toISOString().slice(0, 16)}`;
+        if (this.preActivationWarningCache[cacheKey] === warningToken) return;
+
+        await this.sendNotification(
+            `${label} starts in 1 minute`,
+            'Save your work now to avoid interruption.',
+            true,
+            `preactivation-${cacheKey}-${Date.now()}`
+        );
+
+        this.preActivationWarningCache[cacheKey] = warningToken;
+        await chrome.storage.local.set({ preActivationWarningCache: this.preActivationWarningCache });
+    }
+
+    getNextActivationStart(config, now = new Date()) {
+        const enabled = config?.enabled === true || config?.enabled === 'enabled';
+        const days = Array.isArray(config?.days) ? config.days : [];
+        if (!enabled || !days.length) return null;
+
+        const startTime = config.startTime || '00:00';
+        const [hour, minute] = startTime.split(':').map(Number);
+        if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+
+        for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+            const candidate = new Date(now.getTime());
+            candidate.setHours(0, 0, 0, 0);
+            candidate.setDate(candidate.getDate() + dayOffset);
+
+            if (!days.includes(candidate.getDay())) continue;
+
+            candidate.setHours(hour, minute, 0, 0);
+            if (candidate.getTime() > now.getTime()) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     async enableScheduledBlocking() {
@@ -947,8 +1121,12 @@ class BackgroundService {
     }
 
     async startTimer(duration, type = 'custom') {
+        const durSec = Math.floor(Number(duration));
+        if (!Number.isFinite(durSec) || durSec <= 0) {
+            throw new Error('Timer duration must be greater than zero');
+        }
         await this.ensureContentScriptInjected();
-        const durSec = parseInt(duration);
+        await chrome.alarms.clear('timer');
         this.timerState = { isRunning: true, startTime: Date.now(), duration: durSec, type };
         chrome.alarms.create('timer', { delayInMinutes: durSec / 60 });
         await chrome.storage.local.set({ timerState: this.timerState, sessionOverlayDismissed: false });
@@ -1013,7 +1191,50 @@ class BackgroundService {
         return Number(data.disableAuthorizedUntil || 0) > Date.now();
     }
 
-    async startFocusMode(duration, focusBlockedSites = []) {
+    async startFocusMode(duration, focusBlockedSites = [], startAfterMinutes = 0) {
+        const durationSeconds = Math.floor(Number(duration));
+        if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+            throw new Error('Focus duration must be greater than zero');
+        }
+        await this.cancelPendingFocusActivation();
+        const delayMinutes = Math.max(0, Number(startAfterMinutes || 0));
+        if (delayMinutes >= 1) {
+            const activationAt = Date.now() + (delayMinutes * 60000);
+            const pendingFocusActivation = {
+                duration: durationSeconds,
+                focusBlockedSites: Array.isArray(focusBlockedSites) ? focusBlockedSites : [],
+                activationAt
+            };
+
+            await chrome.storage.local.set({ pendingFocusActivation });
+            chrome.alarms.create('focusModeActivation', { when: activationAt });
+            await this.sendNotification(
+                'Focus Mode starts in 1 minute',
+                'Save your work now. Focus blocking will activate soon.',
+                true,
+                `focus-preactivation-${activationAt}`
+            );
+            return;
+        }
+
+        await this.activateFocusMode(durationSeconds, focusBlockedSites);
+    }
+
+    async activatePendingFocusMode() {
+        const result = await chrome.storage.local.get(['pendingFocusActivation']);
+        const pending = result.pendingFocusActivation;
+        if (!pending) return;
+
+        await chrome.storage.local.remove(['pendingFocusActivation']);
+        await this.activateFocusMode(pending.duration, pending.focusBlockedSites || []);
+    }
+
+    async cancelPendingFocusActivation() {
+        await chrome.alarms.clear('focusModeActivation');
+        await chrome.storage.local.remove(['pendingFocusActivation']);
+    }
+
+    async activateFocusMode(duration, focusBlockedSites = []) {
         await this.ensureContentScriptInjected();
         const endTime = Date.now() + (duration * 1000);
         // Deep Work Strict Mode: automatically enabled during Focus Mode
@@ -1041,6 +1262,7 @@ class BackgroundService {
     }
 
     async stopFocusMode() {
+        await this.cancelPendingFocusActivation();
         this.focusState.isActive = false;
         this.focusState.deepWorkMode = false;
         this.focusState.endTime = Date.now();
@@ -1115,14 +1337,14 @@ class BackgroundService {
                 await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
             } catch (e) {
                 // Not injected, do it now
-                chrome.scripting.executeScript({
+                await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     files: ['content/blocker.js', 'content/anti-antiblock.js']
-                }).catch(() => { });
-                chrome.scripting.insertCSS({
+                }).catch(() => undefined);
+                await chrome.scripting.insertCSS({
                     target: { tabId: tab.id },
                     files: ['content/adblock-styles.css']
-                }).catch(() => { });
+                }).catch(() => undefined);
             }
         }
     }
@@ -1290,6 +1512,27 @@ class BackgroundService {
         }, 8000);
 
         this.playSound('break-time');
+    }
+
+    async sendNotification(title, message, requireInteraction = false, notificationId = null) {
+        const settings = await this.getSettings();
+        if (settings.notificationsEnabled === false) return;
+
+        const id = notificationId || `timeshield-notice-${Date.now()}`;
+        chrome.notifications.create(id, {
+            type: 'basic',
+            iconUrl: 'assets/icons/icon128.png',
+            title,
+            message,
+            priority: 2,
+            requireInteraction
+        });
+
+        if (!requireInteraction) {
+            setTimeout(() => {
+                chrome.notifications.clear(id);
+            }, 8000);
+        }
     }
 
     async updateStats(newStats) {

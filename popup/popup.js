@@ -47,14 +47,20 @@ class PopupController {
     }
 
     async loadAllData() {
-        await Promise.all([
-            this.loadSettings(),
-            this.loadTodos(),
-            this.restoreTimerState(),
-            this.loadCurrentSite(),  // Quick-Add current site
-            this.checkPauseState(),
-            this.refreshSyncStatus()
-        ]);
+        const tasks = [
+            ['settings', () => this.loadSettings()],
+            ['todos', () => this.loadTodos()],
+            ['timer state', () => this.restoreTimerState()],
+            ['current site', () => this.loadCurrentSite()],
+            ['pause state', () => this.checkPauseState()],
+            ['sync status', () => this.refreshSyncStatus()]
+        ];
+        const results = await Promise.allSettled(tasks.map(([, task]) => task()));
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                console.error(`Failed to load ${tasks[index][0]}:`, result.reason);
+            }
+        });
     }
 
 
@@ -62,11 +68,22 @@ class PopupController {
     setupEventListeners() {
         const bind = (id, fn) => {
             const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('click', () => { console.log('Clicked:', id); fn(); });
-            } else {
+            if (!el) {
                 console.warn('Button not found:', id);
+                return;
             }
+            el.addEventListener('click', async (event) => {
+                if (el.disabled) return;
+                el.disabled = true;
+                try {
+                    await fn(event);
+                } catch (error) {
+                    console.error(`Popup action failed: ${id}`, error);
+                    this.showToast('Action failed. Please try again.');
+                } finally {
+                    el.disabled = false;
+                }
+            });
         };
 
         bind('toggleClock', () => this.toggleFloatingClock());
@@ -89,36 +106,43 @@ class PopupController {
         if (addToFocusBtn) addToFocusBtn.addEventListener('click', () => this.addCurrentSiteToFocus());
         if (addToScheduleBtn) addToScheduleBtn.addEventListener('click', () => this.addCurrentSiteToSchedule());
 
-        this.elements.timerMinutes.addEventListener('input', () => this.syncTimerInputs());
-        this.elements.timerSeconds.addEventListener('input', () => this.syncTimerInputs());
+        this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
+        this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
 
-        const restoreFocusBtn = document.getElementById('restoreFocusBtn');
-        if (restoreFocusBtn) {
-            restoreFocusBtn.addEventListener('click', () => {
-                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
-                window.close();
-            });
-        }
-
-        const restoreTimerBtn = document.getElementById('restoreTimerBtn');
-        if (restoreTimerBtn) {
-            restoreTimerBtn.addEventListener('click', () => {
-                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
-                window.close();
-            });
-        }
+        const restoreStatusWidget = async () => {
+            const response = await chrome.runtime.sendMessage({ action: 'showStatusWidget' });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to restore status widget');
+            }
+            window.close();
+        };
+        document.getElementById('restoreFocusBtn')?.addEventListener('click', restoreStatusWidget);
+        document.getElementById('restoreTimerBtn')?.addEventListener('click', restoreStatusWidget);
 
         // Ad blocker toggle
-        document.getElementById('adBlockToggle').addEventListener('change', (e) => {
-            chrome.runtime.sendMessage({ action: 'toggleAdBlock', enabled: e.target.checked });
+        const adBlockToggle = document.getElementById('adBlockToggle');
+        adBlockToggle?.addEventListener('change', async (event) => {
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'toggleAdBlock', enabled: event.target.checked });
+                if (response?.success === false) throw new Error(response.error || 'Unable to update ad blocker');
+                this.showToast(event.target.checked ? 'Ad blocking enabled.' : 'Ad blocking disabled.');
+            } catch (error) {
+                event.target.checked = !event.target.checked;
+                this.showToast('Unable to update ad blocking. Please try again.');
+                console.error('Failed to toggle ad blocker:', error);
+            }
         });
 
         // Widget display toggles
-        document.getElementById('focusTimerWidgetToggle').addEventListener('change', (e) => {
-            this.updateWidgetSetting('focusTimerWidgetEnabled', e.target.checked);
+        document.getElementById('focusTimerWidgetToggle')?.addEventListener('change', (event) => {
+            this.updateWidgetSetting('focusTimerWidgetEnabled', event.target.checked).catch((error) => {
+                console.error('Failed to update focus widget setting:', error);
+            });
         });
-        document.getElementById('timerWidgetToggle').addEventListener('change', (e) => {
-            this.updateWidgetSetting('timerWidgetEnabled', e.target.checked);
+        document.getElementById('timerWidgetToggle')?.addEventListener('change', (event) => {
+            this.updateWidgetSetting('timerWidgetEnabled', event.target.checked).catch((error) => {
+                console.error('Failed to update timer widget setting:', error);
+            });
         });
     }
 
@@ -275,46 +299,70 @@ class PopupController {
     }
 
     async startClock() {
+        if (this.state.clockInterval) clearInterval(this.state.clockInterval);
+
         const update = async () => {
-            const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-            const is12h = settings?.timeFormat === '12h';
-
-            this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
-                hour12: is12h,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-
-            document.getElementById('toggleFormat').textContent = is12h ? '12H' : '24H';
+            try {
+                const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
+                const is12h = settings?.timeFormat === '12h';
+                if (this.elements.currentTime) {
+                    this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
+                        hour12: is12h,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                }
+                const formatButton = document.getElementById('toggleFormat');
+                if (formatButton) formatButton.textContent = is12h ? '12H' : '24H';
+            } catch (error) {
+                console.error('Failed to update popup clock:', error);
+            }
         };
-        update();
+        await update();
         this.state.clockInterval = setInterval(update, 1000);
     }
 
     async toggleTimeFormat() {
-        const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-        const newFormat = settings?.timeFormat === '12h' ? '24h' : '12h';
-        await chrome.runtime.sendMessage({ action: 'setTimeFormat', format: newFormat });
-        this.startClock(); // Refresh immediately
-    }
-
-    toggleTimer() {
-        if (this.state.isTimerRunning) {
-            this.stopTimer();
-        } else {
-            const mins = parseInt(this.elements.timerMinutes.value) || 0;
-            const secs = parseInt(this.elements.timerSeconds.value) || 0;
-            this.startTimer(mins * 60 + secs);
+        try {
+            const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
+            const newFormat = settings?.timeFormat === '12h' ? '24h' : '12h';
+            const response = await chrome.runtime.sendMessage({ action: 'setTimeFormat', format: newFormat });
+            if (response?.success === false) throw new Error(response.error || 'Unable to change time format');
+            await this.startClock();
+        } catch (error) {
+            console.error('Failed to change time format:', error);
+            this.showToast('Unable to change time format.');
         }
     }
 
-    startTimer(seconds) {
-        if (seconds <= 0) return;
+    async toggleTimer() {
+        if (this.state.isTimerRunning) {
+            await this.stopTimer();
+            return;
+        }
+        const mins = parseInt(this.elements.timerMinutes?.value, 10) || 0;
+        const secs = parseInt(this.elements.timerSeconds?.value, 10) || 0;
+        await this.startTimer(mins * 60 + secs);
+    }
+
+    async startTimer(seconds) {
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            this.showToast('Enter a timer duration greater than zero.');
+            return;
+        }
+
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'startTimer', duration: seconds });
+            if (response?.success === false) throw new Error(response.error || 'Unable to start timer');
+        } catch (error) {
+            console.error('Failed to start timer:', error);
+            this.showToast('Unable to start the timer.');
+            return;
+        }
+
         this.state.timerRemaining = seconds;
         this.state.isTimerRunning = true;
-
-        chrome.runtime.sendMessage({ action: 'startTimer', duration: seconds });
         this.elements.startTimerBtn.textContent = 'Stop Flow';
         this.elements.startTimerBtn.classList.add('btn-focus');
         this.elements.timerInputsContainer.style.display = 'none';
@@ -336,14 +384,22 @@ class PopupController {
         }, 1000);
     }
 
-    stopTimer() {
+    async stopTimer() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+            if (response?.success === false) throw new Error(response.error || 'Unable to stop timer');
+        } catch (error) {
+            console.error('Failed to stop timer:', error);
+            this.showToast('Unable to stop the timer.');
+            return;
+        }
+
         this.state.isTimerRunning = false;
         clearInterval(this.state.timerInterval);
         this.elements.startTimerBtn.textContent = 'Start Flow';
         this.elements.startTimerBtn.classList.remove('btn-focus');
         this.elements.timerInputsContainer.style.display = 'flex';
         this.elements.timerDisplay.style.display = 'none';
-        chrome.runtime.sendMessage({ action: 'stopTimer' });
         this.syncTimerInputs();
     }
 
@@ -377,14 +433,20 @@ class PopupController {
             }
         } else {
             const mins = prompt('Focus duration (minutes):', '25');
-            if (mins && !isNaN(mins)) {
-                await chrome.runtime.sendMessage({
-                    action: 'startFocusMode',
-                    duration: parseInt(mins) * 60,
-                    startAfterMinutes: 1
-                });
-                window.close();
+            const durationMinutes = Math.floor(Number(mins));
+            if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+                if (mins !== null) this.showToast('Enter a focus duration greater than zero.');
+                return;
             }
+            const response = await chrome.runtime.sendMessage({
+                action: 'startFocusMode',
+                duration: durationMinutes * 60,
+                startAfterMinutes: 1
+            });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to start focus mode');
+            }
+            window.close();
         }
     }
 
@@ -417,12 +479,15 @@ class PopupController {
             }
         } else {
             // Enable social media blocking
-            await chrome.runtime.sendMessage({
+            const response = await chrome.runtime.sendMessage({
                 action: 'startFocusMode',
                 duration: 25 * 60,
                 focusBlockedSites: this.socialMediaSites,
                 startAfterMinutes: 1
             });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to enable social media blocking');
+            }
             this.showToast('Social media block will start in 1 minute.');
             this.updateSocialMediaButton(true);
         }
