@@ -65,9 +65,9 @@ class SleepBlockPage {
         document.querySelectorAll('.duration-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const duration = btn.dataset.minutes;
+                const isRestOfDay = duration === 'eod';
                 let durationMs = 0;
-
-                if (duration === 'eod') {
+                if (isRestOfDay) {
                     // End of day
                     const now = new Date();
                     const eod = new Date();
@@ -82,7 +82,7 @@ class SleepBlockPage {
                 }
 
                 // Send pause message to background script
-                chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs }, (response) => {
+                chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs, restOfDay: isRestOfDay }, (response) => {
                     if (response?.success) {
                         // Show success message briefly
                         pauseSection.innerHTML = `
