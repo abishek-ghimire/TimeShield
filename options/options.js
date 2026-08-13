@@ -7,6 +7,7 @@ class OptionsManager {
         this.syncStatus = { state: 'offline', lastSynced: null, email: null, error: null };
         this.siteCategories = this.getDefaultSiteCategories();
         this.customCategories = [];
+        this.activeCategoryKey = null;
 
         this.init();
     }
@@ -235,6 +236,22 @@ class OptionsManager {
     }
 
     setupSiteManagement() {
+        const addCategorySiteBtn = document.getElementById('add-category-site-btn');
+        const categorySiteInput = document.getElementById('category-site-input');
+
+        if (addCategorySiteBtn) {
+            addCategorySiteBtn.addEventListener('click', () => this.addCategorySite());
+        }
+
+        if (categorySiteInput) {
+            categorySiteInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.addCategorySite();
+                }
+            });
+        }
+
         document.getElementById('addFocusSite').addEventListener('click', () => this.addFocusSite());
         document.getElementById('addScheduledSite').addEventListener('click', () => this.addScheduledSite());
         document.getElementById('addCategoryToFocus').addEventListener('click', () => this.applyCategoryToList('focus'));
@@ -390,8 +407,16 @@ class OptionsManager {
         const focusSelect = document.getElementById('categoryPreset');
         const scheduleSelect = document.getElementById('scheduleCategoryPreset');
         const customList = document.getElementById('customCategoriesList');
+        const categoryTabs = document.getElementById('categoryTabs');
+        const categorySitesList = document.getElementById('categorySitesList');
+        const categorySiteInput = document.getElementById('category-site-input');
+        const addCategorySiteBtn = document.getElementById('add-category-site-btn');
         
         const entries = this.getAllCategoryEntries();
+
+        if (!this.activeCategoryKey || !entries.some(entry => entry.value === this.activeCategoryKey)) {
+            this.activeCategoryKey = entries.length ? entries[0].value : null;
+        }
         
         [focusSelect, scheduleSelect].forEach(select => {
             if (!select) return;
@@ -404,6 +429,59 @@ class OptionsManager {
                 select.appendChild(option);
             });
         });
+
+        if (categoryTabs) {
+            categoryTabs.innerHTML = '';
+            entries.forEach(entry => {
+                const tab = document.createElement('button');
+                tab.type = 'button';
+                tab.className = `category-tab${entry.value === this.activeCategoryKey ? ' active' : ''}`;
+                tab.textContent = entry.label;
+                tab.dataset.categoryKey = entry.value;
+                tab.addEventListener('click', () => this.setActiveCategory(entry.value));
+                categoryTabs.appendChild(tab);
+            });
+        }
+
+        if (categorySitesList) {
+            categorySitesList.innerHTML = '';
+            const activeEntry = entries.find(entry => entry.value === this.activeCategoryKey);
+
+            if (!activeEntry) {
+                categorySitesList.innerHTML = '<p class="category-empty">No categories available.</p>';
+                if (categorySiteInput) categorySiteInput.disabled = true;
+                if (addCategorySiteBtn) addCategorySiteBtn.disabled = true;
+            } else {
+                if (categorySiteInput) {
+                    categorySiteInput.disabled = false;
+                    categorySiteInput.placeholder = `Enter domain for ${activeEntry.label}...`;
+                }
+                if (addCategorySiteBtn) {
+                    addCategorySiteBtn.disabled = false;
+                    addCategorySiteBtn.textContent = `Add Site to ${activeEntry.label}`;
+                }
+
+                const sites = this.normalizeCategorySites(activeEntry.sites);
+                if (!sites.length) {
+                    categorySitesList.innerHTML = '<p class="category-empty">No sites added to this category yet.</p>';
+                } else {
+                    sites.forEach(site => {
+                        const tag = document.createElement('span');
+                        tag.className = 'category-tag';
+                        tag.innerHTML = `
+                            <span>${site}</span>
+                            <button type="button" class="category-tag-remove" aria-label="Remove ${site}">X</button>
+                        `;
+
+                        tag.querySelector('.category-tag-remove').addEventListener('click', () => {
+                            this.removeCategorySite(site);
+                        });
+
+                        categorySitesList.appendChild(tag);
+                    });
+                }
+            }
+        }
 
         if (customList) {
             customList.innerHTML = '';
@@ -432,6 +510,77 @@ class OptionsManager {
 
     normalizeCategorySites(sites) {
         return [...new Set((sites || []).map(site => site.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]).filter(Boolean))];
+    }
+
+    setActiveCategory(categoryKey) {
+        this.activeCategoryKey = categoryKey;
+        this.populateSiteCategories();
+    }
+
+    async addCategorySite() {
+        const input = document.getElementById('category-site-input');
+        const site = this.normalizeCategorySites([input?.value || ''])[0];
+
+        if (!site) {
+            this.showNotification('Enter a valid domain first.', 'warning');
+            return;
+        }
+
+        const selected = this.getAllCategoryEntries().find(entry => entry.value === this.activeCategoryKey);
+        if (!selected) {
+            this.showNotification('Select a category first.', 'warning');
+            return;
+        }
+
+        if (selected.value.startsWith('preset:')) {
+            const key = selected.value.split(':')[1];
+            const currentSites = this.normalizeCategorySites(this.siteCategories[key] || []);
+            this.siteCategories[key] = [...new Set([...currentSites, site])];
+            await chrome.storage.local.set({ siteCategories: this.siteCategories });
+        } else {
+            const index = Number(selected.value.split(':')[1]);
+            const category = this.customCategories[index];
+
+            if (!category) {
+                this.showNotification('Selected category is no longer available.', 'warning');
+                return;
+            }
+
+            category.sites = [...new Set([...this.normalizeCategorySites(category.sites || []), site])];
+            await chrome.storage.local.set({ customCategories: this.customCategories });
+        }
+
+        if (input) input.value = '';
+        this.populateSiteCategories();
+        this.showNotification(`Added ${site} to ${selected.label}.`, 'success');
+    }
+
+    async removeCategorySite(site) {
+        const selected = this.getAllCategoryEntries().find(entry => entry.value === this.activeCategoryKey);
+        if (!selected) {
+            this.showNotification('Select a category first.', 'warning');
+            return;
+        }
+
+        if (selected.value.startsWith('preset:')) {
+            const key = selected.value.split(':')[1];
+            this.siteCategories[key] = this.normalizeCategorySites(this.siteCategories[key] || []).filter(existing => existing !== site);
+            await chrome.storage.local.set({ siteCategories: this.siteCategories });
+        } else {
+            const index = Number(selected.value.split(':')[1]);
+            const category = this.customCategories[index];
+
+            if (!category) {
+                this.showNotification('Selected category is no longer available.', 'warning');
+                return;
+            }
+
+            category.sites = this.normalizeCategorySites(category.sites || []).filter(existing => existing !== site);
+            await chrome.storage.local.set({ customCategories: this.customCategories });
+        }
+
+        this.populateSiteCategories();
+        this.showNotification(`Removed ${site} from ${selected.label}.`, 'warning');
     }
 
     async applyCategoryToList(target) {
@@ -1818,8 +1967,10 @@ class OptionsManager {
     }
 
     async runProtectionSequence(actionLabel) {
-        const countdownAllowed = await this.showDisableCountdown(actionLabel, 60);
-        if (!countdownAllowed) return false;
+        if (this.requiresProtectionCountdown(actionLabel)) {
+            const countdownAllowed = await this.showDisableCountdown(actionLabel, 60);
+            if (!countdownAllowed) return false;
+        }
 
         const challengeResult = await this.runChallengeChecks(actionLabel);
         if (!challengeResult.ok) {
@@ -1830,6 +1981,11 @@ class OptionsManager {
 
         await this.playFeedbackSound('success');
         return true;
+    }
+
+    requiresProtectionCountdown(actionLabel) {
+        const label = String(actionLabel || '').toLowerCase();
+        return label.includes('remove') || label.includes('disable') || label.includes('clear') || label.includes('delete') || label.includes('confirm') || label.includes('ok');
     }
 
     // --- Screen Time Functionality ---
