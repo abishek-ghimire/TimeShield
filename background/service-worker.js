@@ -32,6 +32,7 @@ class BackgroundService {
 
         this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
         this.preActivationWarningCache = {};
+        this.activeTabInjectionPromises = new Map();
 
         // NEW: Ad blocker state
         this.adsBlocked = 0;
@@ -983,8 +984,35 @@ class BackgroundService {
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             const tab = tabs?.[0];
             if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) return false;
-            await chrome.tabs.sendMessage(tab.id, message);
-            return true;
+
+            try {
+                const response = await chrome.tabs.sendMessage(tab.id, message);
+                if (response?.success === true) return true;
+            } catch {
+                // The active tab may not have the content script yet.
+            }
+
+            let injectionPromise = this.activeTabInjectionPromises.get(tab.id);
+            if (!injectionPromise) {
+                injectionPromise = Promise.allSettled([
+                    chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content/blocker.js', 'content/anti-antiblock.js']
+                    }),
+                    chrome.scripting.insertCSS({
+                        target: { tabId: tab.id },
+                        files: ['content/adblock-styles.css']
+                    })
+                ]).finally(() => {
+                    if (this.activeTabInjectionPromises.get(tab.id) === injectionPromise) {
+                        this.activeTabInjectionPromises.delete(tab.id);
+                    }
+                });
+                this.activeTabInjectionPromises.set(tab.id, injectionPromise);
+            }
+            await injectionPromise;
+            const response = await chrome.tabs.sendMessage(tab.id, message);
+            return response?.success === true;
         } catch (error) {
             return false;
         }
