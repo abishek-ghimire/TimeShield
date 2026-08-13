@@ -32,7 +32,8 @@ class PopupController {
             timerRemaining: 0,
             isTimerRunning: false,
             focusInterval: null,
-            isPaused: false
+            isPaused: false,
+            timeFormat: '12h'
         };
 
         this.init();
@@ -40,8 +41,8 @@ class PopupController {
 
     async init() {
         this.setupEventListeners();
-        this.startClock();
         await this.loadAllData();
+        this.startClock();
     }
 
     async loadAllData() {
@@ -278,41 +279,33 @@ class PopupController {
         this.state.focusInterval = setInterval(updateText, 1000);
     }
 
-    async startClock() {
+    renderClock() {
+        const is12Hour = this.state.timeFormat !== '24h';
+        if (this.elements.currentTime) {
+            this.elements.currentTime.textContent = new Date().toLocaleTimeString(undefined, {
+                hour12: is12Hour,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        const formatButton = document.getElementById('toggleFormat');
+        if (formatButton) formatButton.textContent = is12Hour ? '12H' : '24H';
+    }
+
+    startClock() {
         if (this.state.clockInterval) clearInterval(this.state.clockInterval);
-
-        const render = (is12h = false) => {
-            if (this.elements.currentTime) {
-                this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
-                    hour12: is12h,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            }
-            const formatButton = document.getElementById('toggleFormat');
-            if (formatButton) formatButton.textContent = is12h ? '12H' : '24H';
-        };
-
-        const update = () => {
-            // Render immediately so service-worker startup can never leave a 00:00:00 placeholder visible.
-            render(false);
-            chrome.runtime.sendMessage({ action: 'getSettings' })
-                .then((settings) => render(settings?.timeFormat === '12h'))
-                .catch(() => {});
-        };
-
-        update();
-        this.state.clockInterval = setInterval(update, 1000);
+        this.renderClock();
+        this.state.clockInterval = setInterval(() => this.renderClock(), 1000);
     }
 
     async toggleTimeFormat() {
+        const newFormat = this.state.timeFormat === '12h' ? '24h' : '12h';
         try {
-            const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-            const newFormat = settings?.timeFormat === '12h' ? '24h' : '12h';
             const response = await chrome.runtime.sendMessage({ action: 'setTimeFormat', format: newFormat });
             if (response?.success === false) throw new Error(response.error || 'Unable to change time format');
-            await this.startClock();
+            this.state.timeFormat = newFormat;
+            this.renderClock();
         } catch (error) {
             console.error('Failed to change time format:', error);
             this.showToast('Unable to change time format.');
@@ -870,6 +863,8 @@ class PopupController {
 
     async loadSettings() {
         const result = await chrome.storage.local.get(['settings']);
+        this.state.timeFormat = result.settings?.timeFormat === '24h' ? '24h' : '12h';
+        this.renderClock();
         const theme = result.settings?.theme || 'solar';
         if (theme === 'light') {
             document.body.className = 'theme-light';

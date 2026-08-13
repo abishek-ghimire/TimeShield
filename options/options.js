@@ -4,9 +4,6 @@ class OptionsManager {
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
         this.screenTimeRefDate = new Date();
-        this.siteCategories = this.getDefaultSiteCategories();
-        this.customCategories = [];
-        this.blockingCategories = { focus: [], schedule: [] };
 
         this.init();
     }
@@ -21,9 +18,8 @@ class OptionsManager {
 
     async loadData() {
         const result = await chrome.storage.local.get([
-            'settings', 'focusBlockedSites',
+            'settings', 'focusBlockedSites', 'scheduledBlockedSites',
             'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist',
-            'siteCategories', 'customCategories', 'blockingCategories'
         ]);
 
         this.settings = {
@@ -55,25 +51,11 @@ class OptionsManager {
         };
         this.sleepBlocking.enabled = this.toBooleanSetting(this.sleepBlocking.enabled);
         this.whitelist = result.whitelist || [];
-        this.siteCategories = this.getSocialMediaPreset(result.siteCategories);
-        this.customCategories = Array.isArray(result.customCategories) ? result.customCategories : [];
-        this.blockingCategories = this.normalizeBlockingCategories(result.blockingCategories);
+        await chrome.storage.local.remove(['siteCategories', 'customCategories', 'blockingCategories']);
     }
 
     toBooleanSetting(value) {
         return value === true || value === 1 || value === '1' || value === 'true' || value === 'enabled' || value === 'on';
-    }
-
-    normalizeBlockingCategories(value) {
-        const source = value && typeof value === 'object' ? value : {};
-        const normalize = (list) => (Array.isArray(list) ? list : []).map((category, index) => ({
-            id: String(category.id || `${Date.now()}-${index}`),
-            name: String(category.name || `Category ${index + 1}`).trim(),
-            sites: this.normalizeCategorySites(category.sites || []),
-            enabled: this.toBooleanSetting(category.enabled)
-        })).filter(category => category.name && category.sites.length)
-            .filter(category => !category.id.startsWith('preset:') || category.id === 'preset:socialMedia');
-        return { focus: normalize(source.focus), schedule: normalize(source.schedule) };
     }
 
     setupEventListeners() {
@@ -260,8 +242,6 @@ class OptionsManager {
 
         on('addFocusSite', 'click', () => this.addFocusSite());
         on('addScheduledSite', 'click', () => this.addScheduledSite());
-        on('addCategoryToFocus', 'click', () => this.applyCategoryToList('focus'));
-        on('addCategoryToSchedule', 'click', () => this.applyCategoryToList('schedule'));
         on('scheduledBlocking', 'change', (event) => this.toggleScheduledBlocking(event.target.value));
         on('blockingStartTime', 'change', () => this.saveScheduledBlocking());
         on('blockingEndTime', 'change', () => this.saveScheduledBlocking());
@@ -369,299 +349,9 @@ class OptionsManager {
         this.populateTimeLimits();
         this.populateGlobalLimit(); // NEW
         this.populateAdBlockSettings(); // NEW
-        this.populateSiteCategories();
         this.updateRangeDisplays();
         this.applyTheme();
     }
-
-    getDefaultSiteCategories() {
-        return {
-            socialMedia: [
-                'facebook.com',
-                'instagram.com',
-                'x.com',
-                'twitter.com',
-                'tiktok.com',
-                'reddit.com',
-                'snapchat.com',
-                'linkedin.com',
-                'pinterest.com',
-                'threads.net',
-                'discord.com',
-                'youtube.com'
-            ]
-        };
-    }
-
-
-    getSocialMediaPreset(storedCategories) {
-        const defaultSites = this.getDefaultSiteCategories().socialMedia;
-        const storedSites = Array.isArray(storedCategories?.socialMedia) && storedCategories.socialMedia.length
-            ? storedCategories.socialMedia
-            : defaultSites;
-        return { socialMedia: this.normalizeCategorySites(storedSites) };
-    }
-
-    getAllCategoryEntries() {
-        const presets = Object.entries(this.siteCategories || {}).map(([key, sites]) => ({
-            value: `preset:${key}`,
-            label: key.replace(/([A-Z])/g, ' $1').replace(/^./, char => char.toUpperCase()).trim(),
-            sites
-        }));
-
-        const customs = (this.customCategories || []).map((category, index) => ({
-            value: `custom:${index}`,
-            label: category.name,
-            sites: category.sites || []
-        }));
-
-        return [...presets, ...customs];
-    }
-
-    populateSiteCategories() {
-        const focusSelect = document.getElementById('categoryPreset');
-        const scheduleSelect = document.getElementById('scheduleCategoryPreset');
-        const customList = document.getElementById('customCategoriesList');
-        
-        const entries = this.getAllCategoryEntries();
-        
-        [focusSelect, scheduleSelect].forEach(select => {
-            if (!select) return;
-            const selectedValue = select.value;
-            select.innerHTML = '<option value="">Select a category...</option>';
-            entries.forEach((entry) => {
-                const option = document.createElement('option');
-                option.value = entry.value;
-                option.textContent = entry.label;
-                select.appendChild(option);
-            });
-            select.value = entries.some(entry => entry.value === selectedValue) ? selectedValue : '';
-        });
-
-        if (customList) {
-            customList.innerHTML = '';
-            if (!this.customCategories.length) {
-                customList.innerHTML = '<p class="hint">No custom categories yet.</p>';
-                return;
-            }
-
-            this.customCategories.forEach((category, index) => {
-                const item = document.createElement('div');
-                item.className = 'site-item';
-                item.innerHTML = `
-                    <span class="site-url">${category.name}</span>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <span class="site-url">${(category.sites || []).length} sites</span>
-                        <button class="remove-site" data-index="${index}" data-type="custom-category">Remove</button>
-                    </div>
-                `;
-                item.querySelector('.remove-site').addEventListener('click', (e) => {
-                    this.removeCustomCategory(Number(e.target.dataset.index));
-                });
-                customList.appendChild(item);
-            });
-        }
-    }
-
-    normalizeCategorySites(sites) {
-        return [...new Set((sites || []).map(site => site.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]).filter(Boolean))];
-    }
-
-    getCategoryEntriesForTarget(target) {
-        const state = this.blockingCategories?.[target] || [];
-        const baseEntries = this.getAllCategoryEntries().map(entry => ({
-            id: entry.value,
-            name: entry.label,
-            sites: this.normalizeCategorySites(entry.sites),
-            enabled: false
-        }));
-        const savedEntries = (Array.isArray(state) ? state : []).map(category => ({
-            id: String(category.id),
-            name: String(category.name || 'Category').trim(),
-            sites: this.normalizeCategorySites(category.sites),
-            enabled: this.toBooleanSetting(category.enabled)
-        })).filter(category => category.name && category.sites.length);
-        const merged = [...baseEntries];
-        savedEntries.forEach(saved => {
-            const existing = merged.find(entry => entry.id === saved.id);
-            if (existing) Object.assign(existing, saved);
-            else merged.push(saved);
-        });
-        return merged;
-    }
-
-    async saveBlockingCategories() {
-        this.blockingCategories = this.normalizeBlockingCategories(this.blockingCategories);
-        await chrome.storage.local.set({ blockingCategories: this.blockingCategories });
-        chrome.runtime.sendMessage({ action: 'checkScheduledBlocking' }).catch(() => {});
-        this.updateAccordionBadges();
-    }
-
-    async setBlockingCategoryEnabled(target, categoryId, enabled) {
-        const entries = this.getCategoryEntriesForTarget(target);
-        const category = entries.find(entry => entry.id === categoryId);
-        if (!category) return;
-
-        const wantsEnable = Boolean(enabled);
-        if (category.enabled && !wantsEnable) {
-            const allowed = await this.runProtectionSequence(`Disable ${category.name} category protection`);
-            if (!allowed) {
-                this.updateSiteLists();
-                return;
-            }
-        }
-
-        category.enabled = wantsEnable;
-        this.blockingCategories[target] = entries;
-        await this.saveBlockingCategories();
-        this.showNotification(`${category.name} ${wantsEnable ? 'enabled' : 'disabled'} for ${target === 'focus' ? 'Focus Mode' : 'scheduled blocking'}.`, wantsEnable ? 'success' : 'warning');
-        this.updateSiteLists();
-    }
-
-    async addSiteToBlockingCategory(target, categoryId) {
-        const entries = this.getCategoryEntriesForTarget(target);
-        const category = entries.find(entry => entry.id === categoryId);
-        if (!category) return;
-        const input = prompt(`Add a domain to ${category.name}:`, '');
-        const site = this.normalizeCategorySites([input || ''])[0];
-        if (!site) return;
-        if (!category.sites.includes(site)) category.sites.push(site);
-        this.blockingCategories[target] = entries;
-        await this.saveBlockingCategories();
-        this.updateSiteLists();
-        this.showNotification(`${site} added to ${category.name}.`, 'success');
-    }
-
-    async removeSiteFromBlockingCategory(target, categoryId, site) {
-        const allowed = await this.runProtectionSequence(`Remove ${site} from category protection`);
-        if (!allowed) return;
-        const entries = this.getCategoryEntriesForTarget(target);
-        const category = entries.find(entry => entry.id === categoryId);
-        if (!category) return;
-        category.sites = category.sites.filter(item => item !== site);
-        this.blockingCategories[target] = entries.filter(entry => entry.sites.length);
-        await this.saveBlockingCategories();
-        this.updateSiteLists();
-        this.showNotification(`${site} removed from ${category.name}.`, 'warning');
-    }
-
-    async createBlockingCategory(target) {
-        const name = (prompt('Category name (for example, Movies):', '') || '').trim();
-        if (!name) return;
-        const sites = this.normalizeCategorySites((prompt('Domains separated by commas or spaces:', '') || '').split(/[\\s,]+/));
-        if (!sites.length) {
-            this.showNotification('Add at least one domain to create the category.', 'warning');
-            return;
-        }
-        const entries = this.getCategoryEntriesForTarget(target);
-        const id = `user:${Date.now()}`;
-        entries.push({ id, name, sites, enabled: false });
-        this.blockingCategories[target] = entries;
-        await this.saveBlockingCategories();
-        this.updateSiteLists();
-        this.showNotification(`${name} category created. Enable it when you want to use it.`, 'success');
-    }
-
-    renderBlockingCategoryControls(target, listElement) {
-        if (!listElement) return;
-        const panelId = `${target}BlockingCategoriesPanel`;
-        let panel = document.getElementById(panelId);
-        if (!panel) {
-            panel = document.createElement('div');
-            panel.id = panelId;
-            panel.className = 'ts-category-panel';
-            listElement.parentElement.insertBefore(panel, listElement);
-        }
-        const entries = this.getCategoryEntriesForTarget(target);
-        panel.innerHTML = `
-            <div class="ts-category-heading">
-                <div><strong>Active categories</strong><small>Enable categories independently; their sites join this protection list.</small></div>
-                <button type="button" class="btn btn-secondary ts-add-category">New category</button>
-            </div>
-            <div class="ts-category-grid">
-                ${entries.map(category => `
-                    <div class="ts-category-card ${category.enabled ? 'is-enabled' : ''}" data-category-id="${category.id}">
-                        <label class="checkbox-group ts-category-toggle"><input type="checkbox" ${category.enabled ? 'checked' : ''} aria-label="Enable ${category.name}"><span>${category.name}</span><em>${category.sites.length} site${category.sites.length === 1 ? '' : 's'}</em></label>
-                        <div class="ts-category-sites">${category.sites.map(site => `<span class="ts-category-site">${site}<button type="button" aria-label="Remove ${site} from ${category.name}" data-site="${site}">×</button></span>`).join('')}</div>
-                        <button type="button" class="btn btn-secondary ts-add-category-site">Add site</button>
-                    </div>
-                `).join('') || '<p class="hint">No categories yet. Create one to group sites by context.</p>'}
-            </div>
-        `;
-        panel.querySelector('.ts-add-category')?.addEventListener('click', () => this.createBlockingCategory(target));
-        panel.querySelectorAll('.ts-category-card').forEach(card => {
-            const categoryId = card.dataset.categoryId;
-            card.querySelector('input[type="checkbox"]')?.addEventListener('change', (event) => this.setBlockingCategoryEnabled(target, categoryId, event.target.checked));
-            card.querySelector('.ts-add-category-site')?.addEventListener('click', () => this.addSiteToBlockingCategory(target, categoryId));
-            card.querySelectorAll('.ts-category-site button').forEach(button => button.addEventListener('click', () => this.removeSiteFromBlockingCategory(target, categoryId, button.dataset.site)));
-        });
-    }
-
-    getActiveBlockingSites(target, manualSites = []) {
-        const categorySites = this.getCategoryEntriesForTarget(target).filter(category => category.enabled).flatMap(category => category.sites);
-        return [...new Set([...(manualSites || []), ...categorySites])];
-    }
-
-    async applyCategoryToList(target) {
-        const select = document.getElementById(target === 'schedule' ? 'scheduleCategoryPreset' : 'categoryPreset');
-        if (!select) return;
-
-        const selected = this.getAllCategoryEntries().find(entry => entry.value === select.value);
-        if (!selected) {
-            this.showNotification('Select a category first.', 'warning');
-            return;
-        }
-
-        const sites = this.normalizeCategorySites(selected.sites);
-        if (!sites.length) {
-            this.showNotification('Selected category has no sites.', 'warning');
-            return;
-        }
-
-        if (target === 'focus') {
-            this.focusBlockedSites = [...new Set([...this.focusBlockedSites, ...sites])];
-        } else {
-            this.scheduledBlockedSites = [...new Set([...this.scheduledBlockedSites, ...sites])];
-        }
-
-        await this.saveSiteLists();
-        this.updateSiteLists();
-        this.showNotification(`Added ${selected.label} sites to ${target} block list.`, 'success');
-    }
-
-    async saveCustomCategory() {
-        const nameInput = document.getElementById('customCategoryName');
-        const sitesInput = document.getElementById('customCategorySites');
-        const name = nameInput?.value.trim();
-        const sites = this.normalizeCategorySites((sitesInput?.value || '').split(/[\n,]/));
-
-        if (!name || !sites.length) {
-            this.showNotification('Enter a category name and at least one site.', 'warning');
-            return;
-        }
-
-        const existingIndex = this.customCategories.findIndex(category => category.name.toLowerCase() === name.toLowerCase());
-        const category = { name, sites };
-        if (existingIndex >= 0) {
-            this.customCategories[existingIndex] = category;
-        } else {
-            this.customCategories.push(category);
-        }
-
-        await chrome.storage.local.set({ customCategories: this.customCategories });
-        this.populateSiteCategories();
-        if (nameInput) nameInput.value = '';
-        if (sitesInput) sitesInput.value = '';
-        this.showNotification('Custom category saved.', 'success');
-    }
-
-    async removeCustomCategory(index) {
-        this.customCategories.splice(index, 1);
-        await chrome.storage.local.set({ customCategories: this.customCategories });
-        this.populateSiteCategories();
-        this.showNotification('Custom category removed.', 'warning');
-    }
-
 
     setDayGroupChecked(dayIds, checked) {
         dayIds.forEach((id) => {
@@ -937,14 +627,12 @@ class OptionsManager {
         const focusSitesList = document.getElementById('focusSitesList');
         const scheduledSitesList = document.getElementById('scheduledSitesList');
 
-        this.renderBlockingCategoryControls('focus', focusSitesList);
         focusSitesList.innerHTML = '';
         this.focusBlockedSites.forEach(site => {
             const siteItem = this.createSiteItem(site, 'focus');
             focusSitesList.appendChild(siteItem);
         });
 
-        this.renderBlockingCategoryControls('schedule', scheduledSitesList);
         scheduledSitesList.innerHTML = '';
         this.scheduledBlockedSites.forEach(site => {
             const siteItem = this.createSiteItem(site, 'scheduled');
@@ -1027,7 +715,6 @@ class OptionsManager {
         await chrome.storage.local.set({
             focusBlockedSites: this.focusBlockedSites,
             scheduledBlockedSites: this.scheduledBlockedSites,
-            blockingCategories: this.blockingCategories,
             whitelist: this.whitelist
         });
         // Trigger immediate check in service worker
