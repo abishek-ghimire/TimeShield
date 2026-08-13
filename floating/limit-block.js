@@ -74,9 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const duration = btn.dataset.minutes;
+            const isRestOfDay = duration === 'eod';
             let durationMs = 0;
-
-            if (duration === 'eod') {
+            if (isRestOfDay) {
                 // End of day
                 const now = new Date();
                 const eod = new Date();
@@ -91,8 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Send pause message to background script
-            chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs }, (response) => {
-                if (response.success) {
+            chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs, restOfDay: isRestOfDay }, (response) => {
+                if (response?.success) {
                     // Show success message briefly
                     pauseSection.innerHTML = `
                         <h3>✅ Blocking Paused</h3>
@@ -103,42 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => {
                         window.close();
                     }, 2000);
-                } else if (response.requiresPassword) {
-                    // Show text challenge
-                    pauseSection.innerHTML = `
-                        <h3>✍️ Text Challenge Required</h3>
-                        <p class="pause-message">I choose discipline over distraction, for my dreams are worth more than temporary comfort.</p>
-                        <p class="pause-message" style="color: #f43f5e;">Remaining free 5-min pauses today: ${response.remainingShortPauses}</p>
-                        <div style="margin-top: 20px;">
-                            <input type="text" id="pauseChallenge" placeholder="Type the sentence above" style="padding: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 8px; width: 300px; margin-right: 10px;">
-                            <button class="duration-btn" id="submitChallenge">Submit</button>
-                            <button class="cancel-pause-btn" id="cancelChallenge">Cancel</button>
-                        </div>
-                    `;
-                    
-                    // Add event listeners for text challenge form
-                    document.getElementById('submitChallenge').addEventListener('click', () => {
-                        const challenge = document.getElementById('pauseChallenge').value;
-                        if (challenge) {
-                            chrome.runtime.sendMessage({ action: 'pauseBlockingWithPassword', durationMs: durationMs, password: challenge }, (response) => {
-                                if (response.success) {
-                                    pauseSection.innerHTML = `
-                                        <h3>✅ Blocking Paused</h3>
-                                        <p class="pause-message">Protection has been temporarily paused.</p>
-                                    `;
-                                    setTimeout(() => window.close(), 2000);
-                                } else {
-                                    pauseSection.querySelector('.pause-message').textContent = 'Incorrect text. Please try again.';
-                                    document.getElementById('pauseChallenge').value = '';
-                                }
-                            });
-                        }
+                } else if (response?.requiresPassword) {
+                    window.TimeShieldPauseChallenge.render({
+                        pauseSection,
+                        pauseButton: pauseBtn,
+                        response,
+                        durationMs
                     });
-                    
-                    document.getElementById('cancelChallenge').addEventListener('click', () => {
-                        pauseSection.style.display = 'none';
-                        pauseBtn.style.display = 'flex';
-                    });
+                } else {
+                    pauseSection.querySelector('.pause-message')?.replaceChildren(
+                        document.createTextNode(response?.error || 'Unable to pause blocking. Please try again.')
+                    );
                 }
             });
         });

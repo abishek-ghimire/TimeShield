@@ -24,7 +24,6 @@ class PopupController {
             todoList: document.getElementById('todoList'),
             startTimerBtn: document.getElementById('startTimer'),
             startFocusBtn: document.getElementById('startFocus'),
-            pauseFocusBtn: document.getElementById('pauseFocusMode'),
             syncStatusText: document.getElementById('syncStatusText'),
             syncLastSyncedText: document.getElementById('syncLastSyncedText')
         };
@@ -48,45 +47,77 @@ class PopupController {
     }
 
     async loadAllData() {
-        await Promise.all([
-            this.loadSettings(),
-            this.loadTodos(),
-            this.restoreTimerState(),
-            this.loadCurrentSite(),  // Quick-Add current site
-            this.checkPauseState(),
-            this.checkFocusPauseState(),
-            this.refreshSyncStatus()
-        ]);
+        const tasks = [
+            ['settings', () => this.loadSettings()],
+            ['todos', () => this.loadTodos()],
+            ['timer state', () => this.restoreTimerState()],
+            ['current site', () => this.loadCurrentSite()],
+            ['pause state', () => this.checkPauseState()],
+            ['protection status', () => this.refreshProtectionStatus()],
+            ['sync status', () => this.refreshSyncStatus()]
+        ];
+        const results = await Promise.allSettled(tasks.map(([, task]) => task()));
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                console.error(`Failed to load ${tasks[index][0]}:`, result.reason);
+            }
+        });
     }
 
 
 
-    setupEventListeners() {
-<<<<<<< HEAD
-        document.getElementById('toggleClock').addEventListener('click', () => this.toggleFloatingClock());
-        document.getElementById('flipClockMode').addEventListener('click', () => this.openFlipClockTab());
-        document.getElementById('pauseProtectionMode').addEventListener('click', () => this.handlePauseProtection());
-        if (this.elements.pauseFocusBtn) {
-            this.elements.pauseFocusBtn.addEventListener('click', () => this.handleFocusPause());
+    async refreshProtectionStatus() {
+        const response = await chrome.runtime.sendMessage({ action: 'getProtectionStatus' }).catch(() => null);
+        const status = response?.status;
+        const main = document.getElementById('popupProtectionStatus');
+        const meta = document.getElementById('popupProtectionMeta');
+        const dot = document.getElementById('protectionStatusDot');
+        if (!main || !meta || !dot) return;
+
+        dot.className = 'status-dot';
+        if (status?.paused) {
+            dot.classList.add('is-paused');
+            main.textContent = 'Protection paused';
+            meta.textContent = status.pauseUntil ? `Resumes ${new Date(status.pauseUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Paused until resumed';
+        } else if (status?.safeMode) {
+            dot.classList.add('is-safe');
+            main.textContent = 'Safe mode enabled';
+            meta.textContent = 'Automatic redirects are paused';
+        } else if (status?.focusActive) {
+            main.textContent = 'Focus Mode active';
+            meta.textContent = 'Distraction protection is running';
+        } else if (status?.sleepActive) {
+            main.textContent = 'Sleep protection active';
+            meta.textContent = 'Your sleep window is enforcing';
+        } else if (status?.scheduleActive) {
+            main.textContent = 'Scheduled protection active';
+            meta.textContent = 'Your current schedule is enforcing';
+        } else {
+            dot.classList.add('is-idle');
+            main.textContent = 'Protection ready';
+            meta.textContent = `${Math.round((status?.todaySeconds || 0) / 60)} minutes tracked today`;
         }
-        document.getElementById('blockSocialMedia').addEventListener('click', () => this.blockSocialMedia());
-        document.getElementById('syncNowButton').addEventListener('click', () => this.syncNow());
-        document.getElementById('openSyncSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
-        this.elements.startFocusBtn.addEventListener('click', () => this.handleFocusMode());
-        document.getElementById('openSettings').addEventListener('click', () => chrome.runtime.openOptionsPage());
-        this.elements.startTimerBtn.addEventListener('click', () => this.toggleTimer());
-        document.getElementById('addTask').addEventListener('click', () => this.addTask());
-        document.getElementById('blockElement').addEventListener('click', () => this.startElementPicker());
-        document.getElementById('toggleFormat').addEventListener('click', () => this.toggleTimeFormat());
-        document.getElementById('updateFilters').addEventListener('click', () => this.updateFilters());
-=======
+    }
+
+    setupEventListeners() {
         const bind = (id, fn) => {
             const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('click', () => { console.log('Clicked:', id); fn(); });
-            } else {
+            if (!el) {
                 console.warn('Button not found:', id);
+                return;
             }
+            el.addEventListener('click', async (event) => {
+                if (el.disabled) return;
+                el.disabled = true;
+                try {
+                    await fn(event);
+                } catch (error) {
+                    console.error(`Popup action failed: ${id}`, error);
+                    this.showToast('Action failed. Please try again.');
+                } finally {
+                    el.disabled = false;
+                }
+            });
         };
 
         bind('toggleClock', () => this.toggleFloatingClock());
@@ -102,7 +133,7 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
->>>>>>> 73173dc8da33ac8b153e8731bc15ed530eeb0bd2
+        bind('refreshPopupStatus', () => this.refreshProtectionStatus());
 
         // Quick-add current site buttons
         const addToFocusBtn = document.getElementById('addToFocus');
@@ -110,36 +141,43 @@ class PopupController {
         if (addToFocusBtn) addToFocusBtn.addEventListener('click', () => this.addCurrentSiteToFocus());
         if (addToScheduleBtn) addToScheduleBtn.addEventListener('click', () => this.addCurrentSiteToSchedule());
 
-        this.elements.timerMinutes.addEventListener('input', () => this.syncTimerInputs());
-        this.elements.timerSeconds.addEventListener('input', () => this.syncTimerInputs());
+        this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
+        this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
 
-        const restoreFocusBtn = document.getElementById('restoreFocusBtn');
-        if (restoreFocusBtn) {
-            restoreFocusBtn.addEventListener('click', () => {
-                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
-                window.close();
-            });
-        }
-
-        const restoreTimerBtn = document.getElementById('restoreTimerBtn');
-        if (restoreTimerBtn) {
-            restoreTimerBtn.addEventListener('click', () => {
-                chrome.runtime.sendMessage({ action: 'showStatusWidget' });
-                window.close();
-            });
-        }
+        const restoreStatusWidget = async () => {
+            const response = await chrome.runtime.sendMessage({ action: 'showStatusWidget' });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to restore status widget');
+            }
+            window.close();
+        };
+        document.getElementById('restoreFocusBtn')?.addEventListener('click', restoreStatusWidget);
+        document.getElementById('restoreTimerBtn')?.addEventListener('click', restoreStatusWidget);
 
         // Ad blocker toggle
-        document.getElementById('adBlockToggle').addEventListener('change', (e) => {
-            chrome.runtime.sendMessage({ action: 'toggleAdBlock', enabled: e.target.checked });
+        const adBlockToggle = document.getElementById('adBlockToggle');
+        adBlockToggle?.addEventListener('change', async (event) => {
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'toggleAdBlock', enabled: event.target.checked });
+                if (response?.success === false) throw new Error(response.error || 'Unable to update ad blocker');
+                this.showToast(event.target.checked ? 'Ad blocking enabled.' : 'Ad blocking disabled.');
+            } catch (error) {
+                event.target.checked = !event.target.checked;
+                this.showToast('Unable to update ad blocking. Please try again.');
+                console.error('Failed to toggle ad blocker:', error);
+            }
         });
 
         // Widget display toggles
-        document.getElementById('focusTimerWidgetToggle').addEventListener('change', (e) => {
-            this.updateWidgetSetting('focusTimerWidgetEnabled', e.target.checked);
+        document.getElementById('focusTimerWidgetToggle')?.addEventListener('change', (event) => {
+            this.updateWidgetSetting('focusTimerWidgetEnabled', event.target.checked).catch((error) => {
+                console.error('Failed to update focus widget setting:', error);
+            });
         });
-        document.getElementById('timerWidgetToggle').addEventListener('change', (e) => {
-            this.updateWidgetSetting('timerWidgetEnabled', e.target.checked);
+        document.getElementById('timerWidgetToggle')?.addEventListener('change', (event) => {
+            this.updateWidgetSetting('timerWidgetEnabled', event.target.checked).catch((error) => {
+                console.error('Failed to update timer widget setting:', error);
+            });
         });
     }
 
@@ -161,7 +199,7 @@ class PopupController {
                 offline: 'Offline',
                 failed: 'Sync Failed'
             };
-            this.elements.syncStatusText.textContent = labelMap[status?.state] || 'Offline';
+            this.elements.syncStatusText.textContent = status?.conflict ? 'Conflict Needs Review' : (labelMap[status?.state] || 'Offline');
         }
 
         if (this.elements.syncLastSyncedText) {
@@ -296,46 +334,70 @@ class PopupController {
     }
 
     async startClock() {
+        if (this.state.clockInterval) clearInterval(this.state.clockInterval);
+
         const update = async () => {
-            const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-            const is12h = settings?.timeFormat === '12h';
-
-            this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
-                hour12: is12h,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-
-            document.getElementById('toggleFormat').textContent = is12h ? '12H' : '24H';
+            try {
+                const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
+                const is12h = settings?.timeFormat === '12h';
+                if (this.elements.currentTime) {
+                    this.elements.currentTime.textContent = new Date().toLocaleTimeString('en-US', {
+                        hour12: is12h,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                }
+                const formatButton = document.getElementById('toggleFormat');
+                if (formatButton) formatButton.textContent = is12h ? '12H' : '24H';
+            } catch (error) {
+                console.error('Failed to update popup clock:', error);
+            }
         };
-        update();
+        await update();
         this.state.clockInterval = setInterval(update, 1000);
     }
 
     async toggleTimeFormat() {
-        const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
-        const newFormat = settings?.timeFormat === '12h' ? '24h' : '12h';
-        await chrome.runtime.sendMessage({ action: 'setTimeFormat', format: newFormat });
-        this.startClock(); // Refresh immediately
-    }
-
-    toggleTimer() {
-        if (this.state.isTimerRunning) {
-            this.stopTimer();
-        } else {
-            const mins = parseInt(this.elements.timerMinutes.value) || 0;
-            const secs = parseInt(this.elements.timerSeconds.value) || 0;
-            this.startTimer(mins * 60 + secs);
+        try {
+            const settings = await chrome.runtime.sendMessage({ action: 'getSettings' });
+            const newFormat = settings?.timeFormat === '12h' ? '24h' : '12h';
+            const response = await chrome.runtime.sendMessage({ action: 'setTimeFormat', format: newFormat });
+            if (response?.success === false) throw new Error(response.error || 'Unable to change time format');
+            await this.startClock();
+        } catch (error) {
+            console.error('Failed to change time format:', error);
+            this.showToast('Unable to change time format.');
         }
     }
 
-    startTimer(seconds) {
-        if (seconds <= 0) return;
+    async toggleTimer() {
+        if (this.state.isTimerRunning) {
+            await this.stopTimer();
+            return;
+        }
+        const mins = parseInt(this.elements.timerMinutes?.value, 10) || 0;
+        const secs = parseInt(this.elements.timerSeconds?.value, 10) || 0;
+        await this.startTimer(mins * 60 + secs);
+    }
+
+    async startTimer(seconds) {
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            this.showToast('Enter a timer duration greater than zero.');
+            return;
+        }
+
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'startTimer', duration: seconds });
+            if (response?.success === false) throw new Error(response.error || 'Unable to start timer');
+        } catch (error) {
+            console.error('Failed to start timer:', error);
+            this.showToast('Unable to start the timer.');
+            return;
+        }
+
         this.state.timerRemaining = seconds;
         this.state.isTimerRunning = true;
-
-        chrome.runtime.sendMessage({ action: 'startTimer', duration: seconds });
         this.elements.startTimerBtn.textContent = 'Stop Flow';
         this.elements.startTimerBtn.classList.add('btn-focus');
         this.elements.timerInputsContainer.style.display = 'none';
@@ -357,14 +419,22 @@ class PopupController {
         }, 1000);
     }
 
-    stopTimer() {
+    async stopTimer() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'stopTimer' });
+            if (response?.success === false) throw new Error(response.error || 'Unable to stop timer');
+        } catch (error) {
+            console.error('Failed to stop timer:', error);
+            this.showToast('Unable to stop the timer.');
+            return;
+        }
+
         this.state.isTimerRunning = false;
         clearInterval(this.state.timerInterval);
         this.elements.startTimerBtn.textContent = 'Start Flow';
         this.elements.startTimerBtn.classList.remove('btn-focus');
         this.elements.timerInputsContainer.style.display = 'flex';
         this.elements.timerDisplay.style.display = 'none';
-        chrome.runtime.sendMessage({ action: 'stopTimer' });
         this.syncTimerInputs();
     }
 
@@ -398,153 +468,20 @@ class PopupController {
             }
         } else {
             const mins = prompt('Focus duration (minutes):', '25');
-            if (mins && !isNaN(mins)) {
-                await chrome.runtime.sendMessage({
-                    action: 'startFocusMode',
-                    duration: parseInt(mins) * 60,
-                    startAfterMinutes: 1
-                });
-                window.close();
+            const durationMinutes = Math.floor(Number(mins));
+            if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+                if (mins !== null) this.showToast('Enter a focus duration greater than zero.');
+                return;
             }
-        }
-    }
-
-    async checkFocusPauseState() {
-        const result = await chrome.storage.local.get(['focusPauseUntil', 'focusPausedState', 'focusState']);
-        const pauseBtn = this.elements.pauseFocusBtn;
-        const labelEl = document.getElementById('pauseFocusLabel');
-
-        if (!pauseBtn || !labelEl) return;
-
-        const isPaused = Boolean(result.focusPausedState) && (result.focusPauseUntil === -1 || Date.now() < Number(result.focusPauseUntil || 0));
-        const isActive = Boolean(result.focusState?.isActive);
-
-        if (isPaused) {
-            labelEl.textContent = 'Resume Focus';
-            pauseBtn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-            pauseBtn.style.background = 'rgba(16, 185, 129, 0.1)';
-        } else {
-            labelEl.textContent = 'Pause Focus';
-            pauseBtn.style.borderColor = 'rgba(244, 63, 94, 0.3)';
-            pauseBtn.style.background = '';
-        }
-
-        pauseBtn.disabled = !isActive && !isPaused;
-        pauseBtn.style.opacity = pauseBtn.disabled ? '0.55' : '1';
-        pauseBtn.style.cursor = pauseBtn.disabled ? 'not-allowed' : 'pointer';
-    }
-
-    generateFocusChallenge() {
-        const charset = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        const bytes = crypto.getRandomValues(new Uint8Array(30));
-        let challenge = '';
-        for (let i = 0; i < 30; i += 1) {
-            challenge += charset[bytes[i] % charset.length];
-        }
-        return challenge;
-    }
-
-    showFocusPauseChallenge() {
-        return new Promise((resolve) => {
-            const challenge = this.generateFocusChallenge();
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,0.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
-
-            const modal = document.createElement('div');
-            modal.style.cssText = 'width:min(520px,calc(100vw - 32px));background:linear-gradient(180deg,#0f172a,#111827);color:#e5e7eb;border:1px solid rgba(99,102,241,0.35);border-radius:18px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,0.5);font-family:Inter,sans-serif;';
-            modal.innerHTML = `
-                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Pause Focus Verification</div>
-                <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">Type the 30-character string exactly</div>
-                <div style="font-size:0.9rem;line-height:1.5;color:#cbd5e1;margin-bottom:12px;">Lowercase letters and numbers only. Copy-paste is disabled.</div>
-                <div style="font-family:'Courier New',monospace;letter-spacing:0.12em;word-break:break-all;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.18);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:#f8fafc;">${challenge}</div>
-                <input id="focus-pause-challenge-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onpaste="return false;" ondrop="return false;" placeholder="Enter the exact 30-character string" style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(148,163,184,0.22);background:#0b1220;color:#e5e7eb;margin-bottom:14px;">
-                <div id="focus-pause-error" style="display:none;color:#fca5a5;font-size:0.86rem;margin-bottom:14px;">The string does not match. Try again.</div>
-                <div style="display:flex;justify-content:flex-end;gap:10px;">
-                    <button id="focus-pause-cancel" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
-                    <button id="focus-pause-confirm" style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Confirm</button>
-                </div>
-            `;
-
-            const settle = (value) => {
-                overlay.remove();
-                resolve(value);
-            };
-
-            const input = modal.querySelector('#focus-pause-challenge-input');
-            const error = modal.querySelector('#focus-pause-error');
-            const cancelBtn = modal.querySelector('#focus-pause-cancel');
-            const confirmBtn = modal.querySelector('#focus-pause-confirm');
-
-            const verify = () => {
-                if ((input.value || '').trim() === challenge) {
-                    settle(true);
-                } else {
-                    error.style.display = 'block';
-                    input.addEventListener('input', () => { error.style.display = 'none'; }, { once: true });
-                }
-            };
-
-            cancelBtn.addEventListener('click', () => settle(false));
-            confirmBtn.addEventListener('click', verify);
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') verify();
+            const response = await chrome.runtime.sendMessage({
+                action: 'startFocusMode',
+                duration: durationMinutes * 60,
+                startAfterMinutes: 1
             });
-            input.addEventListener('paste', (e) => e.preventDefault());
-            input.addEventListener('drop', (e) => e.preventDefault());
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) settle(false);
-            });
-
-            overlay.appendChild(modal);
-            document.body.appendChild(overlay);
-            input.focus();
-        });
-    }
-
-    async chooseFocusPauseDuration() {
-        const choice = prompt('Pause Focus for how long? Enter 5 or 10 minutes:', '5');
-        if (!choice) return 0;
-        const minutes = Number(choice.trim());
-        if (minutes !== 5 && minutes !== 10) {
-            this.showToast('Choose 5 or 10 minutes.');
-            return 0;
-        }
-        return minutes * 60000;
-    }
-
-    async handleFocusPause() {
-        const result = await chrome.storage.local.get(['focusState', 'focusPauseUntil', 'focusPausedState']);
-        const focusState = result.focusState || {};
-        const isPaused = Boolean(result.focusPausedState) && (result.focusPauseUntil === -1 || Date.now() < Number(result.focusPauseUntil || 0));
-
-        if (isPaused) {
-            const response = await chrome.runtime.sendMessage({ action: 'resumeFocusMode' });
-            if (response?.success) {
-                this.showToast('Focus resumed.');
-                await this.checkFocusPauseState();
-            } else {
-                this.showToast('Unable to resume focus right now.');
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to start focus mode');
             }
-            return;
-        }
-
-        if (!focusState.isActive) {
-            this.showToast('Start Focus Mode first, then pause it when needed.');
-            return;
-        }
-
-        const verified = await this.showFocusPauseChallenge();
-        if (!verified) return;
-
-        const durationMs = await this.chooseFocusPauseDuration();
-        if (!durationMs) return;
-
-        const response = await chrome.runtime.sendMessage({ action: 'pauseFocusMode', durationMs });
-        if (response?.success) {
-            this.showToast('Focus paused temporarily.');
-            await this.checkFocusPauseState();
-        } else {
-            this.showToast(response?.error || 'Could not pause focus.');
+            window.close();
         }
     }
 
@@ -577,12 +514,15 @@ class PopupController {
             }
         } else {
             // Enable social media blocking
-            await chrome.runtime.sendMessage({
+            const response = await chrome.runtime.sendMessage({
                 action: 'startFocusMode',
                 duration: 25 * 60,
                 focusBlockedSites: this.socialMediaSites,
                 startAfterMinutes: 1
             });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to enable social media blocking');
+            }
             this.showToast('Social media block will start in 1 minute.');
             this.updateSocialMediaButton(true);
         }
@@ -819,16 +759,8 @@ class PopupController {
         return true;
     }
 
-    async runProtectionSequence(actionLabel) {
-        const messages = [
-            'Stay with the task a little longer.',
-            'Your attention is already invested here.',
-            'Breaks are easier to start than momentum is to rebuild.',
-            'Hold the line and protect the session.',
-            'This pause exists to prevent accidental disengagement.'
-        ];
-
-        const allowed = await new Promise((resolve) => {
+    async showProtectionStep(actionLabel, step, totalSteps, message, delaySeconds = 8) {
+        return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
                 position: fixed; inset: 0; z-index: 100000;
@@ -838,6 +770,8 @@ class PopupController {
             `;
 
             const modal = document.createElement('div');
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
             modal.style.cssText = `
                 width: min(460px, calc(100vw - 32px));
                 background: linear-gradient(180deg, #0f172a, #111827);
@@ -848,25 +782,30 @@ class PopupController {
                 box-shadow: 0 24px 60px rgba(0,0,0,0.5);
                 font-family: 'Inter', sans-serif;
             `;
-
             modal.innerHTML = `
-                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Protection Countdown</div>
-                <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px;">${actionLabel}</div>
-                <div id="popup-countdown-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
+                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection · Step <span id="popup-protection-step"></span></div>
+                <div id="popup-protection-action" style="font-size:1.05rem;font-weight:800;margin-bottom:8px;"></div>
+                <div id="popup-protection-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                    <div id="popup-countdown-value" style="font-family:'Outfit',sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:80px;">01:00</div>
+                    <div id="popup-protection-countdown" style="font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:800;color:#818cf8;min-width:68px;">8s</div>
                     <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
-                        <div id="popup-countdown-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 1s linear;"></div>
+                        <div id="popup-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
                     </div>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;">
-                    <button id="popup-countdown-cancel" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Cancel</button>
-                    <button id="popup-countdown-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Wait</button>
+                    <button id="popup-protection-stay" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
+                    <button id="popup-protection-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue Anyway (8s)</button>
                 </div>
             `;
 
-            const totalSeconds = 60;
-            const totalMs = totalSeconds * 1000;
+            modal.querySelector('#popup-protection-step').textContent = `${step} of ${totalSteps}`;
+            modal.querySelector('#popup-protection-action').textContent = actionLabel;
+            modal.querySelector('#popup-protection-message').textContent = message;
+            const countdownEl = modal.querySelector('#popup-protection-countdown');
+            const barEl = modal.querySelector('#popup-protection-bar');
+            const stayBtn = modal.querySelector('#popup-protection-stay');
+            const continueBtn = modal.querySelector('#popup-protection-continue');
+            const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
             const endAt = Date.now() + totalMs;
             let timerId = null;
 
@@ -875,64 +814,60 @@ class PopupController {
                 document.removeEventListener('keydown', escHandler, true);
                 overlay.remove();
             };
-
             const settle = (value) => {
                 cleanup();
                 resolve(value);
             };
-
-            const escHandler = (e) => {
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    settle(false);
-                }
+            const escHandler = (event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                settle(false);
             };
-
-            const messageEl = modal.querySelector('#popup-countdown-message');
-            const valueEl = modal.querySelector('#popup-countdown-value');
-            const barEl = modal.querySelector('#popup-countdown-bar');
-            const cancelBtn = modal.querySelector('#popup-countdown-cancel');
-            const continueBtn = modal.querySelector('#popup-countdown-continue');
-
-            const formatCountdown = (value) => {
-                const total = Math.max(0, Number(value) || 0);
-                const mins = Math.floor(total / 60);
-                const secs = total % 60;
-                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-            };
-
             const tick = () => {
-                const remaining = Math.max(0, endAt - Date.now());
-                const remainingSeconds = Math.ceil(remaining / 1000);
-                valueEl.textContent = formatCountdown(remainingSeconds);
-                messageEl.textContent = messages[remainingSeconds % messages.length];
-                barEl.style.width = `${Math.max(0, (remaining / totalMs) * 100)}%`;
-
-                if (remainingSeconds <= 0) {
-                    continueBtn.disabled = false;
-                    continueBtn.style.opacity = '1';
-                    continueBtn.style.cursor = 'pointer';
-                    continueBtn.textContent = 'Continue';
-                    clearInterval(timerId);
-                } else {
-                    continueBtn.textContent = `Wait ${remainingSeconds}s`;
+                const remainingMs = Math.max(0, endAt - Date.now());
+                const remainingSeconds = Math.ceil(remainingMs / 1000);
+                countdownEl.textContent = remainingSeconds > 0 ? `${remainingSeconds}s` : 'Ready';
+                barEl.style.width = `${(remainingMs / totalMs) * 100}%`;
+                if (remainingSeconds > 0) {
+                    continueBtn.textContent = `Continue Anyway (${remainingSeconds}s)`;
+                    return;
                 }
+                continueBtn.disabled = false;
+                continueBtn.style.opacity = '1';
+                continueBtn.style.cursor = 'pointer';
+                continueBtn.textContent = 'Continue Anyway';
+                clearInterval(timerId);
             };
-
-            cancelBtn.addEventListener('click', () => settle(false));
-            continueBtn.addEventListener('click', () => {
-                if (continueBtn.disabled) return;
-                settle(true);
-            });
 
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
             document.addEventListener('keydown', escHandler, true);
+            stayBtn.addEventListener('click', () => settle(false));
+            continueBtn.addEventListener('click', () => {
+                if (!continueBtn.disabled) settle(true);
+            });
             tick();
-            timerId = setInterval(tick, 1000);
+            timerId = setInterval(tick, 200);
+            stayBtn.focus();
         });
+    }
 
-        if (!allowed) return false;
+    async runProtectionSequence(actionLabel) {
+        const messages = [
+            'Your current focus is valuable. You can keep it with one click.',
+            'Small distractions can turn into much longer detours.',
+            'Finish the next meaningful step before changing your protection.',
+            'Momentum is difficult to rebuild once it is broken.',
+            'A short pause now can protect your goals for the rest of the day.',
+            'Choose deliberately: protect your attention or continue anyway.',
+            'This is the final check. Make the choice you will be proud of later.'
+        ];
+
+        for (let index = 0; index < messages.length; index += 1) {
+            const allowed = await this.showProtectionStep(actionLabel, index + 1, messages.length, messages[index], 8);
+            if (!allowed) return false;
+        }
 
         const challengeOk = await this.runChallengeChecks(actionLabel);
         if (!challengeOk) {
