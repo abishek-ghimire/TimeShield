@@ -56,10 +56,22 @@ body {
     font-family: 'Inter', sans-serif;
     background: var(--bg-gradient);
     color: var(--text-main);
-    width: 380px;
+    width: min(380px, 100vw);
+    min-width: 0;
     min-height: 500px;
     overflow-x: hidden;
     transition: background 0.3s ease, color 0.3s ease;
+}
+
+button,
+input,
+select {
+    max-width: 100%;
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.65;
 }
 
 .popup-container {
@@ -440,6 +452,63 @@ body.theme-light .todo-item:hover {
 }
 
 /* Animations */
+@media (max-width: 360px) {
+    .popup-container {
+        padding: 12px;
+    }
+
+    .popup-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .brand h1 {
+        font-size: 1.15rem;
+    }
+
+    .current-time {
+        margin-left: auto;
+        font-size: 1rem;
+        padding: 5px 8px;
+    }
+
+    .quick-actions-modern,
+    .progress-grid,
+    .ad-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-primary {
+        grid-column: auto;
+    }
+
+    .timer-main-display {
+        font-size: 2.5rem;
+    }
+
+    .timer-inputs {
+        width: 100%;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .timer-inputs input {
+        width: min(64px, 28vw);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

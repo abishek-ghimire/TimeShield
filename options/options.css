@@ -67,7 +67,9 @@ body {
 }
 
 .main-content {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
     padding: 40px 60px;
     max-width: 1000px;
     margin: 0 auto;
@@ -524,5 +526,75 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
     .main-content {
         padding: 30px 20px;
+        max-width: none;
+    }
+
+    .app-footer {
+        padding: 28px 20px;
+    }
+
+    .footer-content,
+    .footer-links {
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+}
+
+@media (max-width: 560px) {
+    .sidebar {
+        padding: 14px 12px;
+    }
+
+    .brand {
+        padding: 0 8px 18px;
+    }
+
+    .nav-tabs {
+        gap: 6px;
+        margin: 0 -4px;
+        padding: 0 4px;
+    }
+
+    .tab {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .main-content {
+        padding: 20px 12px;
+    }
+
+    .card,
+    .settings-section {
+        padding: 16px;
+    }
+
+    .form-row,
+    .form-grid,
+    .stats-grid,
+    .input-group,
+    .button-group {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+
+    .site-item {
+        align-items: flex-start;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .site-url {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .footer-content {
+        flex-direction: column;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        gap: 10px;
     }
 }
