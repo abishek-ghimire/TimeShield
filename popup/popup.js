@@ -733,9 +733,10 @@ class PopupController {
                         <div id="popup-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+                    <span id="popup-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.78rem;">Continue will appear after the countdown.</span>
                     <button id="popup-protection-stay" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
-                    <button id="popup-protection-continue" disabled style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue Anyway (8s)</button>
+                    <button id="popup-protection-continue" hidden style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Continue Anyway</button>
                 </div>
             `;
 
@@ -745,6 +746,7 @@ class PopupController {
             const countdownEl = modal.querySelector('#popup-protection-countdown');
             const barEl = modal.querySelector('#popup-protection-bar');
             const stayBtn = modal.querySelector('#popup-protection-stay');
+            const waitEl = modal.querySelector('#popup-protection-wait');
             const continueBtn = modal.querySelector('#popup-protection-continue');
             const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
             const endAt = Date.now() + totalMs;
@@ -771,13 +773,12 @@ class PopupController {
                 countdownEl.textContent = remainingSeconds > 0 ? `${remainingSeconds}s` : 'Ready';
                 barEl.style.width = `${(remainingMs / totalMs) * 100}%`;
                 if (remainingSeconds > 0) {
-                    continueBtn.textContent = `Continue Anyway (${remainingSeconds}s)`;
+                    waitEl.textContent = `Continue will appear in ${remainingSeconds}s.`;
                     return;
                 }
-                continueBtn.disabled = false;
-                continueBtn.style.opacity = '1';
-                continueBtn.style.cursor = 'pointer';
-                continueBtn.textContent = 'Continue Anyway';
+                waitEl.textContent = 'You may continue if you still choose to.';
+                continueBtn.hidden = false;
+                continueBtn.focus();
                 clearInterval(timerId);
             };
 
@@ -785,9 +786,7 @@ class PopupController {
             document.body.appendChild(overlay);
             document.addEventListener('keydown', escHandler, true);
             stayBtn.addEventListener('click', () => settle(false));
-            continueBtn.addEventListener('click', () => {
-                if (!continueBtn.disabled) settle(true);
-            });
+            continueBtn.addEventListener('click', () => settle(true));
             tick();
             timerId = setInterval(tick, 200);
             stayBtn.focus();

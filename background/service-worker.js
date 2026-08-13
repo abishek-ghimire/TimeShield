@@ -687,32 +687,23 @@ class BackgroundService {
                     break;
                 }
 
-                const isShortPause = durationMs === 300000;
-                const requiresPassword = !isShortPause || this.shortPauseUsage.count >= 2;
-                if (!requiresPassword) {
-                    const paused = await this.pauseBlocking(durationMs);
-                    if (paused) await this.incrementShortPause();
-                    sendResponse(paused
-                        ? { success: true, requiresPassword: false }
-                        : { success: false, error: 'Pausing is unavailable while Focus Mode is active' });
-                } else {
-                    const challenge = this.generatePauseChallenge();
-                    await chrome.storage.local.set({
-                        pauseChallenge: {
-                            value: challenge,
-                            durationMs,
-                            restOfDay: message.restOfDay === true,
-                            expiresAt: Date.now() + (10 * 60 * 1000)
-                        }
-                    });
-                    sendResponse({
-                        success: false,
-                        requiresPassword: true,
-                        challenge,
+                // Every pause duration requires the same visible confirmation word. This keeps
+                // the duration picker from silently pausing protection, including five minutes.
+                const challenge = this.generatePauseChallenge();
+                await chrome.storage.local.set({
+                    pauseChallenge: {
+                        value: challenge,
+                        durationMs,
                         restOfDay: message.restOfDay === true,
-                        remainingShortPauses: Math.max(0, 2 - this.shortPauseUsage.count)
-                    });
-                }
+                        expiresAt: Date.now() + (10 * 60 * 1000)
+                    }
+                });
+                sendResponse({
+                    success: false,
+                    requiresPassword: true,
+                    challenge,
+                    restOfDay: message.restOfDay === true
+                });
                 break;
             }
             case 'pauseBlockingWithPassword': {

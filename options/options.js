@@ -1557,9 +1557,10 @@ class OptionsManager {
                         <div id="ts-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+                    <span id="ts-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.82rem;">Continue will appear after the countdown.</span>
                     <button id="ts-protection-stay" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
-                    <button id="ts-protection-continue" disabled style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;opacity:0.5;cursor:not-allowed;">Continue Anyway (8s)</button>
+                    <button id="ts-protection-continue" hidden style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Continue Anyway</button>
                 </div>
             `;
 
@@ -1570,6 +1571,7 @@ class OptionsManager {
             const countdownEl = modal.querySelector('#ts-protection-countdown');
             const barEl = modal.querySelector('#ts-protection-bar');
             const stayBtn = modal.querySelector('#ts-protection-stay');
+            const waitEl = modal.querySelector('#ts-protection-wait');
             const continueBtn = modal.querySelector('#ts-protection-continue');
             const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
             const endAt = Date.now() + totalMs;
@@ -1596,13 +1598,12 @@ class OptionsManager {
                 countdownEl.textContent = remainingSeconds > 0 ? `${remainingSeconds}s` : 'Ready';
                 barEl.style.width = `${(remainingMs / totalMs) * 100}%`;
                 if (remainingSeconds > 0) {
-                    continueBtn.textContent = `Continue Anyway (${remainingSeconds}s)`;
+                    waitEl.textContent = `Continue will appear in ${remainingSeconds}s.`;
                     return;
                 }
-                continueBtn.disabled = false;
-                continueBtn.style.opacity = '1';
-                continueBtn.style.cursor = 'pointer';
-                continueBtn.textContent = 'Continue Anyway';
+                waitEl.textContent = 'You may continue if you still choose to.';
+                continueBtn.hidden = false;
+                continueBtn.focus();
                 clearInterval(timerId);
             };
 
@@ -1610,9 +1611,7 @@ class OptionsManager {
             document.body.appendChild(overlay);
             document.addEventListener('keydown', escHandler, true);
             stayBtn.addEventListener('click', () => settle(false));
-            continueBtn.addEventListener('click', () => {
-                if (!continueBtn.disabled) settle(true);
-            });
+            continueBtn.addEventListener('click', () => settle(true));
             tick();
             timerId = setInterval(tick, 200);
             stayBtn.focus();
@@ -1638,11 +1637,6 @@ class OptionsManager {
             const expectedPassword = String(settings.challengePasswordValue || 'focus');
             const pass = prompt(`${actionLabel}\n\nEnter your focus password`, '') || '';
             if (pass !== expectedPassword) return { ok: false, reason: 'Password verification failed' };
-        }
-
-        if (settings.challengeDelayEnabled) {
-            const delaySeconds = Math.max(3, Math.min(60, Number(settings.challengeDelaySeconds || 8)));
-            await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
         }
 
         return { ok: true };
