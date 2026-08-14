@@ -153,6 +153,13 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
 });
 
 
+test('Popup keeps an intrinsic width instead of collapsing into a clipped sidebar strip', async () => {
+    const popupCss = await read('popup/popup.css');
+    assert.match(popupCss, /html\s*\{[\s\S]*?width:\s*380px;[\s\S]*?min-width:\s*380px;/);
+    assert.match(popupCss, /body\s*\{[\s\S]*?width:\s*380px;[\s\S]*?min-width:\s*380px;/);
+    assert.doesNotMatch(popupCss, /width:\s*min\(380px,\s*100vw\)/);
+});
+
 test('Popup is compact, Mission-first, and schedule enforcement requires configured sites', async () => {
     const popupHtml = await read('popup/popup.html');
     const popupCss = await read('popup/popup.css');
