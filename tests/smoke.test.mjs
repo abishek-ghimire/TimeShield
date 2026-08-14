@@ -28,6 +28,7 @@ test('Manifest is valid Manifest V3 with required runtime permissions', async ()
         assert.ok(manifest.permissions.includes(permission), `missing ${permission} permission`);
     }
     assert.equal(manifest.background.service_worker, 'background/service-worker.js');
+    assert.equal(manifest.background.type, 'module', 'background imports require a module service worker');
 });
 
 test('All extension JavaScript parses successfully', async () => {
