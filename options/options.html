@@ -284,10 +284,13 @@
         select {
             -webkit-appearance: menulist !important;
             appearance: auto !important;
+            display: block;
+            min-height: 42px;
             cursor: pointer !important;
             pointer-events: auto !important;
             position: relative;
-            z-index: 1;
+            z-index: 4;
+            touch-action: manipulation;
         }
 
         select option {
@@ -1393,6 +1396,9 @@
             align-items: center;
             gap: 14px;
             padding: 16px 22px;
+            position: relative;
+            z-index: 2;
+            pointer-events: auto;
             cursor: pointer;
             user-select: none;
             background: transparent;
@@ -1479,23 +1485,31 @@
         }
 
         .accordion-body {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+            display: none;
+            position: relative;
+            z-index: 1;
         }
 
         .accordion-item.open .accordion-body {
-            grid-template-rows: 1fr;
+            display: block;
+            overflow: visible;
         }
 
         .accordion-inner {
-            overflow: hidden;
             padding: 0 22px;
-            transition: padding 0.32s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .accordion-item.open .accordion-inner {
             padding: 0 22px 22px;
+        }
+
+        .accordion-body select,
+        .accordion-body input,
+        .accordion-body button,
+        .accordion-body label {
+            position: relative;
+            z-index: 3;
+            pointer-events: auto;
         }
 
         .accordion-divider {
@@ -1723,7 +1737,7 @@
 
                     <!-- Notifications & Reminders -->
                     <div class="accordion-item open" id="acc-gen-notifications">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-gen-notifications">
+                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-gen-notifications">
                             <span class="accordion-icon">🔔</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Notifications &amp; Reminders</span>
@@ -1748,7 +1762,7 @@
 
                     <!-- Appearance -->
                     <div class="accordion-item" id="acc-gen-appearance">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-gen-appearance">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-gen-appearance">
                             <span class="accordion-icon">🎨</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Appearance</span>
@@ -1784,11 +1798,11 @@
 
                     <!-- Startup & Sync -->
                     <div class="accordion-item" id="acc-gen-startup">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-gen-startup">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-gen-startup">
                             <span class="accordion-icon">⚙️</span>
                             <span class="accordion-title-wrap">
-                                <span class="accordion-title">Startup &amp; Sync</span>
-                                <span class="accordion-subtitle">Auto-start, sync &amp; focus tips</span>
+                                <span class="accordion-title">Startup</span>
+                                <span class="accordion-subtitle">Auto-start and focus preferences</span>
                             </span>
                             <span class="accordion-chevron"><svg viewBox="0 0 24 24">
                                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -1809,7 +1823,7 @@
 
                     <!-- Warning and reliability controls -->
                     <div class="accordion-item" id="acc-gen-reliability">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-gen-reliability">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-gen-reliability">
                             <span class="accordion-icon">🛡️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Warnings &amp; Reliability</span>
@@ -1851,7 +1865,7 @@
 
                     <!-- Display -->
                     <div class="accordion-item open" id="acc-clk-display">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-clk-display">
+                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-clk-display">
                             <span class="accordion-icon">🕐</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Display</span>
@@ -1896,7 +1910,7 @@
 
                     <!-- What to Show -->
                     <div class="accordion-item" id="acc-clk-show">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-clk-show">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-clk-show">
                             <span class="accordion-icon">👁️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">What to Show</span>
@@ -1926,7 +1940,7 @@
 
                     <!-- Timezone -->
                     <div class="accordion-item" id="acc-clk-tz">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-clk-tz">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-clk-tz">
                             <span class="accordion-icon">🌐</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Timezone</span>
@@ -1971,7 +1985,7 @@
 
                     <!-- Focus Mode Blocklist (Moved up - core focus feature) -->
                     <div class="accordion-item" id="acc-foc-blocklist">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-blocklist">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-blocklist">
                             <span class="accordion-icon">🎯</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Focus Mode Blocklist</span>
@@ -1998,7 +2012,7 @@
 
                     <!-- Protection Challenges -->
                     <div class="accordion-item" id="acc-foc-challenges">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-challenges">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-challenges">
                             <span class="accordion-icon">🛡️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Protection Challenges</span>
@@ -2024,7 +2038,7 @@
 
                     <!-- Pause Protection -->
                     <div class="accordion-item" id="acc-foc-pause">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-foc-pause">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-pause">
                             <span class="accordion-icon">⏸️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Pause Protection</span>
@@ -2055,7 +2069,7 @@
 
                     <!-- Enable / Level -->
                     <div class="accordion-item open" id="acc-adb-main">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-adb-main">
+                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-adb-main">
                             <span class="accordion-icon">🛑</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Ad Blocking</span>
@@ -2087,7 +2101,7 @@
 
                     <!-- Filter Lists -->
                     <div class="accordion-item" id="acc-adb-filters">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-filters">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-adb-filters">
                             <span class="accordion-icon">📋</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Filter Lists</span>
@@ -2124,7 +2138,7 @@
 
                     <!-- Custom Filters -->
                     <div class="accordion-item" id="acc-adb-custom">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-custom">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-adb-custom">
                             <span class="accordion-icon">✏️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Custom Filters</span>
@@ -2147,7 +2161,7 @@
 
                     <!-- Ad Blocker Whitelist -->
                     <div class="accordion-item" id="acc-adb-whitelist">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-whitelist">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-adb-whitelist">
                             <span class="accordion-icon">✅</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Ad Blocker Whitelist</span>
@@ -2169,7 +2183,7 @@
 
                     <!-- Stats -->
                     <div class="accordion-item" id="acc-adb-stats">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-adb-stats">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-adb-stats">
                             <span class="accordion-icon">📊</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Statistics &amp; Reset</span>
@@ -2200,7 +2214,7 @@
 
                     <!-- Task Preferences -->
                     <div class="accordion-item open" id="acc-tasks-prefs">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-tasks-prefs">
+                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-tasks-prefs">
                             <span class="accordion-icon">📝</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Task Preferences</span>
@@ -2242,7 +2256,7 @@
 
                     <!-- ① Scheduled Blocking List -->
                     <div class="accordion-item open" id="acc-blocklist">
-                        <button class="accordion-header" aria-expanded="true" data-target="acc-blocklist">
+                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-blocklist">
                             <span class="accordion-icon">🚫</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Scheduled Blocking List</span>
@@ -2270,7 +2284,7 @@
 
                     <!-- ② Schedule Settings -->
                     <div class="accordion-item" id="acc-schedule">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-schedule">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-schedule">
                             <span class="accordion-icon">🕐</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Schedule Settings</span>
@@ -2335,7 +2349,7 @@
 
                     <!-- ③ Sleep Time Blocking -->
                     <div class="accordion-item" id="acc-sleep">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-sleep">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-sleep">
                             <span class="accordion-icon">😴</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Sleep Time Blocking</span>
@@ -2420,7 +2434,7 @@
 
                     <!-- ④ Time Limits -->
                     <div class="accordion-item" id="acc-timelimits">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-timelimits">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-timelimits">
                             <span class="accordion-icon">⏳</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Daily Time Limits</span>
@@ -2458,7 +2472,7 @@
 
                     <!-- ⑤ Global Distraction Limit -->
                     <div class="accordion-item" id="acc-global">
-                        <button class="accordion-header" aria-expanded="false" data-target="acc-global">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-global">
                             <span class="accordion-icon">🌍</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Global Distraction Limit</span>

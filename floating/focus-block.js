@@ -53,55 +53,46 @@ class FocusBlockPage {
             });
         }
 
-        // Add click handlers to duration buttons
+        // Every duration immediately asks the worker for a challenge, then replaces this
+        // chooser with the verification screen. The visible status avoids a silent click.
         document.querySelectorAll('.duration-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const duration = btn.dataset.minutes;
                 const isRestOfDay = duration === 'eod';
-                let durationMs = 0;
+                const durationMs = isRestOfDay
+                    ? Math.max(1, new Date(new Date().setHours(23, 59, 59, 999)).getTime() - Date.now())
+                    : Number(duration) * 60000;
+                const messageEl = pauseSection.querySelector('.pause-message');
 
-                if (isRestOfDay) {
-                    // End of day
-                    const now = new Date();
-                    const eod = new Date();
-                    eod.setHours(23, 59, 59, 999);
-                    durationMs = eod.getTime() - now.getTime();
-                } else if (duration === '-1') {
-                    // Indefinite pausing has been removed. Require a finite duration.
-                    alert('Indefinite pause option has been removed. Please choose a timed duration.');
-                    return;
-                } else {
-                    durationMs = parseInt(duration) * 60000;
-                }
+                if (!Number.isFinite(durationMs) || durationMs <= 0) return;
+                btn.disabled = true;
+                if (messageEl) messageEl.textContent = 'Preparing your verification challenge…';
 
-                console.log('🔍 Duration calculation:', { duration, durationMs, isFiveMin: durationMs === 300000 });
-
-                // Send pause message to background script
-                chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs: durationMs, restOfDay: isRestOfDay }, (response) => {
-                    if (response?.success) {
-                        // Show success message briefly
-                        pauseSection.innerHTML = `
-                            <h3>✅ Blocking Paused</h3>
-                            <p class="pause-message">Protection has been temporarily paused.</p>
-                        `;
-                        
-                        // Close the page after a short delay
-                        setTimeout(() => {
-                            window.close();
-                        }, 2000);
-                    } else if (response?.requiresPassword) {
+                try {
+                    const response = await chrome.runtime.sendMessage({
+                        action: 'pauseBlocking',
+                        durationMs,
+                        restOfDay: isRestOfDay
+                    });
+                    if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge?.render === 'function') {
                         window.TimeShieldPauseChallenge.render({
                             pauseSection,
                             pauseButton: pauseBtn,
                             response,
                             durationMs
                         });
-                    } else {
-                        pauseSection.querySelector('.pause-message')?.replaceChildren(
-                            document.createTextNode(response?.error || 'Unable to pause blocking. Please try again.')
-                        );
+                        return;
                     }
-                });
+                    if (response?.success) {
+                        pauseSection.innerHTML = '<h3>Blocking Paused</h3><p class="pause-message">Protection has been temporarily paused.</p>';
+                        window.setTimeout(() => window.close(), 2000);
+                        return;
+                    }
+                    throw new Error(response?.error || 'Unable to open verification.');
+                } catch (error) {
+                    btn.disabled = false;
+                    if (messageEl) messageEl.textContent = `${error.message || 'Unable to open verification.'} Please choose the duration again.`;
+                }
             });
         });
     }

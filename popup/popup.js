@@ -1,20 +1,5 @@
 class PopupController {
     constructor() {
-        this.socialMediaSites = [
-            'facebook.com',
-            'instagram.com',
-            'x.com',
-            'twitter.com',
-            'tiktok.com',
-            'reddit.com',
-            'snapchat.com',
-            'linkedin.com',
-            'pinterest.com',
-            'threads.net',
-            'discord.com',
-            'youtube.com'
-        ];
-
         this.elements = {
             currentTime: document.getElementById('currentTime'),
             timerDisplay: document.getElementById('timerDisplay'),
@@ -50,7 +35,6 @@ class PopupController {
             ['settings', () => this.loadSettings()],
             ['todos', () => this.loadTodos()],
             ['timer state', () => this.restoreTimerState()],
-            ['current site', () => this.loadCurrentSite()],
             ['pause state', () => this.checkPauseState()],
             ['protection status', () => this.refreshProtectionStatus()]
         ];
@@ -121,7 +105,6 @@ class PopupController {
         bind('toggleClock', () => this.toggleFloatingClock());
         bind('flipClockMode', () => this.openFlipClockTab());
         bind('pauseProtectionMode', () => this.handlePauseProtection());
-        bind('blockSocialMedia', () => this.blockSocialMedia());
         bind('startFocus', () => this.handleFocusMode());
         bind('openSettings', () => chrome.runtime.openOptionsPage());
         bind('startTimer', () => this.toggleTimer());
@@ -130,12 +113,6 @@ class PopupController {
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
         bind('refreshPopupStatus', () => this.refreshProtectionStatus());
-
-        // Quick-add current site buttons
-        const addToFocusBtn = document.getElementById('addToFocus');
-        const addToScheduleBtn = document.getElementById('addToSchedule');
-        if (addToFocusBtn) addToFocusBtn.addEventListener('click', () => this.addCurrentSiteToFocus());
-        if (addToScheduleBtn) addToScheduleBtn.addEventListener('click', () => this.addCurrentSiteToSchedule());
 
         this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
@@ -426,80 +403,6 @@ class PopupController {
         }
     }
 
-    async blockSocialMedia() {
-        const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
-        const focusState = result.focusState || {};
-        const pendingFocus = result.pendingFocusActivation || null;
-        const pendingSites = Array.isArray(pendingFocus?.focusBlockedSites) ? pendingFocus.focusBlockedSites : [];
-        
-        // Check if social media blocking is currently active
-        const isSocialMediaBlocked = (focusState.isActive &&
-            focusState.focusBlockedSites &&
-            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site))) ||
-            (pendingFocus && this.socialMediaSites.every(site => pendingSites.includes(site)));
-
-        if (isSocialMediaBlocked) {
-            const canStop = await this.runProtectionSequence('Disable Social Media Focus Block');
-            if (!canStop) return;
-
-            await chrome.runtime.sendMessage({ action: 'authorizeDisableActions', ttlMs: 45000 });
-            const response = focusState.isActive
-                ? await chrome.runtime.sendMessage({ action: 'stopFocusMode' })
-                : await chrome.runtime.sendMessage({ action: 'cancelPendingFocusMode' });
-            if (response?.success) {
-                this.showToast('Social media block disabled.');
-                this.updateSocialMediaButton(false);
-            } else {
-                alert('Focus protection is active. Please complete verification and try again.');
-                return;
-            }
-        } else {
-            // Enable social media blocking
-            const response = await chrome.runtime.sendMessage({
-                action: 'startFocusMode',
-                duration: 25 * 60,
-                focusBlockedSites: this.socialMediaSites,
-                startAfterMinutes: 1
-            });
-            if (response?.success === false) {
-                throw new Error(response.error || 'Unable to enable social media blocking');
-            }
-            this.showToast('Social media block will start in 1 minute.');
-            this.updateSocialMediaButton(true);
-        }
-        window.close();
-    }
-
-    async checkSocialMediaBlockState() {
-        const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
-        const focusState = result.focusState || {};
-        const pendingFocus = result.pendingFocusActivation || null;
-        const pendingSites = Array.isArray(pendingFocus?.focusBlockedSites) ? pendingFocus.focusBlockedSites : [];
-        
-        const isSocialMediaBlocked = (focusState.isActive &&
-            focusState.focusBlockedSites &&
-            this.socialMediaSites.every(site => focusState.focusBlockedSites.includes(site))) ||
-            (pendingFocus && this.socialMediaSites.every(site => pendingSites.includes(site)));
-        
-        this.updateSocialMediaButton(isSocialMediaBlocked);
-    }
-
-    updateSocialMediaButton(isBlocked) {
-        const label = document.getElementById('blockSocialMediaLabel');
-        const button = document.getElementById('blockSocialMedia');
-        if (label && button) {
-            if (isBlocked) {
-                label.textContent = 'Unblock Social Media';
-                button.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                button.style.background = 'rgba(16, 185, 129, 0.1)';
-            } else {
-                label.textContent = 'Block Social Media';
-                button.style.borderColor = '';
-                button.style.background = '';
-            }
-        }
-    }
-
     async toggleFloatingClock() {
         const result = await chrome.storage.local.get(['clockVisible']);
         const newState = !result.clockVisible;
@@ -545,122 +448,6 @@ class PopupController {
             chrome.tabs.create({ url: chrome.runtime.getURL('floating/pause-overlay.html') });
             window.close();
         }
-    }
-
-    // Load the current tab's domain and display quick-add + remaining time
-    async loadCurrentSite() {
-        const panel = document.getElementById('quickAddPanel');
-        const domainLabel = document.getElementById('quickAddDomain');
-        if (!panel || !domainLabel) return;
-
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab || !tab.url) { panel.style.display = 'none'; return; }
-
-        try {
-            const url = new URL(tab.url);
-            if (!url.protocol.startsWith('http')) { panel.style.display = 'none'; return; }
-            const domain = url.hostname.replace(/^www\./, '');
-            this.currentDomain = domain;
-            domainLabel.textContent = domain;
-            panel.style.display = 'block';
-            // Show remaining usage time if a limit exists
-            await this.showRemainingTime(domain);
-        } catch (e) {
-            panel.style.display = 'none';
-        }
-    }
-
-    async showRemainingTime(domain) {
-        const el = document.getElementById('remainingTimeRow');
-        if (!el) return;
-
-        const today = new Date().toDateString();
-        const result = await chrome.storage.local.get(['siteUsageData', 'timeLimits', 'globalLimit']);
-        const usageData = result.siteUsageData || {};
-        const timeLimits = result.timeLimits || [];
-        const globalLimit = result.globalLimit || { enabled: false, minutes: 0, domains: [] };
-        const todayUsage = usageData[today] || {};
-        const usedSeconds = todayUsage[domain] || 0;
-
-        // Check individual per-site limit first
-        const limitObj = timeLimits.find(l => l.site === domain);
-        let limitSeconds = 0;
-        let limitLabel = '';
-
-        if (limitObj && limitObj.minutes > 0) {
-            limitSeconds = limitObj.minutes * 60;
-            limitLabel = 'Daily Limit';
-        } else if (globalLimit.enabled && (globalLimit.domains || []).includes(domain)) {
-            let globalUsed = 0;
-            (globalLimit.domains || []).forEach(d => { globalUsed += (todayUsage[d] || 0); });
-            const remaining = Math.max(0, (globalLimit.minutes || 0) * 60 - globalUsed);
-            this._renderRemainingTime(el, remaining, 'Shared Pool', (globalLimit.minutes || 0) * 60);
-            return;
-        }
-
-        if (!limitSeconds) { el.style.display = 'none'; return; }
-
-        this._renderRemainingTime(el, Math.max(0, limitSeconds - usedSeconds), 'Daily Limit', limitSeconds);
-
-        // Live refresh every 5 s while popup stays open
-        if (this._remainingTimer) clearInterval(this._remainingTimer);
-        this._remainingTimer = setInterval(async () => {
-            const r2 = await chrome.storage.local.get(['siteUsageData']);
-            const u2 = ((r2.siteUsageData || {})[today] || {});
-            const rem = Math.max(0, limitSeconds - (u2[domain] || 0));
-            this._renderRemainingTime(el, rem, 'Daily Limit', limitSeconds);
-            if (rem === 0) clearInterval(this._remainingTimer);
-        }, 5000);
-    }
-
-    _renderRemainingTime(el, remainingSeconds, label, totalSeconds) {
-        el.style.display = 'flex';
-        const h = Math.floor(remainingSeconds / 3600);
-        const m = Math.floor((remainingSeconds % 3600) / 60);
-        const s = remainingSeconds % 60;
-        let text = '';
-        if (remainingSeconds <= 0) text = '🚫 Limit reached!';
-        else if (h > 0) text = `${h}h ${m}m left`;
-        else if (m > 0) text = `${m}m ${s}s left`;
-        else text = `${s}s left`;
-
-        const pct = totalSeconds > 0 ? Math.round((remainingSeconds / totalSeconds) * 100) : 0;
-        const color = remainingSeconds <= 0 ? '#f43f5e'
-            : remainingSeconds < 300 ? '#f59e0b'
-                : '#10b981';
-
-        el.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:5px;">
-                <span style="font-size:0.68rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">⏱ ${label}</span>
-                <span style="font-size:0.82rem;font-weight:700;color:${color};">${text}</span>
-            </div>
-            <div style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:${color};border-radius:99px;transition:width 0.4s;"></div>
-            </div>`;
-    }
-
-    async addCurrentSiteToFocus() {
-        if (!this.currentDomain) return;
-        const result = await chrome.storage.local.get(['focusBlockedSites']);
-        const sites = result.focusBlockedSites || [];
-        if (!sites.includes(this.currentDomain)) {
-            sites.push(this.currentDomain);
-            await chrome.storage.local.set({ focusBlockedSites: sites });
-        }
-        const btn = document.getElementById('addToFocus');
-        if (btn) { btn.textContent = '✅ Added!'; btn.disabled = true; }
-    }
-
-    async addCurrentSiteToSchedule() {
-        if (!this.currentDomain) return;
-        const result = await chrome.storage.local.get(['scheduledBlockedSites']);
-        const sites = result.scheduledBlockedSites || [];
-        if (!sites.includes(this.currentDomain)) {
-            sites.push(this.currentDomain);
-            await chrome.storage.local.set({ scheduledBlockedSites: sites });
-        }
-        const btn = document.getElementById('addToSchedule');
-        if (btn) { btn.textContent = '✅ Added!'; btn.disabled = true; }
     }
 
     async startElementPicker() {

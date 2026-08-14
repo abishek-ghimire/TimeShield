@@ -129,6 +129,16 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     assert.match(worker, /isSleepBlockingActive/);
     assert.match(worker, /enableSleepBlocking/);
     assert.match(worker, /sleepActive/);
+    assert.match(worker, /manualOnlyDefaultsClearedVersion/);
+    assert.match(worker, /clearLegacyAutomaticProtection/);
+    assert.doesNotMatch(options, /Quick Add from Category|Active categories/);
+
+    const focusBlock = await read('floating/focus-block.js');
+    const pauseOverlay = await read('floating/pause-overlay.js');
+    assert.match(focusBlock, /Preparing your verification challenge/);
+    assert.match(focusBlock, /TimeShieldPauseChallenge\.render/);
+    assert.match(pauseOverlay, /const motTextEl.*motivationText/);
+    assert.match(pauseOverlay, /requiresPassword/);
 
     for (const source of [options, popup]) {
         assert.match(source, /showProtectionStep\(actionLabel, step, totalSteps, message, delaySeconds = 8\)/);

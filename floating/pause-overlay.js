@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let selectedDurationMs = 0;
     let selectedIsRestOfDay = false;
+    const motTextEl = document.getElementById('motivationText') || document.getElementById('motivationText1');
 
     // 0. Grace Pause Check
     const graceStatus = await chrome.runtime.sendMessage({ action: 'getGracePauseStatus' });
@@ -78,42 +79,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!Number.isFinite(selectedDurationMs) || selectedDurationMs <= 0) return;
             btn.disabled = true;
-            const response = await chrome.runtime.sendMessage({
-                action: 'pauseBlocking',
-                durationMs: selectedDurationMs,
-                restOfDay: isRestOfDay
-            });
-            btn.disabled = false;
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    action: 'pauseBlocking',
+                    durationMs: selectedDurationMs,
+                    restOfDay: isRestOfDay
+                });
 
-            if (response?.success) {
-                window.close();
-                return;
-            }
-
-            if (response?.requiresPassword && /^[a-z]{25}$/.test(response.challenge || '')) {
-                durationView.classList.remove('active');
-                motivationView.classList.add('active');
-                if (motTextEl) motTextEl.textContent = response.challenge;
-                const input = document.getElementById('motivationInput');
-                if (input) {
-                    input.value = '';
-                    input.placeholder = 'Type the 25 lowercase letters above';
-                    input.focus();
+                if (response?.success) {
+                    window.close();
+                    return;
                 }
-                return;
-            }
 
-            const error = document.getElementById('motivationErrorMsg');
-            if (error) {
-                error.textContent = response?.error || 'Unable to pause protection. Please try again.';
-                error.style.display = 'block';
+                if (response?.requiresPassword && /^[a-z]{25}$/.test(response.challenge || '')) {
+                    durationView.classList.remove('active');
+                    motivationView.classList.add('active');
+                    if (motTextEl) motTextEl.textContent = response.challenge;
+                    const input = document.getElementById('motivationInput');
+                    if (input) {
+                        input.value = '';
+                        input.placeholder = 'Type the 25 lowercase letters above';
+                        input.focus();
+                    }
+                    return;
+                }
+
+                const error = document.getElementById('motivationErrorMsg');
+                if (error) {
+                    error.textContent = response?.error || 'Unable to start verification. Please try again.';
+                    error.style.display = 'block';
+                }
+            } catch (error) {
+                const errorMessage = document.getElementById('motivationErrorMsg');
+                if (errorMessage) {
+                    errorMessage.textContent = 'Unable to start verification. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
+            } finally {
+                btn.disabled = false;
             }
         });
     });
 
     // 4. Verify the returned 25-letter lowercase challenge word.
     // Support either id for backward compatibility
-    const motTextEl = document.getElementById('motivationText') || document.getElementById('motivationText1');
     if (motTextEl) {
         // store expected to protect against accidental clearing
         motTextEl.dataset.expected = motTextEl.textContent || motTextEl.dataset.expected || '';

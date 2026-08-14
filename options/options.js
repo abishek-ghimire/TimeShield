@@ -27,7 +27,7 @@ class OptionsManager {
             ...(result.settings || {})
         };
         this.focusBlockedSites = result.focusBlockedSites || [];
-        this.scheduledBlockedSites = result.scheduledBlockedSites || this.getDefaultBlockedSites();
+        this.scheduledBlockedSites = Array.isArray(result.scheduledBlockedSites) ? result.scheduledBlockedSites : [];
         this.scheduledBlocking = {
             ...this.getDefaultScheduledBlocking(),
             ...(result.scheduledBlocking || {})
@@ -823,14 +823,8 @@ class OptionsManager {
     }
 
     getDefaultBlockedSites() {
-        return [
-            'facebook.com',
-            'twitter.com',
-            'instagram.com',
-            'youtube.com',
-            'tiktok.com',
-            'reddit.com'
-        ];
+        // Manual configuration only: no domain is protected until the user adds it.
+        return [];
     }
 
     getDefaultScheduledBlocking() {
