@@ -54,6 +54,7 @@ class BackgroundService {
         await chrome.storage.local.remove(['firebaseUser', 'customFirebaseConfig', 'syncStatus', 'syncDirty', 'lastSyncTime', 'syncConflict']);
         await this.initializeStorage();
         await this.migrateOldSettings();
+        await this.clearLegacyAutomaticProtection();
         await this.restoreState();
         await this.initializeAdBlocking();
         await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
@@ -229,8 +230,19 @@ class BackgroundService {
         if (focusResult.focusState) {
             this.focusState = focusResult.focusState;
             if (this.focusState.isActive) {
+                // Empty lists must never restore a Focus session or redirect the user.
+                const sites = Array.isArray(focusResult.focusBlockedSites)
+                    ? focusResult.focusBlockedSites.filter(site => typeof site === 'string' && site.trim())
+                    : [];
+                if (sites.length === 0) {
+                    this.focusState = { ...this.focusState, isActive: false, deepWorkMode: false, endTime: Date.now() };
+                    await chrome.alarms.clear('focusMode');
+                    await this.disableSiteBlockingRange(101, 200);
+                    await chrome.storage.local.set({ focusState: this.focusState });
+                    chrome.action.setBadgeText({ text: '' });
+                    return;
+                }
                 // If focus was active, ensure site blocking is re-enabled with correct sites
-                const sites = focusResult.focusBlockedSites || [];
                 await this.enableSiteBlocking(sites, 101, 'focus');
 
                 // Set badge and color
@@ -1369,13 +1381,19 @@ class BackgroundService {
         if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
             throw new Error('Focus duration must be greater than zero');
         }
+        const cleanSites = Array.isArray(focusBlockedSites)
+            ? [...new Set(focusBlockedSites.map(site => String(site || '').trim().toLowerCase().replace(/^www\./, '')).filter(Boolean))]
+            : [];
+        if (cleanSites.length === 0) {
+            throw new Error('Add at least one site in Settings before starting Focus Mode.');
+        }
         await this.cancelPendingFocusActivation();
         const delayMinutes = Math.max(0, Number(startAfterMinutes || 0));
         if (delayMinutes >= 1) {
             const activationAt = Date.now() + (delayMinutes * 60000);
             const pendingFocusActivation = {
                 duration: durationSeconds,
-                focusBlockedSites: Array.isArray(focusBlockedSites) ? focusBlockedSites : [],
+                focusBlockedSites: cleanSites,
                 activationAt
             };
 
@@ -1390,7 +1408,7 @@ class BackgroundService {
             return;
         }
 
-        await this.activateFocusMode(durationSeconds, focusBlockedSites);
+        await this.activateFocusMode(durationSeconds, cleanSites);
     }
 
     async activatePendingFocusMode() {
@@ -1399,7 +1417,14 @@ class BackgroundService {
         if (!pending) return;
 
         await chrome.storage.local.remove(['pendingFocusActivation']);
-        await this.activateFocusMode(pending.duration, pending.focusBlockedSites || []);
+        const sites = Array.isArray(pending.focusBlockedSites)
+            ? pending.focusBlockedSites.filter(site => typeof site === 'string' && site.trim())
+            : [];
+        if (sites.length === 0) {
+            await this.disableSiteBlockingRange(101, 200);
+            return;
+        }
+        await this.activateFocusMode(pending.duration, sites);
     }
 
     async cancelPendingFocusActivation() {
@@ -1408,8 +1433,14 @@ class BackgroundService {
     }
 
     async activateFocusMode(duration, focusBlockedSites = []) {
+        const effectiveFocusSites = Array.isArray(focusBlockedSites)
+            ? focusBlockedSites.filter(site => typeof site === 'string' && site.trim())
+            : [];
+        if (effectiveFocusSites.length === 0) {
+            await this.disableSiteBlockingRange(101, 200);
+            return;
+        }
         await this.ensureContentScriptInjected();
-        const effectiveFocusSites = focusBlockedSites;
         const endTime = Date.now() + (duration * 1000);
         // Deep Work Strict Mode: automatically enabled during Focus Mode
         this.focusState = { isActive: true, startTime: Date.now(), duration, endTime, deepWorkMode: true };
@@ -1917,6 +1948,51 @@ class BackgroundService {
         console.log('Deep Work Strict Mode disabled - chrome://extensions access restored');
     }
 
+    async clearLegacyAutomaticProtection() {
+        const automaticDomains = new Set([
+            'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'youtube.com',
+            'reddit.com', 'netflix.com', 'tiktok.com', 'linkedin.com', 'pinterest.com',
+            'snapchat.com', 'threads.net', 'discord.com'
+        ]);
+        const data = await chrome.storage.local.get([
+            'focusBlockedSites', 'scheduledBlockedSites', 'blockedSites',
+            'focusState', 'scheduledBlocking', 'globalLimit', 'manualOnlyDefaultsClearedVersion'
+        ]);
+        // Versioned so existing installations that already passed the old cleanup
+        // are also cleared of former starter domains exactly once.
+        if (data.manualOnlyDefaultsClearedVersion === 1) return;
+
+        const removeAutomaticDomains = (sites) => (Array.isArray(sites) ? sites : [])
+            .filter(site => !automaticDomains.has(String(site).toLowerCase().replace(/^www\\./, '')));
+        const focusSites = removeAutomaticDomains(data.focusBlockedSites);
+        const scheduledSites = removeAutomaticDomains(data.scheduledBlockedSites);
+        const legacySites = removeAutomaticDomains(data.blockedSites);
+        const globalLimit = { enabled: false, minutes: 60, domains: [], ...(data.globalLimit || {}) };
+        const cleanedGlobalDomains = removeAutomaticDomains(globalLimit.domains);
+        const updates = {
+            focusBlockedSites: focusSites,
+            scheduledBlockedSites: scheduledSites,
+            blockedSites: legacySites,
+            globalLimit: {
+                ...globalLimit,
+                domains: cleanedGlobalDomains,
+                enabled: cleanedGlobalDomains.length > 0 && globalLimit.enabled === true
+            },
+            manualOnlyDefaultsClearedVersion: 1
+        };
+
+        if (data.focusState?.isActive && focusSites.length === 0) {
+            updates.focusState = { ...data.focusState, isActive: false, deepWorkMode: false, endTime: Date.now() };
+            await chrome.alarms.clear('focusMode');
+            await this.disableSiteBlockingRange(101, 200);
+        }
+        if (data.scheduledBlocking?.enabled && scheduledSites.length === 0) {
+            updates.scheduledBlocking = { ...data.scheduledBlocking, enabled: false };
+            await this.disableSiteBlockingRange(201, 300);
+        }
+        await chrome.storage.local.set(updates);
+    }
+
     async initializeStorage() {
         const defaults = {
             settings: {
@@ -1929,14 +2005,8 @@ class BackgroundService {
                 focusTimerWidgetEnabled: true,
                 timerWidgetEnabled: true
             },
-            blockedSites: [
-                'facebook.com',
-                'twitter.com',
-                'instagram.com',
-                'youtube.com',
-                'reddit.com',
-                'netflix.com'
-            ],
+            // Blocking begins empty. Users choose every protected domain themselves.
+            blockedSites: [],
             gracePauses: {
                 count: 0,
                 lastResetDate: new Date().toDateString()

@@ -120,7 +120,7 @@ class StorageManager {
 
     static async getBlockedSites() {
         const result = await this.get('blockedSites');
-        return result.blockedSites || this.getDefaultBlockedSites();
+        return Array.isArray(result.blockedSites) ? result.blockedSites : [];
     }
 
     static async saveBlockedSites(sites) {
@@ -129,18 +129,7 @@ class StorageManager {
     }
 
     static getDefaultBlockedSites() {
-        return [
-            'facebook.com',
-            'twitter.com',
-            'instagram.com',
-            'youtube.com',
-            'reddit.com',
-            'netflix.com',
-            'tiktok.com',
-            'linkedin.com',
-            'pinterest.com',
-            'snapchat.com'
-        ];
+        return [];
     }
 
     static async getWhitelist() {

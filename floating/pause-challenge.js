@@ -24,8 +24,8 @@
                     <input type="text" id="pauseChallenge" maxlength="25" autocomplete="off" autocapitalize="off" spellcheck="false"
                         placeholder="type the word above"
                         style="padding:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;border-radius:8px;flex:1 1 240px;min-width:0;">
-                    <button class="duration-btn" id="submitChallenge" type="button">Submit</button>
-                    <button class="cancel-pause-btn" id="cancelChallenge" type="button">Cancel</button>
+                    <button class="duration-btn" id="submitChallenge" type="button">Continue Anyway</button>
+                    <button class="cancel-pause-btn" id="cancelChallenge" type="button">Stay Focused</button>
                 </div>
                 <p class="pause-message" id="challengeError" style="display:none;color:#fb7185;">That word does not match. Try again.</p>
             `;
