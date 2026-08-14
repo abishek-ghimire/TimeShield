@@ -725,3 +725,257 @@ textarea:focus-visible { outline: 3px solid rgba(36, 87, 214, 0.35); outline-off
     .protection-status-main { font-size: 0.9rem; }
     .protection-status-meta { font-size: 0.62rem; }
 }
+
+/* Compact one-page popup layout */
+body {
+    width: min(380px, 100vw);
+    min-height: 0;
+    height: 590px;
+    overflow: hidden;
+}
+
+.popup-container {
+    height: 590px;
+    padding: 10px 12px;
+    overflow: hidden;
+}
+
+.popup-header {
+    margin-bottom: 9px;
+    padding: 2px 0 5px;
+}
+
+.brand h1 {
+    font-size: 1.16rem;
+    gap: 7px;
+}
+
+.brand-logo-wrap {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+}
+
+.current-time {
+    font-size: 1.04rem;
+    padding: 5px 8px;
+    border-radius: 9px;
+}
+
+.popup-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quick-actions-modern {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-bottom: 0;
+}
+
+.quick-actions-modern .btn,
+.compact-action {
+    min-height: 36px;
+    padding: 7px 6px;
+    font-size: 0.72rem;
+    gap: 5px;
+}
+
+.quick-actions-modern .btn-primary {
+    grid-column: auto;
+}
+
+.quick-actions-modern .btn-tiny-restore {
+    width: auto;
+    min-height: 36px;
+    border-radius: 9px;
+}
+
+.protection-status-card {
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+.protection-status-main {
+    margin-top: 3px;
+    font-size: 0.86rem;
+}
+
+.protection-status-meta {
+    margin-top: 2px;
+    font-size: 0.62rem;
+}
+
+.popup-utility-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.compact-toggle {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 29px;
+    padding: 5px 8px;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+}
+
+.popup-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.card.compact-card,
+.timer-card {
+    margin-bottom: 0;
+    padding: 9px;
+    border-radius: 11px;
+}
+
+.card-title {
+    margin-bottom: 6px;
+    font-size: 0.68rem;
+    letter-spacing: 0.07em;
+}
+
+.todo-list {
+    min-height: 36px;
+    max-height: 47px;
+    gap: 3px;
+    padding-right: 2px;
+}
+
+.todo-item {
+    padding: 4px 6px;
+    border-radius: 7px;
+}
+
+.todo-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+}
+
+.todo-item label {
+    overflow: hidden;
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.compact-card-button {
+    width: 100%;
+    min-height: 26px;
+    margin-top: 5px;
+    padding: 4px 6px;
+    font-size: 0.65rem;
+    border-style: dashed;
+}
+
+.ad-controls {
+    gap: 5px !important;
+}
+
+.ad-controls > div {
+    gap: 5px !important;
+}
+
+.ad-controls button {
+    min-height: 26px;
+    padding: 4px !important;
+    font-size: 0.62rem !important;
+}
+
+.timer-ui {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    column-gap: 7px;
+    align-items: center;
+}
+
+.timer-inputs {
+    grid-column: 1 / -1;
+    margin: 0 0 5px;
+    gap: 6px;
+}
+
+.timer-inputs input {
+    width: 48px;
+    padding: 5px;
+    font-size: 0.82rem;
+    border-radius: 7px;
+}
+
+.timer-ui > div[style*="width: 100%"] {
+    grid-column: 1 / -1;
+    margin: 0 0 5px !important;
+    padding: 3px 6px !important;
+}
+
+.timer-ui > div[style*="width: 100%"] button {
+    min-height: 28px;
+    padding: 5px !important;
+    font-size: 0.68rem !important;
+}
+
+.timer-main-display {
+    grid-column: 1 / -1;
+    margin: 0 0 4px;
+    font-size: 1.65rem !important;
+}
+
+@media (max-height: 620px) {
+    body,
+    .popup-container {
+        height: 565px;
+    }
+
+    .popup-container {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .popup-header {
+        margin-bottom: 6px;
+    }
+
+    .popup-main {
+        gap: 6px;
+    }
+
+    .popup-card-grid {
+        gap: 6px;
+    }
+
+    .todo-list {
+        max-height: 38px;
+    }
+}
+
+@media (max-width: 360px) {
+    body,
+    .popup-container {
+        height: 590px;
+    }
+
+    .popup-container {
+        padding: 8px;
+    }
+
+    .brand h1 {
+        font-size: 1rem;
+    }
+
+    .popup-card-grid {
+        gap: 6px;
+    }
+}

@@ -150,3 +150,25 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     }
     assert.doesNotMatch(popup, /syncNow/);
 });
+
+
+test('Popup is compact, Mission-first, and schedule enforcement requires configured sites', async () => {
+    const popupHtml = await read('popup/popup.html');
+    const popupCss = await read('popup/popup.css');
+    const worker = await read('background/service-worker.js');
+
+    const missionIndex = popupHtml.indexOf('> Mission\n');
+    const adProtectionIndex = popupHtml.indexOf('> Ad Protection\n');
+    assert.ok(missionIndex >= 0, 'Mission card is present');
+    assert.ok(adProtectionIndex >= 0, 'Ad Protection card is present');
+    assert.ok(missionIndex < adProtectionIndex, 'Mission precedes Ad Protection');
+    assert.doesNotMatch(popupHtml, /Mission Plan|Mission & Plan/);
+    assert.match(popupHtml, /popup-card-grid/);
+    assert.match(popupCss, /Compact one-page popup layout/);
+    assert.match(popupCss, /height:\s*590px/);
+    assert.match(popupCss, /overflow:\s*hidden/);
+
+    assert.match(worker, /Array\.isArray\(result\.scheduledBlockedSites\)/);
+    assert.match(worker, /if \(sites\.length === 0\) \{\s*await this\.disableScheduledBlocking\(\);/);
+    assert.doesNotMatch(worker, /scheduledBlockedSites \|\| StorageManager\.getDefaultBlockedSites\(\)/);
+});

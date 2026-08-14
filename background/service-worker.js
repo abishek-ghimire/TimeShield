@@ -1097,7 +1097,13 @@ class BackgroundService {
             chrome.action.setBadgeText({ text: '😴' });
             chrome.action.setBadgeBackgroundColor({ color: '#8b5cf6' }); // Purple color for "sleep/block all"
         } else {
-            const sites = result.scheduledBlockedSites || StorageManager.getDefaultBlockedSites();
+            const sites = Array.isArray(result.scheduledBlockedSites)
+                ? result.scheduledBlockedSites.filter(site => typeof site === 'string' && site.trim())
+                : [];
+            if (sites.length === 0) {
+                await this.disableScheduledBlocking();
+                return;
+            }
             await this.enableSiteBlocking(sites, 201, 'schedule');
             await this.redirectTabsOnBlock(sites, 'floating/schedule-block.html');
             chrome.action.setBadgeText({ text: '🚫' });
