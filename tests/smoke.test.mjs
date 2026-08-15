@@ -181,6 +181,24 @@ test('Popup keeps an intrinsic width instead of collapsing into a clipped sideba
     assert.doesNotMatch(popupCss, /width:\s*min\(380px,\s*100vw\)/);
 });
 
+test('Focus pause, current-site capture, and synchronized clock behavior stay wired', async () => {
+    const worker = await read('background/service-worker.js');
+    const popup = await read('popup/popup.js');
+    const clock = await read('floating/clock.js');
+    const blocker = await read('content/blocker.js');
+    assert.match(worker, /case 'addCurrentSiteToFocusList'/);
+    assert.match(worker, /chrome\.tabs\.query\(\{ active: true, currentWindow: true \}\)/);
+    assert.match(worker, /case 'openFlipClockTab'/);
+    assert.doesNotMatch(worker, /Pausing is unavailable while Focus Mode is active/);
+    assert.match(popup, /addCurrentSiteToFocusList/);
+    assert.match(popup, /action: 'addCurrentSiteToFocusList'/);
+    assert.match(clock, /focusState\?\.endTime/);
+    assert.match(clock, /Math\.ceil\(\(focusEnd - now\) \/ 1000\)/);
+    assert.doesNotMatch(clock, /Focus Complete/);
+    assert.match(blocker, /changes\.clockPos\?\.newValue/);
+    assert.match(blocker, /this\._applyScale\(\)/);
+});
+
 test('Popup is compact, Mission-first, and schedule enforcement requires configured sites', async () => {
     const popupHtml = await read('popup/popup.html');
     const popupCss = await read('popup/popup.css');
@@ -202,6 +220,13 @@ test('Popup is compact, Mission-first, and schedule enforcement requires configu
     assert.match(worker, /Array\.isArray\(result\.scheduledBlockedSites\)/);
     assert.match(worker, /if \(sites\.length === 0\) \{\s*await this\.disableScheduledBlocking\(\);/);
     assert.doesNotMatch(worker, /scheduledBlockedSites \|\| StorageManager\.getDefaultBlockedSites\(\)/);
+});
+
+test('Clock view opens flip mode in a separate tab', async () => {
+    const clock = await read('floating/clock.js');
+    const popup = await read('popup/popup.js');
+    assert.match(clock, /action: 'openFlipClockTab'/);
+    assert.match(popup, /chrome\.runtime\.getURL\('floating\/flip-clock\.html'\)/);
 });
 
 test('Options typography and accordion defaults stay accessible and collapsed-first', async () => {
