@@ -366,16 +366,57 @@ class PopupController {
                 if (mins !== null) this.showToast('Enter a focus duration greater than zero.');
                 return;
             }
+            const ready = await this.showFocusStartWarning(durationMinutes);
+            if (!ready) return;
+
             const response = await chrome.runtime.sendMessage({
                 action: 'startFocusMode',
-                duration: durationMinutes * 60,
-                startAfterMinutes: 1
+                duration: durationMinutes * 60
             });
             if (response?.success === false) {
                 throw new Error(response.error || 'Unable to start focus mode');
             }
             window.close();
         }
+    }
+
+    showFocusStartWarning(durationMinutes) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0; z-index: 100000;
+                display: flex; align-items: center; justify-content: center;
+                padding: 16px; background: rgba(2, 6, 23, 0.86);
+                font-family: Inter, system-ui, sans-serif;
+            `;
+            overlay.innerHTML = `
+                <section style="width: min(340px, 100%); padding: 22px; border-radius: 18px;
+                    background: #111126; color: #f8fafc; border: 1px solid rgba(139,92,246,.45);
+                    box-shadow: 0 20px 60px rgba(0,0,0,.45);">
+                    <h2 style="margin:0 0 10px; font-size:1.15rem;">Save your work before Focus Mode</h2>
+                    <p style="margin:0 0 12px; color:#cbd5e1; line-height:1.5; font-size:.9rem;">
+                        Focus Mode will begin immediately and block the sites on your Focus list for ${durationMinutes} minutes.
+                    </p>
+                    <ul style="margin:0 0 18px; padding-left:20px; color:#cbd5e1; line-height:1.6; font-size:.85rem;">
+                        <li>Save documents and submit any pending work.</li>
+                        <li>Finish or pause downloads, uploads, and calls.</li>
+                        <li>Close anything you need before starting.</li>
+                    </ul>
+                    <div style="display:flex; gap:10px; justify-content:flex-end;">
+                        <button data-action="cancel" style="padding:9px 13px; border-radius:9px; border:1px solid #475569; background:transparent; color:#cbd5e1; cursor:pointer;">Not yet</button>
+                        <button data-action="start" style="padding:9px 13px; border:0; border-radius:9px; background:#7c3aed; color:white; font-weight:700; cursor:pointer;">Start Focus Now</button>
+                    </div>
+                </section>
+            `;
+
+            const finish = (value) => {
+                overlay.remove();
+                resolve(value);
+            };
+            overlay.querySelector('[data-action="cancel"]').addEventListener('click', () => finish(false));
+            overlay.querySelector('[data-action="start"]').addEventListener('click', () => finish(true));
+            document.body.appendChild(overlay);
+        });
     }
 
     async toggleFloatingClock() {

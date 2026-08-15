@@ -181,6 +181,20 @@ test('Popup keeps an intrinsic width instead of collapsing into a clipped sideba
     assert.doesNotMatch(popupCss, /width:\s*min\(380px,\s*100vw\)/);
 });
 
+test('Focus Mode starts immediately after a save-work warning', async () => {
+    const worker = await read('background/service-worker.js');
+    const popup = await read('popup/popup.js');
+    assert.match(popup, /showFocusStartWarning/);
+    assert.match(popup, /Save your work before Focus Mode/);
+    assert.match(popup, /Start Focus Now/);
+    assert.doesNotMatch(popup, /startAfterMinutes:\s*1/);
+    assert.match(worker, /Focus Mode starts immediately after the popup save-work warning/);
+    assert.doesNotMatch(worker, /Focus Mode starts in 1 minute/);
+    assert.doesNotMatch(worker, /const delayMinutes =/);
+    assert.match(worker, /await this\.cancelPendingFocusActivation\(\);/);
+    assert.match(worker, /await this\.activateFocusMode\(durationSeconds, cleanSites\);/);
+});
+
 test('Focus pause, current-site capture, and synchronized clock behavior stay wired', async () => {
     const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.js');

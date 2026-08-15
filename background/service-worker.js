@@ -305,11 +305,12 @@ class BackgroundService {
         }
         await this.checkShortPauseReset();
 
-        const pendingFocusResult = await chrome.storage.local.get(['pendingFocusActivation', 'preActivationWarningCache']);
-        this.preActivationWarningCache = pendingFocusResult.preActivationWarningCache || {};
-        if (pendingFocusResult.pendingFocusActivation?.activationAt) {
-            chrome.alarms.create('focusModeActivation', { when: pendingFocusResult.pendingFocusActivation.activationAt });
-        }
+        const preActivationResult = await chrome.storage.local.get(['preActivationWarningCache']);
+        this.preActivationWarningCache = preActivationResult.preActivationWarningCache || {};
+        // Focus Mode no longer uses delayed preactivation. Remove legacy pending state
+        // and alarms so an earlier one-minute request cannot start unexpectedly.
+        await chrome.alarms.clear('focusModeActivation');
+        await chrome.storage.local.remove(['pendingFocusActivation']);
     }
 
     async checkShortPauseReset() {
@@ -485,9 +486,7 @@ class BackgroundService {
                 const fSites = Array.isArray(message.focusBlockedSites) && message.focusBlockedSites.length > 0
                     ? message.focusBlockedSites
                     : (focusBlockedResult.focusBlockedSites || []);
-                const requestedDelay = message.startAfterMinutes;
-                const startAfterMinutes = requestedDelay === undefined ? 1 : Number(requestedDelay);
-                await this.startFocusMode(message.duration, fSites, startAfterMinutes);
+                await this.startFocusMode(message.duration, fSites);
                 sendResponse({ success: true });
                 break;
             case 'stopFocusMode':
@@ -1406,7 +1405,7 @@ class BackgroundService {
         return Number(data.disableAuthorizedUntil || 0) > Date.now();
     }
 
-    async startFocusMode(duration, focusBlockedSites = [], startAfterMinutes = 0) {
+    async startFocusMode(duration, focusBlockedSites = []) {
         const durationSeconds = Math.floor(Number(duration));
         if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
             throw new Error('Focus duration must be greater than zero');
@@ -1417,27 +1416,10 @@ class BackgroundService {
         if (cleanSites.length === 0) {
             throw new Error('Add at least one site in Settings before starting Focus Mode.');
         }
+
+        // Focus Mode starts immediately after the popup save-work warning.
+        // Clear any legacy pending activation so an old one-minute delay cannot fire later.
         await this.cancelPendingFocusActivation();
-        const delayMinutes = Math.max(0, Number(startAfterMinutes || 0));
-        if (delayMinutes >= 1) {
-            const activationAt = Date.now() + (delayMinutes * 60000);
-            const pendingFocusActivation = {
-                duration: durationSeconds,
-                focusBlockedSites: cleanSites,
-                activationAt
-            };
-
-            await chrome.storage.local.set({ pendingFocusActivation });
-            chrome.alarms.create('focusModeActivation', { when: activationAt });
-            await this.sendNotification(
-                'Focus Mode starts in 1 minute',
-                'Save your work now. Focus blocking will activate soon.',
-                true,
-                `focus-preactivation-${activationAt}`
-            );
-            return;
-        }
-
         await this.activateFocusMode(durationSeconds, cleanSites);
     }
 
