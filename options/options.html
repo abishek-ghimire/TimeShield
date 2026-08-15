@@ -1706,7 +1706,41 @@
                 scroll-behavior: auto !important;
             }
         }
-    </style>
+        /* Accessible typography scale */
+        body {
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .hint,
+        .accordion-subtitle,
+        .field-hint,
+        .form-hint {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .accordion-title,
+        .section-heading,
+        label,
+        input,
+        select,
+        textarea {
+            font-size: 0.98rem;
+        }
+
+        .btn {
+            font-size: 0.95rem;
+        }
+
+        </style>
 </head>
 
 <body>
@@ -1736,8 +1770,8 @@
                 <div class="accordion">
 
                     <!-- Notifications & Reminders -->
-                    <div class="accordion-item open" id="acc-gen-notifications">
-                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-gen-notifications">
+                    <div class="accordion-item" id="acc-gen-notifications">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-gen-notifications">
                             <span class="accordion-icon">🔔</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Notifications &amp; Reminders</span>
@@ -1864,8 +1898,8 @@
                 <div class="accordion">
 
                     <!-- Display -->
-                    <div class="accordion-item open" id="acc-clk-display">
-                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-clk-display">
+                    <div class="accordion-item" id="acc-clk-display">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-clk-display">
                             <span class="accordion-icon">🕐</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Display</span>
@@ -2068,8 +2102,8 @@
                 <div class="accordion">
 
                     <!-- Enable / Level -->
-                    <div class="accordion-item open" id="acc-adb-main">
-                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-adb-main">
+                    <div class="accordion-item" id="acc-adb-main">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-adb-main">
                             <span class="accordion-icon">🛑</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Ad Blocking</span>
@@ -2213,8 +2247,8 @@
                 <div class="accordion">
 
                     <!-- Task Preferences -->
-                    <div class="accordion-item open" id="acc-tasks-prefs">
-                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-tasks-prefs">
+                    <div class="accordion-item" id="acc-tasks-prefs">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-tasks-prefs">
                             <span class="accordion-icon">📝</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Task Preferences</span>
@@ -2255,8 +2289,8 @@
                 <div class="accordion" id="schedulesAccordion">
 
                     <!-- ① Scheduled Blocking List -->
-                    <div class="accordion-item open" id="acc-blocklist">
-                        <button type="button" class="accordion-header" aria-expanded="true" data-target="acc-blocklist">
+                    <div class="accordion-item" id="acc-blocklist">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-blocklist">
                             <span class="accordion-icon">🚫</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Scheduled Blocking List</span>
@@ -2600,21 +2634,6 @@
         <div id="data" class="tab-content">
             <div class="section">
                 <h2>Data Management</h2>
-
-                <div class="status-card" style="margin-bottom:18px;" aria-live="polite">
-                    <div class="section-heading">Protection status</div>
-                    <div class="status-grid">
-                        <div><span class="status-label">Current state</span><span class="status-value" id="protectionStatusValue">Checking…</span></div>
-                        <div><span class="status-label">Pause expires</span><span class="status-value" id="protectionPauseValue">—</span></div>
-                        <div><span class="status-label">Active schedule</span><span class="status-value" id="protectionScheduleValue">—</span></div>
-                        <div><span class="status-label">Tracked today</span><span class="status-value" id="protectionUsageValue">—</span></div>
-                    </div>
-                    <div class="btn-group" style="margin-top:14px;">
-                        <button class="btn btn-secondary" id="refreshProtectionStatus">Refresh Status</button>
-                        <button class="btn btn-secondary" id="runDiagnostics">Run Diagnostics</button>
-                    </div>
-                    <pre id="diagnosticsOutput" class="diagnostic-card" hidden style="margin-top:12px; white-space:pre-wrap; overflow:auto; font-size:0.78rem;"></pre>
-                </div>
 
                 <div class="export-import">
                     <div>
