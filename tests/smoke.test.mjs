@@ -153,6 +153,22 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
 });
 
 
+test('All settings accordions have reliable two-way expand and collapse wiring', async () => {
+    const html = await read('options/options.html');
+    const options = await read('options/options.js');
+    const itemCount = (html.match(/class="accordion-item/g) || []).length;
+    const headerCount = (html.match(/class="accordion-header"/g) || []).length;
+    assert.ok(itemCount > 0, 'accordion sections are present');
+    assert.equal(headerCount, itemCount, 'every accordion section has one header');
+    assert.doesNotMatch(html, /<button(?![^>]*type="button")[^>]*class="accordion-header"/);
+    assert.match(options, /item\.classList\.toggle\('open', open\)/);
+    assert.match(options, /button\.setAttribute\('aria-expanded', String\(open\)\)/);
+    assert.match(options, /body\.style\.display = open \? 'block' : 'none'/);
+    assert.match(options, /body\.setAttribute\('aria-hidden', String\(!open\)\)/);
+    assert.match(options, /event\.preventDefault\(\)/);
+    assert.match(options, /event\.stopPropagation\(\)/);
+});
+
 test('Popup keeps an intrinsic width instead of collapsing into a clipped sidebar strip', async () => {
     const popupCss = await read('popup/popup.css');
     assert.match(popupCss, /html\s*\{[\s\S]*?width:\s*380px;[\s\S]*?min-width:\s*380px;/);
