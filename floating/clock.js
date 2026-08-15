@@ -92,6 +92,51 @@
 
     let activeInterval = null;
     let timerSnapshot = { focusState: null, timerState: null };
+    let extensionContextInvalid = false;
+
+    function isInvalidatedError(error) {
+        return /extension context invalidated|message port closed|receiving end does not exist/i.test(String(error?.message || error));
+    }
+
+    function handleExtensionContextError(error) {
+        if (!isInvalidatedError(error)) return false;
+        extensionContextInvalid = true;
+        if (activeInterval) {
+            clearInterval(activeInterval);
+            activeInterval = null;
+        }
+        try {
+            window.frameElement?.remove();
+        } catch (_) {
+            // The parent frame may already be gone after an extension reload.
+        }
+        try {
+            document.documentElement.style.display = 'none';
+        } catch (_) {
+            // Ignore teardown errors from an already-disposed document.
+        }
+        return true;
+    }
+
+    async function safeStorageGet(keys) {
+        if (extensionContextInvalid) return {};
+        try {
+            return await chrome.storage.local.get(keys);
+        } catch (error) {
+            handleExtensionContextError(error);
+            return {};
+        }
+    }
+
+    async function safeSendMessage(message) {
+        if (extensionContextInvalid) return null;
+        try {
+            return await chrome.runtime.sendMessage(message);
+        } catch (error) {
+            handleExtensionContextError(error);
+            return null;
+        }
+    }
 
     function renderActiveTimers() {
         const focusState = timerSnapshot.focusState;
@@ -133,7 +178,9 @@
     }
 
     async function checkActiveTimers() {
-        timerSnapshot = await chrome.storage.local.get(['focusState', 'timerState']);
+        if (extensionContextInvalid) return;
+        timerSnapshot = await safeStorageGet(['focusState', 'timerState']);
+        if (extensionContextInvalid) return;
         renderActiveTimers();
         if (!activeInterval && (timerSnapshot.focusState?.isActive || timerSnapshot.timerState?.isRunning)) {
             activeInterval = setInterval(renderActiveTimers, 1000);
@@ -145,22 +192,21 @@
         const closeBtn = document.getElementById('timerCloseBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', async () => {
-                const res = await chrome.storage.local.get(['focusState', 'timerState']);
+                const res = await safeStorageGet(['focusState', 'timerState']);
+                if (extensionContextInvalid) return;
                 const focusActive = res.focusState?.isActive === true;
                 const timerActive = res.timerState?.isRunning === true;
 
-                if (focusActive) {
-                    await chrome.runtime.sendMessage({ action: 'stopFocusMode' });
-                }
-                if (timerActive) {
-                    await chrome.runtime.sendMessage({ action: 'stopTimer' });
-                }
+                if (focusActive) await safeSendMessage({ action: 'stopFocusMode' });
+                if (timerActive) await safeSendMessage({ action: 'stopTimer' });
             });
         }
     });
 
     async function applySettings() {
-        const result = await chrome.storage.local.get(['settings', 'clockVisible', 'focusState', 'timerState']);
+        if (extensionContextInvalid) return;
+        const result = await safeStorageGet(['settings', 'clockVisible', 'focusState', 'timerState']);
+        if (extensionContextInvalid) return;
         cachedSettings = result.settings || {};
         const s = cachedSettings;
         currentTimezone = s.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -249,12 +295,14 @@
     // The in-widget control always opens the full Flip Clock in a separate tab.
     const viewToggle = document.getElementById('view-toggle');
     const openFlipClockTab = async () => {
+        if (extensionContextInvalid) return;
+        const response = await safeSendMessage({ action: 'openFlipClockTab' });
+        if (extensionContextInvalid || response?.success) return;
+        // Keep the click useful if an older service worker is still active.
         try {
-            const response = await chrome.runtime.sendMessage({ action: 'openFlipClockTab' });
-            if (!response?.success) throw new Error('Flip Clock tab was not opened');
-        } catch (error) {
-            // Keep the click useful if an older service worker is still active.
             window.open(chrome.runtime.getURL('floating/flip-clock.html'), '_blank');
+        } catch (error) {
+            handleExtensionContextError(error);
         }
     };
     viewToggle?.addEventListener('click', openFlipClockTab);

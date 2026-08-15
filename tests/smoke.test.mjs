@@ -299,3 +299,17 @@ test('Popup polish preserves fixed width and touch-friendly controls', async () 
     assert.match(popupCss, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
     assert.match(popupCss, /\.timer-display\s*\{[\s\S]*font-size:\s*1\.65rem/);
 });
+
+
+test('Floating clock handles extension reloads without unhandled context errors', async () => {
+    const clock = await read('floating/clock.js');
+    assert.match(clock, /extensionContextInvalid/);
+    assert.match(clock, /isInvalidatedError/);
+    assert.match(clock, /safeStorageGet/);
+    assert.match(clock, /safeSendMessage/);
+    assert.match(clock, /handleExtensionContextError/);
+    assert.match(clock, /clearInterval\(activeInterval\)/);
+    assert.match(clock, /document\.documentElement\.style\.display = 'none'/);
+    assert.doesNotMatch(clock, /timerSnapshot = await chrome\.storage\.local\.get/);
+    assert.doesNotMatch(clock, /await chrome\.runtime\.sendMessage\(\{ action: 'stop/);
+});
