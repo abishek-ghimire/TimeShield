@@ -35,8 +35,7 @@ class PopupController {
             ['settings', () => this.loadSettings()],
             ['todos', () => this.loadTodos()],
             ['timer state', () => this.restoreTimerState()],
-            ['pause state', () => this.checkPauseState()],
-            ['protection status', () => this.refreshProtectionStatus()]
+            ['pause state', () => this.checkPauseState()]
         ];
         const results = await Promise.allSettled(tasks.map(([, task]) => task()));
         results.forEach((result, index) => {
@@ -47,39 +46,6 @@ class PopupController {
     }
 
 
-
-    async refreshProtectionStatus() {
-        const response = await chrome.runtime.sendMessage({ action: 'getProtectionStatus' }).catch(() => null);
-        const status = response?.status;
-        const main = document.getElementById('popupProtectionStatus');
-        const meta = document.getElementById('popupProtectionMeta');
-        const dot = document.getElementById('protectionStatusDot');
-        if (!main || !meta || !dot) return;
-
-        dot.className = 'status-dot';
-        if (status?.paused) {
-            dot.classList.add('is-paused');
-            main.textContent = 'Protection paused';
-            meta.textContent = status.pauseUntil ? `Resumes ${new Date(status.pauseUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Paused until resumed';
-        } else if (status?.safeMode) {
-            dot.classList.add('is-safe');
-            main.textContent = 'Safe mode enabled';
-            meta.textContent = 'Automatic redirects are paused';
-        } else if (status?.focusActive) {
-            main.textContent = 'Focus Mode active';
-            meta.textContent = 'Distraction protection is running';
-        } else if (status?.sleepActive) {
-            main.textContent = 'Sleep protection active';
-            meta.textContent = 'Your sleep window is enforcing';
-        } else if (status?.scheduleActive) {
-            main.textContent = 'Scheduled protection active';
-            meta.textContent = 'Your current schedule is enforcing';
-        } else {
-            dot.classList.add('is-idle');
-            main.textContent = 'Protection ready';
-            meta.textContent = `${Math.round((status?.todaySeconds || 0) / 60)} minutes tracked today`;
-        }
-    }
 
     setupEventListeners() {
         const bind = (id, fn) => {
@@ -112,7 +78,6 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
-        bind('refreshPopupStatus', () => this.refreshProtectionStatus());
 
         this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
@@ -487,55 +452,50 @@ class PopupController {
         return true;
     }
 
-    async showProtectionStep(actionLabel, step, totalSteps, message, delaySeconds = 8) {
+    async showProtectionWarning(actionLabel) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
                 position: fixed; inset: 0; z-index: 100000;
-                background: rgba(2, 6, 23, 0.82);
+                background: rgba(2, 6, 23, 0.84);
                 display: flex; align-items: center; justify-content: center;
-                backdrop-filter: blur(6px);
+                padding: 16px; backdrop-filter: blur(6px);
+                font-family: Inter, system-ui, sans-serif;
             `;
 
             const modal = document.createElement('div');
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'popup-protection-title');
             modal.style.cssText = `
-                width: min(460px, calc(100vw - 32px));
+                width: min(460px, 100%); max-height: calc(100vh - 32px); overflow: auto;
                 background: linear-gradient(180deg, #0f172a, #111827);
-                color: #e5e7eb;
-                border: 1px solid rgba(99,102,241,0.35);
-                border-radius: 18px;
-                padding: 20px;
+                color: #e5e7eb; border: 1px solid rgba(99,102,241,0.4);
+                border-radius: 18px; padding: 22px;
                 box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-                font-family: 'Inter', sans-serif;
             `;
             modal.innerHTML = `
-                <div style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection · Step <span id="popup-protection-step"></span></div>
-                <div id="popup-protection-action" style="font-size:1.05rem;font-weight:800;margin-bottom:8px;"></div>
-                <div id="popup-protection-message" style="font-size:0.92rem;line-height:1.55;color:#cbd5e1;margin-bottom:16px;"></div>
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-                    <div id="popup-protection-countdown" style="font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:800;color:#818cf8;min-width:68px;">8s</div>
-                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
-                        <div id="popup-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
-                    </div>
+                <div style="font-size:0.86rem;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection warning</div>
+                <div id="popup-protection-title" style="font-size:1.2rem;font-weight:800;line-height:1.3;margin-bottom:10px;"></div>
+                <div style="font-size:0.96rem;line-height:1.58;color:#cbd5e1;margin-bottom:18px;">Changing this setting weakens your current protection. Stay with the task in front of you, finish one meaningful step, and keep your attention protected. If you still need to continue, wait for the full countdown and choose deliberately.</div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                    <div id="popup-protection-countdown" style="font-family:Outfit,Inter,sans-serif;font-size:2.4rem;font-weight:800;color:#818cf8;min-width:76px;">20s</div>
+                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.18);border-radius:999px;overflow:hidden;"><div id="popup-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;"></div></div>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-                    <span id="popup-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.78rem;">Continue will appear after the countdown.</span>
-                    <button id="popup-protection-stay" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
-                    <button id="popup-protection-continue" hidden style="padding:8px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Continue Anyway</button>
+                    <span id="popup-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.9rem;">Continue will appear after 20 seconds.</span>
+                    <button id="popup-protection-stay" type="button" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;font-size:0.92rem;">Stay Focused</button>
+                    <button id="popup-protection-continue" type="button" hidden style="padding:10px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;font-size:0.92rem;">Continue Anyway</button>
                 </div>
             `;
+            modal.querySelector('#popup-protection-title').textContent = actionLabel;
 
-            modal.querySelector('#popup-protection-step').textContent = `${step} of ${totalSteps}`;
-            modal.querySelector('#popup-protection-action').textContent = actionLabel;
-            modal.querySelector('#popup-protection-message').textContent = message;
             const countdownEl = modal.querySelector('#popup-protection-countdown');
             const barEl = modal.querySelector('#popup-protection-bar');
             const stayBtn = modal.querySelector('#popup-protection-stay');
             const waitEl = modal.querySelector('#popup-protection-wait');
             const continueBtn = modal.querySelector('#popup-protection-continue');
-            const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
+            const totalMs = 20_000;
             const endAt = Date.now() + totalMs;
             let timerId = null;
 
@@ -544,10 +504,7 @@ class PopupController {
                 document.removeEventListener('keydown', escHandler, true);
                 overlay.remove();
             };
-            const settle = (value) => {
-                cleanup();
-                resolve(value);
-            };
+            const settle = (value) => { cleanup(); resolve(value); };
             const escHandler = (event) => {
                 if (event.key !== 'Escape') return;
                 event.preventDefault();
@@ -563,7 +520,7 @@ class PopupController {
                     waitEl.textContent = `Continue will appear in ${remainingSeconds}s.`;
                     return;
                 }
-                waitEl.textContent = 'You may continue if you still choose to.';
+                waitEl.textContent = 'Choose carefully. Your protection is still worth keeping.';
                 continueBtn.hidden = false;
                 continueBtn.focus();
                 clearInterval(timerId);
@@ -581,28 +538,8 @@ class PopupController {
     }
 
     async runProtectionSequence(actionLabel) {
-        const messages = [
-            'Your current focus is valuable. You can keep it with one click.',
-            'Small distractions can turn into much longer detours.',
-            'Finish the next meaningful step before changing your protection.',
-            'Momentum is difficult to rebuild once it is broken.',
-            'A short pause now can protect your goals for the rest of the day.',
-            'Choose deliberately: protect your attention or continue anyway.',
-            'This is the final check. Make the choice you will be proud of later.'
-        ];
-
-        for (let index = 0; index < messages.length; index += 1) {
-            const allowed = await this.showProtectionStep(actionLabel, index + 1, messages.length, messages[index], 8);
-            if (!allowed) return false;
-        }
-
-        const challengeOk = await this.runChallengeChecks(actionLabel);
-        if (!challengeOk) {
-            chrome.runtime.sendMessage({ action: 'playSound', sound: 'break-time' }).catch(() => { });
-            alert('Verification failed. Try again.');
-            return false;
-        }
-
+        const allowed = await this.showProtectionWarning(actionLabel);
+        if (!allowed) return false;
         chrome.runtime.sendMessage({ action: 'playSound', sound: 'timer-complete' }).catch(() => { });
         return true;
     }

@@ -291,40 +291,12 @@ class OptionsManager {
         on('importData', () => this.importData());
         on('resetSettings', () => this.resetSettings());
         on('clearAllData', () => this.clearAllData());
-        on('refreshProtectionStatus', () => this.refreshProtectionStatus());
-        on('runDiagnostics', () => this.runDiagnostics());
         on('cleanupUsageNow', () => this.cleanupUsageNow());
-        this.refreshProtectionStatus();
-    }
-
-    async refreshProtectionStatus() {
-        const response = await chrome.runtime.sendMessage({ action: 'getProtectionStatus' }).catch(() => null);
-        if (!response?.success) return;
-        const status = response.status || {};
-        const setText = (id, value) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        };
-        setText('protectionStatusValue', status.safeMode ? 'Safe mode' : (status.paused ? 'Paused' : (status.active ? 'Protected' : 'Ready')));
-        setText('protectionPauseValue', status.pauseUntil ? new Date(status.pauseUntil).toLocaleString() : '—');
-        setText('protectionScheduleValue', status.sleepActive ? 'Sleep active' : (status.scheduleActive ? 'Active' : 'Inactive'));
-        setText('protectionUsageValue', `${Math.round((status.todaySeconds || 0) / 60)} min`);
-    }
-
-    async runDiagnostics() {
-        const output = document.getElementById('diagnosticsOutput');
-        const response = await chrome.runtime.sendMessage({ action: 'getDiagnostics' }).catch(() => null);
-        if (!output) return;
-        output.hidden = false;
-        output.textContent = response?.success
-            ? JSON.stringify(response.diagnostics, null, 2)
-            : `Diagnostics failed: ${response?.error || 'background unavailable'}`;
     }
 
     async cleanupUsageNow() {
         const response = await chrome.runtime.sendMessage({ action: 'runRetentionCleanup' }).catch(() => null);
         this.showNotification(response?.success ? `Removed ${response.removedDays || 0} old usage day(s).` : 'Usage cleanup failed.', response?.success ? 'success' : 'error');
-        await this.refreshProtectionStatus();
     }
 
 
@@ -1519,55 +1491,50 @@ class OptionsManager {
         });
     }
 
-    async showProtectionStep(actionLabel, step, totalSteps, message, delaySeconds = 8) {
+    async showProtectionWarning(actionLabel) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
                 position: fixed; inset: 0; z-index: 100000;
-                background: rgba(2, 6, 23, 0.82);
+                background: rgba(2, 6, 23, 0.84);
                 display: flex; align-items: center; justify-content: center;
-                backdrop-filter: blur(6px);
+                padding: 20px; backdrop-filter: blur(6px);
+                font-family: Inter, system-ui, sans-serif;
             `;
 
             const modal = document.createElement('div');
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'ts-protection-title');
             modal.style.cssText = `
-                width: min(540px, calc(100vw - 32px));
+                width: min(560px, 100%); max-height: calc(100vh - 40px); overflow: auto;
                 background: linear-gradient(180deg, #0f172a, #111827);
-                color: #e5e7eb;
-                border: 1px solid rgba(99,102,241,0.35);
-                border-radius: 18px;
-                padding: 22px;
+                color: #e5e7eb; border: 1px solid rgba(99,102,241,0.4);
+                border-radius: 18px; padding: 26px;
                 box-shadow: 0 24px 60px rgba(0,0,0,0.5);
             `;
             modal.innerHTML = `
-                <div style="font-size:0.8rem;letter-spacing:0.12em;text-transform:uppercase;color:#93c5fd;margin-bottom:10px;">Focus protection · Step <span id="ts-protection-step"></span></div>
-                <div id="ts-protection-action" style="font-size:1.15rem;font-weight:800;margin-bottom:8px;"></div>
-                <div id="ts-protection-message" style="font-size:0.95rem;line-height:1.55;color:#cbd5e1;margin-bottom:18px;"></div>
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
-                    <div id="ts-protection-countdown" style="font-family:'Outfit',sans-serif;font-size:2.3rem;font-weight:800;color:#818cf8;min-width:76px;">8s</div>
-                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.16);border-radius:999px;overflow:hidden;">
-                        <div id="ts-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;transition:width 0.2s linear;"></div>
-                    </div>
+                <div style="font-size:0.9rem;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;margin-bottom:12px;">Focus protection warning</div>
+                <div id="ts-protection-title" style="font-size:1.35rem;font-weight:800;line-height:1.25;margin-bottom:12px;"></div>
+                <div style="font-size:1rem;line-height:1.6;color:#cbd5e1;margin-bottom:20px;">Changing this setting weakens your current protection. Stay with the task in front of you, finish one meaningful step, and keep your attention protected. If you still need to continue, wait for the full countdown and choose deliberately.</div>
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">
+                    <div id="ts-protection-countdown" style="font-family:Outfit,Inter,sans-serif;font-size:2.6rem;font-weight:800;color:#818cf8;min-width:82px;">20s</div>
+                    <div style="flex:1;height:10px;background:rgba(148,163,184,0.18);border-radius:999px;overflow:hidden;"><div id="ts-protection-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#6366f1,#22c55e);border-radius:999px;"></div></div>
                 </div>
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-                    <span id="ts-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.82rem;">Continue will appear after the countdown.</span>
-                    <button id="ts-protection-stay" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;">Stay Focused</button>
-                    <button id="ts-protection-continue" hidden style="padding:9px 14px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;">Continue Anyway</button>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;">
+                    <span id="ts-protection-wait" aria-live="polite" style="margin-right:auto;color:#cbd5e1;font-size:0.95rem;">Continue will appear after 20 seconds.</span>
+                    <button id="ts-protection-stay" type="button" style="padding:11px 16px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#1e293b;color:#e5e7eb;cursor:pointer;font-size:0.95rem;">Stay Focused</button>
+                    <button id="ts-protection-continue" type="button" hidden style="padding:11px 16px;border-radius:10px;border:none;background:#6366f1;color:white;cursor:pointer;font-size:0.95rem;">Continue Anyway</button>
                 </div>
             `;
-
-            modal.querySelector('#ts-protection-step').textContent = `${step} of ${totalSteps}`;
-            modal.querySelector('#ts-protection-action').textContent = actionLabel;
-            modal.querySelector('#ts-protection-message').textContent = message;
+            modal.querySelector('#ts-protection-title').textContent = actionLabel;
 
             const countdownEl = modal.querySelector('#ts-protection-countdown');
             const barEl = modal.querySelector('#ts-protection-bar');
             const stayBtn = modal.querySelector('#ts-protection-stay');
             const waitEl = modal.querySelector('#ts-protection-wait');
             const continueBtn = modal.querySelector('#ts-protection-continue');
-            const totalMs = Math.max(1000, Number(delaySeconds) * 1000);
+            const totalMs = 20_000;
             const endAt = Date.now() + totalMs;
             let timerId = null;
 
@@ -1576,10 +1543,7 @@ class OptionsManager {
                 document.removeEventListener('keydown', escHandler, true);
                 overlay.remove();
             };
-            const settle = (value) => {
-                cleanup();
-                resolve(value);
-            };
+            const settle = (value) => { cleanup(); resolve(value); };
             const escHandler = (event) => {
                 if (event.key !== 'Escape') return;
                 event.preventDefault();
@@ -1595,7 +1559,7 @@ class OptionsManager {
                     waitEl.textContent = `Continue will appear in ${remainingSeconds}s.`;
                     return;
                 }
-                waitEl.textContent = 'You may continue if you still choose to.';
+                waitEl.textContent = 'Choose carefully. Your protection is still worth keeping.';
                 continueBtn.hidden = false;
                 continueBtn.focus();
                 clearInterval(timerId);
@@ -1612,56 +1576,12 @@ class OptionsManager {
         });
     }
 
-    async runChallengeChecks(actionLabel) {
-        const settings = this.settings || {};
-
-        if (settings.challengeTextEnabled) {
-            const expected = (settings.challengeTextValue || 'I choose focus over distraction.').trim();
-            const typed = prompt(`${actionLabel}\n\nType this sentence exactly:\n"${expected}"`, '') || '';
-            if (typed.trim() !== expected) return { ok: false, reason: 'Text challenge failed' };
-        }
-
-        if (settings.challengePinEnabled) {
-            const expectedPin = String(settings.challengePinValue || '1234');
-            const pin = prompt(`${actionLabel}\n\nEnter your focus PIN`, '') || '';
-            if (pin !== expectedPin) return { ok: false, reason: 'PIN verification failed' };
-        }
-
-        if (settings.challengePasswordEnabled) {
-            const expectedPassword = String(settings.challengePasswordValue || 'focus');
-            const pass = prompt(`${actionLabel}\n\nEnter your focus password`, '') || '';
-            if (pass !== expectedPassword) return { ok: false, reason: 'Password verification failed' };
-        }
-
-        return { ok: true };
-    }
-
     async runProtectionSequence(actionLabel) {
-        const messages = [
-            'Your current focus is valuable. You can keep it with one click.',
-            'Small distractions can turn into much longer detours.',
-            'Finish the next meaningful step before changing your protection.',
-            'Momentum is difficult to rebuild once it is broken.',
-            'A short pause now can protect your goals for the rest of the day.',
-            'Choose deliberately: protect your attention or continue anyway.',
-            'This is the final check. Make the choice you will be proud of later.'
-        ];
-
-        for (let index = 0; index < messages.length; index += 1) {
-            const allowed = await this.showProtectionStep(actionLabel, index + 1, messages.length, messages[index], 8);
-            if (!allowed) {
-                this.showNotification('Focus protection remains active.', 'success');
-                return false;
-            }
-        }
-
-        const challengeResult = await this.runChallengeChecks(actionLabel);
-        if (!challengeResult.ok) {
-            await this.playFeedbackSound('failure');
-            this.showNotification(challengeResult.reason || 'Verification failed', 'error');
+        const allowed = await this.showProtectionWarning(actionLabel);
+        if (!allowed) {
+            this.showNotification('Focus protection remains active.', 'success');
             return false;
         }
-
         await this.playFeedbackSound('success');
         return true;
     }
@@ -1989,7 +1909,7 @@ class OptionsManager {
             button.type = 'button';
             const item = button.closest('.accordion-item');
             if (!item) return;
-            const open = item.classList.contains('open') || button.getAttribute('aria-expanded') === 'true';
+            const open = false;
             syncAccordionItem(button, item, open);
         });
 

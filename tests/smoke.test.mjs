@@ -91,15 +91,16 @@ test('Reliability controls remain local-only and cloud sync interfaces are absen
     const options = await read('options/options.js');
     const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.js');
-    for (const id of ['siteWarningFirstMinutes', 'showBlockingCountdown', 'safeModeEnabled', 'usageRetentionDays', 'runDiagnostics', 'cleanupUsageNow']) {
+    for (const id of ['siteWarningFirstMinutes', 'showBlockingCountdown', 'safeModeEnabled', 'usageRetentionDays', 'cleanupUsageNow']) {
         assert.match(html, new RegExp(`id=["']${id}["']`), `missing ${id}`);
     }
     for (const source of [html, options, worker, popup]) {
         assert.doesNotMatch(source, /syncConflictPanel|keepLocalSync|keepCloudSync|Cloud Sync|Account Access|syncService/);
     }
     assert.doesNotMatch(html, /Pomodoro Timer/);
-    assert.match(options, /getDiagnostics/);
-    assert.match(popup, /popupProtectionStatus/);
+    for (const source of [html, options, popup]) {
+        assert.doesNotMatch(source, /Protection status|protectionStatus|popupProtection|refreshPopupStatus|runDiagnostics|diagnosticsOutput/);
+    }
 });
 
 test('Light theme defines readable surfaces and visible focus states', async () => {
@@ -142,12 +143,14 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     assert.match(pauseOverlay, /requiresPassword/);
 
     for (const source of [options, popup]) {
-        assert.match(source, /showProtectionStep\(actionLabel, step, totalSteps, message, delaySeconds = 8\)/);
-        assert.match(source, /Focus protection · Step/);
+        assert.match(source, /showProtectionWarning\(actionLabel\)/);
+        assert.match(source, /Focus protection warning/);
+        assert.match(source, /const totalMs = 20_000/);
         assert.match(source, /Continue will appear in \$\{remainingSeconds\}s/);
         assert.match(source, /continueBtn\.hidden = false/);
         assert.match(source, /Stay Focused/);
-        assert.match(source, /This is the final check/);
+        assert.match(source, /Changing this setting weakens your current protection/);
+        assert.doesNotMatch(source, /showProtectionStep|Focus protection · Step|This is the final check/);
     }
     assert.doesNotMatch(popup, /syncNow/);
 });
@@ -161,6 +164,8 @@ test('All settings accordions have reliable two-way expand and collapse wiring',
     assert.ok(itemCount > 0, 'accordion sections are present');
     assert.equal(headerCount, itemCount, 'every accordion section has one header');
     assert.doesNotMatch(html, /<button(?![^>]*type="button")[^>]*class="accordion-header"/);
+    assert.doesNotMatch(html, /accordion-item open|aria-expanded="true"/);
+    assert.match(options, /const open = false/);
     assert.match(options, /item\.classList\.toggle\('open', open\)/);
     assert.match(options, /button\.setAttribute\('aria-expanded', String\(open\)\)/);
     assert.match(options, /body\.style\.display = open \? 'block' : 'none'/);
@@ -191,8 +196,17 @@ test('Popup is compact, Mission-first, and schedule enforcement requires configu
     assert.match(popupCss, /Compact one-page popup layout/);
     assert.match(popupCss, /height:\s*590px/);
     assert.match(popupCss, /overflow:\s*hidden/);
+    assert.match(popupCss, /Accessible typography scale/);
+    assert.match(popupCss, /body\s*\{[\s\S]*?font-size:\s*0\.875rem/);
 
     assert.match(worker, /Array\.isArray\(result\.scheduledBlockedSites\)/);
     assert.match(worker, /if \(sites\.length === 0\) \{\s*await this\.disableScheduledBlocking\(\);/);
     assert.doesNotMatch(worker, /scheduledBlockedSites \|\| StorageManager\.getDefaultBlockedSites\(\)/);
+});
+
+test('Options typography and accordion defaults stay accessible and collapsed-first', async () => {
+    const html = await read('options/options.html');
+    assert.match(html, /Accessible typography scale/);
+    assert.match(html, /body\s*\{[\s\S]*?font-size:\s*1rem/);
+    assert.doesNotMatch(html, /accordion-item open|aria-expanded="true"/);
 });
