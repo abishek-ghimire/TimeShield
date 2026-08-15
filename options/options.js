@@ -1963,28 +1963,66 @@ class OptionsManager {
         });
     }
 
-    // ── ACCORDION (Schedules & Limits) ────────────────────────────────────────
+    // ── ACCORDION (all settings sections) ─────────────────────────────────────
     setupAccordion() {
-        document.querySelectorAll('.accordion-header').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
-                const item = document.getElementById(targetId);
-                if (!item) return;
+        const headers = [...document.querySelectorAll('.accordion-header')];
+        const accordionRoot = document.querySelector('.accordion');
+        if (!headers.length) return;
 
-                const isOpen = item.classList.contains('open');
+        const syncAccordionItem = (button, item, open) => {
+            item.classList.toggle('open', open);
+            button.setAttribute('aria-expanded', String(open));
+            button.classList.toggle('is-expanded', open);
 
-                // Toggle this panel
-                item.classList.toggle('open', !isOpen);
-                btn.setAttribute('aria-expanded', String(!isOpen));
+            const body = item.querySelector(':scope > .accordion-body');
+            if (body) {
+                body.setAttribute('aria-hidden', String(!open));
+                // Keep the state explicit so expansion works even if another
+                // stylesheet or browser default overrides display:none.
+                body.style.display = open ? 'block' : 'none';
+            }
+        };
 
-                // Update badge when closing
-                if (!isOpen) {
-                    // Opened — badge fades via CSS
-                } else {
-                    this.updateAccordionBadges();
-                }
+        // Normalize every section before binding, including sections that are
+        // initially marked open in the HTML.
+        headers.forEach(button => {
+            button.type = 'button';
+            const item = button.closest('.accordion-item');
+            if (!item) return;
+            const open = item.classList.contains('open') || button.getAttribute('aria-expanded') === 'true';
+            syncAccordionItem(button, item, open);
+        });
+
+        const toggleFromButton = (button) => {
+            const item = button.closest('.accordion-item');
+            if (!item) return;
+            const open = item.classList.contains('open');
+            syncAccordionItem(button, item, !open);
+            this.updateAccordionBadges();
+        };
+
+        // Bind directly and use an idempotent marker so repeated initialization
+        // cannot stack handlers and make one click toggle twice.
+        headers.forEach(button => {
+            if (button.dataset.accordionBound === 'true') return;
+            button.dataset.accordionBound = 'true';
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFromButton(button);
             });
         });
+
+        // A delegated fallback also supports any accordion sections added later.
+        if (accordionRoot && !accordionRoot.dataset.accordionDelegated) {
+            accordionRoot.dataset.accordionDelegated = 'true';
+            accordionRoot.addEventListener('click', (event) => {
+                const button = event.target.closest?.('.accordion-header');
+                if (!button || button.dataset.accordionBound === 'true') return;
+                event.preventDefault();
+                toggleFromButton(button);
+            });
+        }
 
         // Keep badges in sync when selects change
         ['scheduledBlocking', 'sleepBlocking', 'timeLimits', 'globalLimitEnabled'].forEach(id => {
