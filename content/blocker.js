@@ -63,12 +63,12 @@ class ContentBlocker {
         chrome.storage.onChanged.addListener(async (changes) => {
             if (!this.refs.widget) return;
 
-            if (changes.clockView) {
-                await this.applyClockMode(changes.clockView.newValue || 'standard');
-            }
-
             if (changes.clockVisible) {
                 this.toggleFloatingClock(changes.clockVisible.newValue);
+            }
+
+            if (changes.clockPos?.newValue && !this.isFullscreenFlip) {
+                this._applyStoredPositionAndSize(changes.clockPos.newValue);
             }
 
             if (changes.clockMinimized && !this.isFullscreenFlip) {
@@ -188,7 +188,6 @@ class ContentBlocker {
 
         await this._restorePositionAndSize(widget);
         await this._restoreVisibility(widget);
-        await this._applyClockModeFromStorage();
     }
 
     _makeDraggable(widget, header, iframe) {
@@ -357,10 +356,6 @@ class ContentBlocker {
         }
     }
 
-    async _applyClockModeFromStorage() {
-        const { clockView } = await chrome.storage.local.get(['clockView']);
-        await this.applyClockMode(clockView || 'standard');
-    }
 
     async applyClockMode(mode) {
         const { widget, header, iframe, grip } = this.refs;
@@ -512,19 +507,27 @@ class ContentBlocker {
         });
     }
 
+    _applyStoredPositionAndSize(pos = {}) {
+        const { widget } = this.refs;
+        if (!widget || this.isFullscreenFlip) return;
+        const width = Math.max(220, Number(pos.w) || 280);
+        const height = Math.max(120, Number(pos.h) || 160);
+        const x = Math.max(0, Math.min(Math.max(0, window.innerWidth - width), Number(pos.x) || 0));
+        const y = Math.max(0, Math.min(Math.max(0, window.innerHeight - height), Number(pos.y) || 0));
+        widget.style.transform = `translate(${x}px, ${y}px)`;
+        widget.style.width = `${width}px`;
+        widget.style.height = `${height}px`;
+        this._applyScale();
+    }
+
     async _restorePositionAndSize(widget) {
         const result = await chrome.storage.local.get(['clockPos']);
-        const pos = result.clockPos;
-        if (pos) {
-            const x = Math.max(0, Math.min(window.innerWidth - (pos.w || 280), pos.x));
-            const y = Math.max(0, Math.min(window.innerHeight - (pos.h || 160), pos.y));
-            widget.style.transform = `translate(${x}px, ${y}px)`;
-            widget.style.width = `${pos.w || 280}px`;
-            widget.style.height = `${pos.h || 160}px`;
+        if (result.clockPos) {
+            this._applyStoredPositionAndSize(result.clockPos);
             return;
         }
 
-        const defaultX = window.innerWidth - 280 - 20;
+        const defaultX = Math.max(0, window.innerWidth - 280 - 20);
         const defaultY = 20;
         widget.style.transform = `translate(${defaultX}px, ${defaultY}px)`;
     }

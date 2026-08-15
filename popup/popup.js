@@ -71,6 +71,7 @@ class PopupController {
         bind('toggleClock', () => this.toggleFloatingClock());
         bind('flipClockMode', () => this.openFlipClockTab());
         bind('pauseProtectionMode', () => this.handlePauseProtection());
+        bind('addCurrentSite', () => this.addCurrentSiteToFocusList());
         bind('startFocus', () => this.handleFocusMode());
         bind('openSettings', () => chrome.runtime.openOptionsPage());
         bind('startTimer', () => this.toggleTimer());
@@ -319,6 +320,15 @@ class PopupController {
         this.elements.timerInputsContainer.style.display = 'flex';
         this.elements.timerDisplay.style.display = 'none';
         this.syncTimerInputs();
+    }
+
+    async addCurrentSiteToFocusList() {
+        const response = await chrome.runtime.sendMessage({ action: 'addCurrentSiteToFocusList' });
+        if (response?.success === false) {
+            this.showToast(response.error || 'This page cannot be added to Focus Mode.');
+            return;
+        }
+        this.showToast(`${response.site} added to the Focus list.`);
     }
 
     async handleFocusMode() {

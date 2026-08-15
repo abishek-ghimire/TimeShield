@@ -512,6 +512,31 @@ class BackgroundService {
                     sendResponse({ success: true });
                 }
                 break;
+            case 'addCurrentSiteToFocusList': {
+                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+                const tab = tabs[0];
+                let hostname = '';
+                try {
+                    const url = new URL(tab?.url || '');
+                    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('The current page cannot be added to Focus Mode.');
+                    hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+                } catch (error) {
+                    sendResponse({ success: false, error: error.message || 'The current page cannot be added to Focus Mode.' });
+                    break;
+                }
+
+                const current = await chrome.storage.local.get(['focusBlockedSites', 'focusState']);
+                const sites = Array.isArray(current.focusBlockedSites) ? [...current.focusBlockedSites] : [];
+                if (!sites.includes(hostname)) sites.push(hostname);
+                await chrome.storage.local.set({ focusBlockedSites: sites });
+
+                if (current.focusState?.isActive) {
+                    await this.enableSiteBlocking(sites, 101, 'focus');
+                    await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
+                }
+                sendResponse({ success: true, site: hostname, added: !current.focusBlockedSites?.includes(hostname) });
+                break;
+            }
             case 'applyDynamicFocusBlock':
                 {
                     // Dynamically apply block to a newly added focus site while Focus Mode is active
@@ -585,6 +610,10 @@ class BackgroundService {
                 sendResponse({ success: true, ...cleanup });
                 break;
             }
+            case 'openFlipClockTab':
+                await chrome.tabs.create({ url: chrome.runtime.getURL('floating/flip-clock.html') });
+                sendResponse({ success: true });
+                break;
             case 'toggleClock':
                 await this.toggleFloatingClock(message.visible);
                 // Ensure scripts are injected after toggle to make it work immediately everywhere
@@ -736,7 +765,7 @@ class BackgroundService {
                     await chrome.storage.local.remove('pauseChallenge');
                     sendResponse({ success: true });
                 } else {
-                    sendResponse({ success: false, error: 'Pausing is unavailable while Focus Mode is active' });
+                    sendResponse({ success: false, error: 'Unable to pause protection' });
                 }
                 break;
             }
@@ -781,13 +810,8 @@ class BackgroundService {
     }
 
     async pauseBlocking(durationMs) {
-        // Deep Work Strict Mode: Prevent pausing during active focus.
-        const focusResult = await chrome.storage.local.get(['focusState']);
-        const focusState = focusResult.focusState || {};
-        if (focusState.isActive && focusState.deepWorkMode) {
-            return false;
-        }
-
+        // Focus Mode may be paused after the same visible challenge as every other protection.
+        // ResumeBlocking() re-evaluates Focus Mode and restores its rules when the pause expires.
         const pauseDurationMs = Number(durationMs);
         if (!Number.isFinite(pauseDurationMs) || pauseDurationMs <= 0) return false;
 
