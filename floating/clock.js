@@ -246,10 +246,23 @@
         }
     });
 
-    // The in-widget control always opens the full flip clock in a separate tab.
+    // The in-widget control always opens the full Flip Clock in a separate tab.
     const viewToggle = document.getElementById('view-toggle');
-    viewToggle?.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openFlipClockTab' }).catch(() => { });
+    const openFlipClockTab = async () => {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'openFlipClockTab' });
+            if (!response?.success) throw new Error('Flip Clock tab was not opened');
+        } catch (error) {
+            // Keep the click useful if an older service worker is still active.
+            window.open(chrome.runtime.getURL('floating/flip-clock.html'), '_blank');
+        }
+    };
+    viewToggle?.addEventListener('click', openFlipClockTab);
+    viewToggle?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openFlipClockTab();
+        }
     });
 
 })();

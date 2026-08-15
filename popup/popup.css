@@ -1000,3 +1000,94 @@ textarea {
         font-size: 0.84rem;
     }
 }
+
+
+/* Final compact-popup visual refinement */
+.popup-container {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(2, 6, 23, 0.12));
+}
+
+.popup-header {
+    border-bottom: 1px solid color-mix(in srgb, var(--card-border) 80%, transparent);
+}
+
+.brand h1 {
+    letter-spacing: 0.055em;
+}
+
+.current-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.quick-actions-modern .btn,
+.compact-action {
+    min-height: 38px;
+    border: 1px solid color-mix(in srgb, var(--card-border) 90%, transparent);
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.16);
+    font-weight: 700;
+}
+
+.quick-actions-modern .btn:hover,
+.compact-action:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--primary) 65%, var(--card-border));
+}
+
+.popup-utility-row {
+    padding: 2px;
+}
+
+.compact-toggle {
+    min-height: 34px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.card.compact-card,
+.timer-card {
+    background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+    border-color: color-mix(in srgb, var(--card-border) 92%, transparent);
+    box-shadow: var(--elev-shadow);
+}
+
+.card-title {
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.card-title .icon {
+    filter: saturate(1.15);
+}
+
+.todo-list,
+.ad-controls,
+.timer-ui {
+    color: var(--text-muted);
+}
+
+.compact-card-button,
+.ad-controls button,
+.timer-ui button {
+    min-height: 30px;
+    font-weight: 700;
+}
+
+.timer-inputs input {
+    min-height: 32px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+#focusOverlayToggle,
+#timerWidgetToggle,
+#adBlockToggle {
+    flex: 0 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .quick-actions-modern .btn:hover,
+    .compact-action:hover {
+        transform: none;
+    }
+}

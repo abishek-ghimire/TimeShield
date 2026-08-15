@@ -238,9 +238,29 @@ test('Popup is compact, Mission-first, and schedule enforcement requires configu
 
 test('Clock view opens flip mode in a separate tab', async () => {
     const clock = await read('floating/clock.js');
+    const clockHtml = await read('floating/clock.html');
+    const blocker = await read('content/blocker.js');
+    const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.js');
     assert.match(clock, /action: 'openFlipClockTab'/);
+    assert.match(clock, /window\.open\(chrome\.runtime\.getURL\('floating\/flip-clock\.html'\), '_blank'\)/);
+    assert.doesNotMatch(clockHtml, /flip-clock-frame/);
+    assert.doesNotMatch(blocker, /async applyClockMode/);
+    assert.match(worker, /case 'openFlipClockTab'/);
     assert.match(popup, /chrome\.runtime\.getURL\('floating\/flip-clock\.html'\)/);
+});
+
+test('Clock geometry is broadcast and applied across open sites', async () => {
+    const blocker = await read('content/blocker.js');
+    const worker = await read('background/service-worker.js');
+    const popupCss = await read('popup/popup.css');
+    assert.match(blocker, /case 'applyClockGeometry'/);
+    assert.match(blocker, /action: 'broadcastClockGeometry'/);
+    assert.match(blocker, /const clockPos = \{\s*x:/);
+    assert.match(worker, /case 'broadcastClockGeometry'/);
+    assert.match(worker, /action: 'applyClockGeometry'/);
+    assert.match(popupCss, /Final compact-popup visual refinement/);
+    assert.match(popupCss, /min-height:\s*38px/);
 });
 
 test('Options typography and accordion defaults stay accessible and collapsed-first', async () => {

@@ -613,6 +613,23 @@ class BackgroundService {
                 await chrome.tabs.create({ url: chrome.runtime.getURL('floating/flip-clock.html') });
                 sendResponse({ success: true });
                 break;
+            case 'broadcastClockGeometry': {
+                const clockPos = message.clockPos;
+                if (!clockPos || !Number.isFinite(Number(clockPos.x)) || !Number.isFinite(Number(clockPos.y))) {
+                    sendResponse({ success: false });
+                    break;
+                }
+                await chrome.storage.local.set({ clockPos });
+                const tabs = await chrome.tabs.query({});
+                await Promise.all(tabs
+                    .filter(tab => tab.id != null && /^https?:/i.test(tab.url || ''))
+                    .map(tab => chrome.tabs.sendMessage(tab.id, {
+                        action: 'applyClockGeometry',
+                        clockPos
+                    }).catch(() => null)));
+                sendResponse({ success: true });
+                break;
+            }
             case 'toggleClock':
                 await this.toggleFloatingClock(message.visible);
                 // Ensure scripts are injected after toggle to make it work immediately everywhere
