@@ -52,6 +52,12 @@ class ContentBlocker {
                     if (this.refs.widget) this._restoreVisibility(this.refs.widget);
                     sendResponse({ success: true });
                     break;
+                case 'applyClockGeometry':
+                    if (message.clockPos && !this.isFullscreenFlip) {
+                        this._applyStoredPositionAndSize(message.clockPos);
+                    }
+                    sendResponse({ success: true });
+                    break;
                 default:
                     break;
             }
@@ -357,65 +363,6 @@ class ContentBlocker {
     }
 
 
-    async applyClockMode(mode) {
-        const { widget, header, iframe, grip } = this.refs;
-        if (!widget || !header || !iframe || !grip) return;
-
-        if (mode === 'flip') {
-            this.isFullscreenFlip = true;
-
-            widget.dataset.prevTransform = widget.style.transform || 'translate(0px, 0px)';
-            widget.dataset.prevWidth = widget.style.width || '280px';
-            widget.dataset.prevHeight = widget.style.height || '160px';
-            widget.dataset.prevRadius = widget.style.borderRadius || '16px';
-            widget.dataset.prevShadow = widget.style.boxShadow || '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)';
-
-            header.style.display = 'none';
-            grip.style.display = 'none';
-
-            widget.style.transform = 'translate(0px, 0px)';
-            widget.style.left = '0';
-            widget.style.top = '0';
-            widget.style.width = '100vw';
-            widget.style.height = '100vh';
-            widget.style.minWidth = '100vw';
-            widget.style.minHeight = '100vh';
-            widget.style.borderRadius = '0';
-            widget.style.boxShadow = 'none';
-            iframe.style.height = '100%';
-
-            if (widget.style.display === 'none') {
-                widget.style.display = 'block';
-            }
-
-            await chrome.storage.local.set({ clockMinimized: false, clockVisible: true });
-            this._applyScale(true);
-            return;
-        }
-
-        this.isFullscreenFlip = false;
-
-        header.style.display = 'flex';
-        iframe.style.height = 'calc(100% - 28px)';
-
-        widget.style.width = widget.dataset.prevWidth || '280px';
-        widget.style.height = widget.dataset.prevHeight || '160px';
-        widget.style.minWidth = '220px';
-        widget.style.minHeight = '120px';
-        widget.style.borderRadius = widget.dataset.prevRadius || '16px';
-        widget.style.boxShadow = widget.dataset.prevShadow || '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)';
-        widget.style.transform = widget.dataset.prevTransform || widget.style.transform || `translate(${Math.max(0, window.innerWidth - 300)}px, 20px)`;
-
-        const { clockMinimized } = await chrome.storage.local.get(['clockMinimized']);
-        if (clockMinimized) {
-            this._applyMinimizeState(widget, iframe, grip, true);
-        } else {
-            this._applyMinimizeState(widget, iframe, grip, false);
-        }
-
-        this._applyScale();
-    }
-
     _applyScale(fullscreen = false) {
         const { widget, iframe } = this.refs;
         if (!widget || !iframe) return;
@@ -502,9 +449,14 @@ class ContentBlocker {
         if (this.isFullscreenFlip) return;
         const rect = widget.getBoundingClientRect();
         const transform = new DOMMatrix(getComputedStyle(widget).transform);
-        chrome.storage.local.set({
-            clockPos: { x: transform.e, y: transform.f, w: rect.width, h: rect.height }
-        });
+        const clockPos = {
+            x: Math.round(transform.e),
+            y: Math.round(transform.f),
+            w: Math.round(rect.width),
+            h: Math.round(rect.height)
+        };
+        chrome.storage.local.set({ clockPos }).catch(() => { });
+        chrome.runtime.sendMessage({ action: 'broadcastClockGeometry', clockPos }).catch(() => { });
     }
 
     _applyStoredPositionAndSize(pos = {}) {
