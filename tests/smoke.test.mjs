@@ -269,3 +269,33 @@ test('Options typography and accordion defaults stay accessible and collapsed-fi
     assert.match(html, /body\s*\{[\s\S]*?font-size:\s*1rem/);
     assert.doesNotMatch(html, /accordion-item open|aria-expanded="true"/);
 });
+
+
+test('Floating Display is independent of Clock View and refreshes immediately', async () => {
+    const blocker = await read('content/blocker.js');
+    const popup = await read('popup/popup.js');
+    const worker = await read('background/service-worker.js');
+    assert.match(blocker, /changes\.focusState \|\| changes\.timerState \|\| changes\.settings/);
+    assert.match(blocker, /case 'settingsUpdated'/);
+    assert.match(blocker, /const shouldShowForStatus = focusActive \|\| timerActive/);
+    assert.match(popup, /if \(enabled\) update\.sessionOverlayDismissed = false/);
+    assert.match(popup, /action: 'settingsUpdated'/);
+    assert.match(worker, /case 'settingsUpdated'/);
+    assert.match(worker, /await this\.ensureContentScriptInjected\(\)/);
+    assert.match(worker, /isEligibleOverlayTab\(url = ''\)/);
+});
+
+test('Eligible local document tabs are included in overlay injection and geometry sync', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /\^\(https\?:\|file:\|ftp:\)/);
+    assert.match(worker, /chrome\.tabs\.query\(\{\}\)/);
+    assert.match(worker, /isEligibleOverlayTab\(tab\.url\)/);
+    assert.match(worker, /isEligibleOverlayTab\(candidate\.url\)/);
+});
+
+test('Popup polish preserves fixed width and touch-friendly controls', async () => {
+    const popupCss = await read('popup/popup.css');
+    assert.match(popupCss, /width:\s*380px;[\s\S]*min-width:\s*380px/);
+    assert.match(popupCss, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+    assert.match(popupCss, /\.timer-display\s*\{[\s\S]*font-size:\s*1\.65rem/);
+});

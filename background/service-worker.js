@@ -622,7 +622,7 @@ class BackgroundService {
                 await chrome.storage.local.set({ clockPos });
                 const tabs = await chrome.tabs.query({});
                 await Promise.all(tabs
-                    .filter(tab => tab.id != null && /^https?:/i.test(tab.url || ''))
+                    .filter(tab => tab.id != null && this.isEligibleOverlayTab(tab.url))
                     .map(tab => chrome.tabs.sendMessage(tab.id, {
                         action: 'applyClockGeometry',
                         clockPos
@@ -636,6 +636,15 @@ class BackgroundService {
                 if (message.visible) await this.ensureContentScriptInjected();
                 sendResponse({ success: true });
                 break;
+            case 'settingsUpdated': {
+                await this.ensureContentScriptInjected();
+                const tabs = await chrome.tabs.query({});
+                await Promise.all(tabs
+                    .filter(tab => tab.id != null && this.isEligibleOverlayTab(tab.url))
+                    .map(tab => chrome.tabs.sendMessage(tab.id, { action: 'settingsUpdated' }).catch(() => null)));
+                sendResponse({ success: true });
+                break;
+            }
             case 'setTimeFormat':
                 const settings = await this.getSettings();
                 settings.timeFormat = message.format;
@@ -1563,9 +1572,13 @@ class BackgroundService {
         await this.stopFocusMode();
     }
 
+    isEligibleOverlayTab(url = '') {
+        return /^(https?:|file:|ftp:)/i.test(String(url));
+    }
+
     async ensureContentScriptInjected() {
-        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-        for (const tab of tabs) {
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs.filter(candidate => candidate.id != null && this.isEligibleOverlayTab(candidate.url))) {
             try {
                 // Check if already injected
                 await chrome.tabs.sendMessage(tab.id, { action: 'ping' });

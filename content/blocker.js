@@ -52,6 +52,10 @@ class ContentBlocker {
                     if (this.refs.widget) this._restoreVisibility(this.refs.widget);
                     sendResponse({ success: true });
                     break;
+                case 'settingsUpdated':
+                    if (this.refs.widget) this._restoreVisibility(this.refs.widget);
+                    sendResponse({ success: true });
+                    break;
                 case 'applyClockGeometry':
                     if (message.clockPos && !this.isFullscreenFlip) {
                         this._applyStoredPositionAndSize(message.clockPos);
@@ -86,7 +90,7 @@ class ContentBlocker {
                 );
             }
 
-            if (changes.focusState || changes.timerState || changes.sessionOverlayDismissed) {
+            if (changes.focusState || changes.timerState || changes.settings || changes.sessionOverlayDismissed) {
                 await this._restoreVisibility(this.refs.widget);
             }
         });

@@ -124,9 +124,12 @@ class PopupController {
         const result = await chrome.storage.local.get(['settings']);
         const settings = result.settings || {};
         settings[key] = enabled;
-        await chrome.storage.local.set({ settings });
-        // Trigger a check in active tabs
-        chrome.runtime.sendMessage({ action: 'settingsUpdated' }).catch(() => { });
+        const update = { settings };
+        if (enabled) update.sessionOverlayDismissed = false;
+        await chrome.storage.local.set(update);
+        // Inject/recheck every eligible tab so an active session appears immediately.
+        await chrome.runtime.sendMessage({ action: 'settingsUpdated' }).catch(() => { });
+        this.showToast(enabled ? 'Floating display enabled.' : 'Floating display disabled.');
     }
 
     syncTimerInputs() {

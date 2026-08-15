@@ -1091,3 +1091,115 @@ textarea {
         transform: none;
     }
 }
+
+/* Screenshot-driven popup polish */
+html,
+body {
+    width: 380px;
+    min-width: 380px;
+    max-width: 380px;
+    overflow-x: hidden;
+}
+
+.popup-container {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px 14px;
+    gap: 9px;
+}
+
+.popup-header {
+    min-height: 42px;
+    padding: 0 2px 8px;
+    align-items: center;
+}
+
+.brand {
+    min-width: 0;
+}
+
+.brand h1 {
+    font-size: 0.92rem;
+    white-space: nowrap;
+}
+
+.current-time {
+    min-width: 104px;
+    padding: 7px 9px;
+    border-radius: 9px;
+    text-align: center;
+    font-size: 0.82rem;
+}
+
+.quick-actions-modern {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.quick-actions-modern .btn,
+.compact-action {
+    min-width: 0;
+    padding-inline: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.popup-utility-row {
+    gap: 8px;
+    min-height: 34px;
+}
+
+.popup-utility-row > * {
+    min-width: 0;
+}
+
+.card-grid {
+    gap: 8px;
+}
+
+.card.compact-card,
+.timer-card {
+    border-radius: 13px;
+}
+
+.card-title {
+    font-size: 0.88rem;
+    letter-spacing: 0.025em;
+}
+
+.timer-card {
+    padding: 11px 12px;
+}
+
+.timer-display {
+    font-size: 1.65rem;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+}
+
+.timer-ui,
+.todo-list,
+.ad-controls {
+    font-size: 0.76rem;
+}
+
+@media (max-width: 379px) {
+    html,
+    body {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
