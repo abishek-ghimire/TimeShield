@@ -402,3 +402,14 @@ test('All pause block pages use the shared preparation flow', async () => {
         assert.match(source, /action: 'pauseBlocking'/);
     }
 });
+
+
+test('Screen-time tracking follows tab lifecycle changes without overcounting', async () => {
+    const tracker = await read('background/usage-tracker.js');
+    assert.match(tracker, /chrome\.tabs\.onRemoved\.addListener/);
+    assert.match(tracker, /this\.activeTabId === tabId/);
+    assert.match(tracker, /chrome\.tabs\.onReplaced\.addListener/);
+    assert.match(tracker, /this\.activeTabId === removedTabId/);
+    assert.match(tracker, /this\.handleTabChange\(addedTabId\)/);
+    assert.match(tracker, /this\.startTracking\(domain, tabId\)/);
+});
