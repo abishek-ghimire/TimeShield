@@ -34,6 +34,18 @@ class UsageTracker {
             }
         });
 
+        chrome.tabs.onRemoved.addListener(tabId => {
+            if (this.activeTabId === tabId) {
+                this.stopTracking();
+            }
+        });
+
+        chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
+            if (this.activeTabId === removedTabId) {
+                this.handleTabChange(addedTabId);
+            }
+        });
+
         chrome.windows.onFocusChanged.addListener(windowId => {
             if (windowId === chrome.windows.WINDOW_ID_NONE) {
                 this.stopTracking(); // Chrome lost focus
@@ -90,7 +102,7 @@ class UsageTracker {
                 // Track http, https, and file protocols
                 if (url.protocol.startsWith('http') || url.protocol === 'file:') {
                     const domain = url.protocol === 'file:' ? `file://${url.pathname.split('/').pop()}` : url.hostname.replace('www.', '');
-                    this.startTracking(domain);
+                    this.startTracking(domain, tabId);
                 } else if (url.protocol === 'chrome-extension:' && url.searchParams.get('src')) {
                     // Chrome PDF viewer often uses chrome-extension://.../?src=<original-pdf-url>
                     const src = decodeURIComponent(url.searchParams.get('src'));
@@ -99,7 +111,7 @@ class UsageTracker {
                         const derived = srcUrl.protocol === 'file:'
                             ? `file://${srcUrl.pathname.split('/').pop()}`
                             : `${srcUrl.hostname.replace('www.', '')}${srcUrl.pathname.toLowerCase().endsWith('.pdf') ? ' (pdf)' : ''}`;
-                        this.startTracking(derived);
+                        this.startTracking(derived, tabId);
                     } catch (e) {
                         this.stopTracking();
                     }
@@ -110,7 +122,7 @@ class UsageTracker {
                 // Handle cases where URL is not valid, like about:blank
                 if (tab.url && tab.url.startsWith('file:///')) {
                     const domain = `file://${tab.url.substring(tab.url.lastIndexOf('/') + 1)}`;
-                    this.startTracking(domain);
+                    this.startTracking(domain, tabId);
                 } else {
                     this.stopTracking();
                 }
