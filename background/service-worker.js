@@ -941,9 +941,9 @@ class BackgroundService {
 
     generatePauseChallenge() {
         const challenges = [
-            'you can protect your attention and finish what matters\nsmall focused steps today create meaningful progress tomorrow',
-            'stay with your plan and give your best work your full mind\nyour patient effort now will make tomorrow easier',
-            'clear attention creates meaningful progress\nkeep going one focused choice at a time\nyou are building work you can be proud of'
+'i choose to protect my attention and finish what matters\nwe make meaningful progress one focused step at a time',
+'i return my full attention to the work in front of me\nwe make today easier by doing the important work now',
+            'i am building work i will be proud to complete\nwe keep moving forward with one focused choice at a time\ni can finish what matters with patience and purpose'
         ];
         const values = new Uint32Array(1);
         globalThis.crypto.getRandomValues(values);

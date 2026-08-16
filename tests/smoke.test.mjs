@@ -78,8 +78,16 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(helper, /valueLines\.length >= 2/);
     assert.match(helper, /\^\[a-z\]\+\(\?: \[a-z\]\+\)\*\$/);
     assert.match(worker, /generatePauseChallenge/);
-    assert.match(worker, /you can protect your attention/);
+    assert.match(worker, /i choose to protect my attention/);
+    assert.match(worker, /we make meaningful progress/);
+    assert.match(worker, /i return my full attention/);
     assert.match(worker, /isValidPauseChallenge/);
+    assert.match(worker, /'i choose to protect my attention and finish what matters\\nwe make meaningful progress one focused step at a time'/);
+    assert.match(worker, /'i return my full attention to the work in front of me\\nwe make today easier by doing the important work now'/);
+    assert.match(worker, /'i am building work i will be proud to complete\\nwe keep moving forward with one focused choice at a time\\ni can finish what matters with patience and purpose'/);
+    const challengeSource = worker.match(/const challenges = \[([\s\S]*?)\n        \];/)?.[1] || '';
+    const challengeText = challengeSource.replace(/,\s*/g, '');
+    assert.doesNotMatch(challengeText, /[A-Z]|[.,!?]/);
     assert.match(worker, /pauseContext === 'usageLimit'/);
     assert.match(worker, /requiresFinalConfirmation: true/);
     assert.match(worker, /confirmUsagePause/);
