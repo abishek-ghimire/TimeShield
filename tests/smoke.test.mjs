@@ -339,3 +339,22 @@ test('Floating clock handles extension reloads without unhandled context errors'
     assert.doesNotMatch(clock, /timerSnapshot = await chrome\.storage\.local\.get/);
     assert.doesNotMatch(clock, /await chrome\.runtime\.sendMessage\(\{ action: 'stop/);
 });
+
+
+test('Inactive Focus sessions cannot leave stale blocking rules behind', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /isFocusSessionValid\(focusState, sites = \[\]\)/);
+    assert.match(worker, /getFocusSessionEndTime\(focusState\)/);
+    assert.match(worker, /clearInactiveFocusProtection\(focusState = null\)/);
+    assert.match(worker, /await this\.disableSiteBlockingRange\(101, 200\)/);
+    assert.match(worker, /if \(this\.isFocusSessionValid\(focusResult\.focusState, sites\)\)/);
+    assert.match(worker, /await this\.clearInactiveFocusProtection\(result\.focusState\)/);
+});
+
+test('Popup keeps controls readable instead of collapsing or ellipsizing the main actions', async () => {
+    const popupCss = await read('popup/popup.css');
+    assert.match(popupCss, /width:\s*420px;/);
+    assert.match(popupCss, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+    assert.match(popupCss, /white-space:\s*normal;/);
+    assert.match(popupCss, /text-overflow:\s*clip;/);
+});
