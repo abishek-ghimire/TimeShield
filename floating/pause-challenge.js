@@ -41,9 +41,44 @@
             const error = pauseSection.querySelector('#challengeError');
             wordDisplay.textContent = challenge;
 
+            const isUsageLimit = response?.pauseContext === 'usageLimit';
+            let submittedValue = '';
+            let finalConfirmationReady = false;
+            let countdownTimer = null;
+
             const resetError = () => {
                 error.style.display = 'none';
             };
+            const stopCountdown = () => {
+                if (countdownTimer) {
+                    window.clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
+            };
+            let sendPauseRequest = (password, confirmUsagePause = false) => {
+                chrome.runtime.sendMessage({
+                    action: 'pauseBlockingWithPassword',
+                    durationMs,
+                    pauseContext: isUsageLimit ? 'usageLimit' : 'general',
+                    password,
+                    confirmUsagePause
+                }, (result) => {
+                    if (chrome.runtime.lastError || !result?.success) {
+                        submit.disabled = false;
+                        error.textContent = result?.error || 'Those sentences do not match. Try again.';
+                        error.style.display = 'block';
+                        if (!result?.requiresFinalConfirmation) {
+                            input.disabled = false;
+                            input.value = '';
+                            input.focus();
+                        }
+                        return;
+                    }
+                    stopCountdown();
+                    showSuccess(pauseSection);
+                });
+            };
+
             input.addEventListener('input', resetError);
             input.addEventListener('paste', (event) => event.preventDefault());
             input.addEventListener('keydown', (event) => {
@@ -51,6 +86,13 @@
             });
 
             submit.addEventListener('click', () => {
+                if (isUsageLimit && finalConfirmationReady) {
+                    submit.disabled = true;
+                    submit.textContent = 'confirming pause';
+                    sendPauseRequest(submittedValue, true);
+                    return;
+                }
+
                 const value = input.value.replace(/\r\n?/g, '\n').trim();
                 const valueLines = value.split('\n');
                 const validValue = valueLines.length >= 2
@@ -62,26 +104,62 @@
                     return;
                 }
 
+                submittedValue = value;
                 submit.disabled = true;
-                chrome.runtime.sendMessage({
-                    action: 'pauseBlockingWithPassword',
-                    durationMs,
-                    pauseContext: response?.pauseContext === 'usageLimit' ? 'usageLimit' : 'general',
-                    password: value
-                }, (result) => {
-                    if (chrome.runtime.lastError || !result?.success) {
-                        submit.disabled = false;
-                        error.textContent = result?.error || 'Those sentences do not match. Try again.';
-                        error.style.display = 'block';
-                        input.value = '';
-                        input.focus();
-                        return;
-                    }
-                    showSuccess(pauseSection);
-                });
+                input.disabled = true;
+                sendPauseRequest(value);
             });
 
+            // Usage-limit pauses get a modest second decision point so extending a
+            // site limit is deliberate rather than an automatic reflex.
+            if (isUsageLimit) {
+                const usageSendPauseRequest = (password, confirmUsagePause = false) => {
+                    chrome.runtime.sendMessage({
+                        action: 'pauseBlockingWithPassword',
+                        durationMs,
+                        pauseContext: 'usageLimit',
+                        password,
+                        confirmUsagePause
+                    }, (result) => {
+                        if (chrome.runtime.lastError || !result?.success) {
+                            if (result?.requiresFinalConfirmation && Number.isFinite(result.readyAt)) {
+                                const updateCountdown = () => {
+                                    const remaining = Math.max(0, Math.ceil((result.readyAt - Date.now()) / 1000));
+                                    submit.textContent = remaining > 0 ? `wait ${remaining}s` : 'confirm pause';
+                                    if (remaining <= 0) {
+                                        finalConfirmationReady = true;
+                                        submit.disabled = false;
+                                        error.textContent = 'your pause request is ready. confirm only if you still want extra site time.';
+                                        error.style.display = 'block';
+                                        stopCountdown();
+                                    }
+                                };
+                                error.textContent = 'pause request accepted. wait ten seconds, then confirm if you still want extra site time.';
+                                error.style.display = 'block';
+                                updateCountdown();
+                                stopCountdown();
+                                countdownTimer = window.setInterval(updateCountdown, 250);
+                                return;
+                            }
+                            submit.disabled = false;
+                            input.disabled = false;
+                            error.textContent = result?.error || 'Those sentences do not match. Try again.';
+                            error.style.display = 'block';
+                            input.value = '';
+                            input.focus();
+                            return;
+                        }
+                        stopCountdown();
+                        showSuccess(pauseSection);
+                    });
+                };
+                // The first submission uses the challenge; the second uses the
+                // same text plus the explicit final-confirmation flag.
+                sendPauseRequest = usageSendPauseRequest;
+            }
+
             cancel.addEventListener('click', () => {
+                stopCountdown();
                 pauseSection.style.display = 'none';
                 pauseButton.style.display = 'flex';
             });
