@@ -87,7 +87,7 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(helper, /wait ten seconds/);
     assert.match(helper, /confirm pause/);
     assert.match(worker, /\[1, 5, 10\]/);
-    assert.match(worker, /\[1, 5, 10, 60, 180\]/);
+    assert.match(worker, /\[1, 5, 60, 180\]/);
     assert.match(helper, /isUsageLimit/);
     assert.doesNotMatch(worker, /new Uint32Array\(25\)/);
     assert.doesNotMatch(worker, /alphabet\.length/);
@@ -98,6 +98,7 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     for (const source of [focus, schedule, sleep]) {
         assert.match(source, /data-minutes="60"/);
         assert.match(source, /data-minutes="180"/);
+        assert.doesNotMatch(source, /data-minutes="10"/);
         assert.doesNotMatch(source, /rest of day/i);
     }
 });

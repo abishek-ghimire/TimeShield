@@ -850,7 +850,7 @@ class BackgroundService {
     }
 
     getAllowedPauseDurationsMs(pauseContext = 'general') {
-        const minutes = pauseContext === 'usageLimit' ? [1, 5, 10] : [1, 5, 10, 60, 180];
+        const minutes = pauseContext === 'usageLimit' ? [1, 5, 10] : [1, 5, 60, 180];
         return minutes.map(value => value * 60 * 1000);
     }
 
