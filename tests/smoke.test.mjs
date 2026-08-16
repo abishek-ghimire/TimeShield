@@ -67,14 +67,33 @@ test('Warning and countdown contracts are connected end to end', async () => {
     assert.match(blocker, /right:\s*12px/);
 });
 
-test('Pause challenge remains exactly 25 lowercase letters', async () => {
+test('Pause challenge uses lowercase motivational sentences and context-specific durations', async () => {
     const helper = await read('floating/pause-challenge.js');
     const worker = await read('background/service-worker.js');
-    assert.match(helper, /25/);
-    assert.match(helper, /lowercase/);
+    const usageLimit = await read('floating/limit-block.html');
+    const focus = await read('floating/focus-block.html');
+    const schedule = await read('floating/schedule-block.html');
+    const sleep = await read('floating/sleep-block.html');
+    assert.match(helper, /motivational sentences/);
+    assert.match(helper, /valueLines\.length >= 2/);
+    assert.match(helper, /\^\[a-z\]\+\(\?: \[a-z\]\+\)\*\$/);
     assert.match(worker, /generatePauseChallenge/);
-    assert.match(worker, /new Uint32Array\(25\)/);
-    assert.match(worker, /alphabet\.length/);
+    assert.match(worker, /you can protect your attention/);
+    assert.match(worker, /isValidPauseChallenge/);
+    assert.match(worker, /pauseContext === 'usageLimit'/);
+    assert.match(worker, /\[1, 5, 10\]/);
+    assert.match(worker, /\[1, 5, 10, 60, 180\]/);
+    assert.doesNotMatch(worker, /new Uint32Array\(25\)/);
+    assert.doesNotMatch(worker, /alphabet\.length/);
+    assert.match(usageLimit, /data-minutes="1"/);
+    assert.match(usageLimit, /data-minutes="5"/);
+    assert.match(usageLimit, /data-minutes="10"/);
+    assert.doesNotMatch(usageLimit, /data-minutes="60"|data-minutes="180"/);
+    for (const source of [focus, schedule, sleep]) {
+        assert.match(source, /data-minutes="60"/);
+        assert.match(source, /data-minutes="180"/);
+        assert.doesNotMatch(source, /rest of day/i);
+    }
 });
 
 test('Status and retention use local calendar-day usage keys', async () => {
@@ -122,7 +141,7 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     assert.doesNotMatch(options, /categoryPreset|scheduleCategoryPreset|renderBlockingCategoryControls|getCategoryEntriesForTarget|saveBlockingCategories/);
     assert.doesNotMatch(worker, /blockingCategories|getActiveBlockingSites/);
     assert.match(options, /'scheduledBlockedSites'/);
-    assert.match(worker, /Every pause duration requires the same visible confirmation word/);
+    assert.match(worker, /isValidPauseChallenge/);
     assert.match(worker, /requiresPassword: true/);
     assert.match(popup, /renderClock\(\)/);
     assert.match(popup, /timeFormat: '12h'/);
