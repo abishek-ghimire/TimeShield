@@ -81,8 +81,14 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(worker, /you can protect your attention/);
     assert.match(worker, /isValidPauseChallenge/);
     assert.match(worker, /pauseContext === 'usageLimit'/);
+    assert.match(worker, /requiresFinalConfirmation: true/);
+    assert.match(worker, /confirmUsagePause/);
+    assert.match(worker, /Date\.now\(\) \+ \(10 \* 1000\)/);
+    assert.match(helper, /wait ten seconds/);
+    assert.match(helper, /confirm pause/);
     assert.match(worker, /\[1, 5, 10\]/);
     assert.match(worker, /\[1, 5, 10, 60, 180\]/);
+    assert.match(helper, /isUsageLimit/);
     assert.doesNotMatch(worker, /new Uint32Array\(25\)/);
     assert.doesNotMatch(worker, /alphabet\.length/);
     assert.match(usageLimit, /data-minutes="1"/);

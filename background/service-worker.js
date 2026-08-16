@@ -790,6 +790,30 @@ class BackgroundService {
                     sendResponse({ success: false, error: 'This pause duration is no longer available.' });
                     break;
                 }
+
+                // Usage-limit pauses require one deliberate final confirmation after the
+                // motivational challenge. This adds modest friction without changing the
+                // pause flow for Focus, scheduled, or sleep blocking.
+                if (challenge.pauseContext === 'usageLimit' && !message.confirmUsagePause) {
+                    const readyAt = Date.now() + (10 * 1000);
+                    await chrome.storage.local.set({
+                        pauseChallenge: { ...challenge, readyAt }
+                    });
+                    sendResponse({
+                        success: false,
+                        requiresFinalConfirmation: true,
+                        readyAt,
+                        pauseContext: challenge.pauseContext
+                    });
+                    break;
+                }
+                if (challenge.pauseContext === 'usageLimit') {
+                    if (!challenge.readyAt || Date.now() < challenge.readyAt) {
+                        sendResponse({ success: false, error: 'Please wait before confirming this usage-limit pause.' });
+                        break;
+                    }
+                }
+
                 const paused = await this.pauseBlocking(durationMs);
                 if (paused) {
                     await chrome.storage.local.remove('pauseChallenge');
