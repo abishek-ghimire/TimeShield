@@ -472,3 +472,36 @@ test('Pause preparation exposes a visible failure path instead of a stuck zero s
     assert.match(helper, /retryPausePreparation/);
     assert.match(helper, /Unable to prepare verification/);
 });
+
+
+test('Packaged Focus rules cannot automatically block social sites', async () => {
+    const manifest = JSON.parse(await read('manifest.json'));
+    const resources = manifest.declarative_net_request?.rule_resources || [];
+    assert.equal(resources.some(resource => resource.id === 'focus-rules'), false);
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /disablePackagedFocusRuleset/);
+    assert.match(worker, /disableRulesetIds:\s*\['focus-rules'\]/);
+});
+
+
+test('Pause verification is not blocked by general worker initialization', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /const pauseRequest = message\.action === 'pauseBlocking'/);
+    assert.match(worker, /if \(!pauseRequest\) await this\.initPromise/);
+});
+
+
+test('Pause requests still return a challenge after the initialization bypass', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /case 'pauseBlocking':/);
+    assert.match(worker, /requiresPassword: true/);
+    assert.match(worker, /await chrome\.storage\.local\.set\(\{\s*pauseChallenge:/);
+});
+
+
+test('Focus block page reports a retryable pause request failure', async () => {
+    const helper = await read('floating/pause-challenge.js');
+    assert.match(helper, /requestChallenge\(\)/);
+    assert.match(helper, /verification request timed out/);
+    assert.match(helper, /Try Again/);
+});

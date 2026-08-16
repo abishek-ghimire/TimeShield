@@ -24,11 +24,6 @@
         "id": "base-adblock",
         "enabled": false,
         "path": "rules/base-adblock.json"
-      },
-      {
-        "id": "focus-rules",
-        "enabled": false,
-        "path": "rules/focus-rules.json"
       }
     ]
   },

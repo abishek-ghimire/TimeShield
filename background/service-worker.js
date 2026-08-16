@@ -52,6 +52,7 @@ class BackgroundService {
         this.setupAlarmHandlers();
         // Cloud synchronization has been removed; discard obsolete account and sync metadata on upgrade.
         await chrome.storage.local.remove(['firebaseUser', 'customFirebaseConfig', 'syncStatus', 'syncDirty', 'lastSyncTime', 'syncConflict']);
+        await this.disablePackagedFocusRuleset();
         await this.initializeStorage();
         await this.migrateOldSettings();
         await this.clearLegacyAutomaticProtection();
@@ -69,6 +70,22 @@ class BackgroundService {
             console.warn('TimeShield: Failed to auto-start clock on launch', e);
         }
         console.log('🚀 Background Service fully initialized');
+    }
+
+    async disablePackagedFocusRuleset() {
+        // Older installations may have enabled the packaged Focus ruleset in
+        // Chrome-managed state. It redirects social sites independently of all
+        // stored settings, so disable it during every worker startup. The
+        // ruleset may be absent in newer manifests; that case is harmless.
+        try {
+            await chrome.declarativeNetRequest.updateEnabledRulesets({
+                disableRulesetIds: ['focus-rules']
+            });
+        } catch (error) {
+            if (!/not found|does not exist|unknown ruleset/i.test(String(error?.message || error))) {
+                console.warn('TimeShield: packaged Focus ruleset cleanup failed', error);
+            }
+        }
     }
 
     // NEW: Initialize Ad Blocking
@@ -414,7 +431,13 @@ class BackgroundService {
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             (async () => {
                 try {
-                    await this.initPromise;
+                    // Pause verification only needs storage and the pause
+                    // methods. Do not make the user wait for unrelated filter
+                    // or tab initialization, which can suspend or take longer
+                    // than the block-page request timeout.
+                    const pauseRequest = message.action === 'pauseBlocking'
+                        || message.action === 'pauseBlockingWithPassword';
+                    if (!pauseRequest) await this.initPromise;
                     if (message.action === 'showStatusWidget') {
                         await chrome.storage.local.set({ sessionOverlayDismissed: false });
                         await this.ensureContentScriptInjected();
