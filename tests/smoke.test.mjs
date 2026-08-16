@@ -358,3 +358,22 @@ test('Popup keeps controls readable instead of collapsing or ellipsizing the mai
     assert.match(popupCss, /white-space:\s*normal;/);
     assert.match(popupCss, /text-overflow:\s*clip;/);
 });
+
+
+test('Screen-time tracking survives MV3 suspension with alarm checkpoints', async () => {
+    const tracker = await read('background/usage-tracker.js');
+    assert.match(tracker, /usageAlarmName\s*=\s*'timeShieldUsageTick'/);
+    assert.match(tracker, /chrome\.alarms\.create\(this\.usageAlarmName,\s*\{\s*periodInMinutes:\s*0\.5\s*\}\)/);
+    assert.match(tracker, /async handleUsageAlarm\(\)/);
+    assert.match(tracker, /incrementUsage\(domain, \{ seconds: elapsedSeconds, countOpen: false \}\)/);
+    assert.match(tracker, /_incrementUsage\(domain, \{ countOpen = false, seconds = 1 \} = \{\}\)/);
+    assert.match(tracker, /data\[today\]\[domain\] = \(data\[today\]\[domain\] \|\| 0\) \+ elapsedSeconds/);
+});
+
+test('Screen-time renderer refreshes from storage changes and compares local calendar days', async () => {
+    const options = await read('options/options.js');
+    assert.match(options, /chrome\.storage\.onChanged\.addListener/);
+    assert.match(options, /changes\.siteUsageData \|\| changes\.siteUsageTimeline \|\| changes\.siteOpenCounts/);
+    assert.match(options, /d\.setHours\(0, 0, 0, 0\)/);
+    assert.match(options, /Math\.round\(\(refDay\.getTime\(\) - d\.getTime\(\)\)/);
+});

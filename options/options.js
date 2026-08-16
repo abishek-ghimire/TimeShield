@@ -1660,6 +1660,17 @@ class OptionsManager {
         });
 
         this.renderScreenTime();
+
+        // Keep the open Screen Time view live while the background tracker
+        // records the active tab. This avoids requiring a manual refresh.
+        if (chrome.storage?.onChanged) {
+            chrome.storage.onChanged.addListener((changes, areaName) => {
+                if (areaName !== 'local') return;
+                if (changes.siteUsageData || changes.siteUsageTimeline || changes.siteOpenCounts) {
+                    this.renderScreenTime();
+                }
+            });
+        }
     }
 
     async clearScreenTimeData() {
@@ -1705,6 +1716,8 @@ class OptionsManager {
 
         const refDate = new Date(this.screenTimeRefDate);
         refDate.setHours(23, 59, 59, 999); // End of the ref day
+        const refDay = new Date(this.screenTimeRefDate);
+        refDay.setHours(0, 0, 0, 0);
 
         const range = document.getElementById('screenTimeRange')?.value || 'day';
         const days = this.getRangeDays();
@@ -1731,11 +1744,10 @@ class OptionsManager {
         Object.keys(siteUsageData).forEach(dateKey => {
             const d = new Date(dateKey);
             if (Number.isNaN(d.getTime())) return;
-
-            // Calculate difference in days from reference date
-            // We want dates in the range [refDate - days, refDate]
-            const timeDiff = refDate.getTime() - d.getTime();
-            const dayDiff = timeDiff / (1000 * 60 * 60 * 24);
+            // Compare local calendar midnights rather than parsed timestamps;
+            // this prevents timezone offsets from hiding the current day.
+            d.setHours(0, 0, 0, 0);
+            const dayDiff = Math.round((refDay.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
 
             if (dayDiff < 0 || dayDiff >= days) return;
 

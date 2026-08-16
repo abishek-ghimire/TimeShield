@@ -4,13 +4,25 @@
 class UsageTracker {
     constructor() {
         this.activeDomain = null;
+        this.activeTabId = null;
+        this.lastCheckpointAt = 0;
         this.intervalId = null;
         this.injectionPromises = new Map();
+        this.usageAlarmName = 'timeShieldUsageTick';
         this.writeQueues = new Map();
         this.init();
     }
 
     async init() {
+        // MV3 service workers may be suspended, so a setInterval alone cannot
+        // reliably record screen time. A Chrome alarm wakes the worker again.
+        chrome.alarms.onAlarm.addListener(alarm => {
+            if (alarm.name === this.usageAlarmName) {
+                this.handleUsageAlarm();
+            }
+        });
+        chrome.alarms.create(this.usageAlarmName, { periodInMinutes: 0.5 });
+
         // Listeners for tab changes
         chrome.tabs.onActivated.addListener(activeInfo => {
             this.handleTabChange(activeInfo.tabId);
@@ -34,12 +46,36 @@ class UsageTracker {
             }
         });
 
-        // Initialize with current active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-            if (tabs && tabs[0]) {
+        // Restore the active tab after a worker restart. lastFocusedWindow is
+        // reliable from a service worker, whereas currentWindow may be absent.
+        await this.restoreCurrentTab();
+    }
+
+    async restoreCurrentTab() {
+        try {
+            const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (tabs?.[0]?.id) {
                 this.handleTabChange(tabs[0].id);
+            } else {
+                this.stopTracking();
             }
-        });
+        } catch {
+            this.stopTracking();
+        }
+    }
+
+    async handleUsageAlarm() {
+        if (!this.activeDomain) {
+            await this.restoreCurrentTab();
+        }
+        if (!this.activeDomain || !this.lastCheckpointAt) return;
+
+        const domain = this.activeDomain;
+        const elapsedSeconds = Math.floor((Date.now() - this.lastCheckpointAt) / 1000);
+        if (elapsedSeconds <= 0) return;
+
+        this.lastCheckpointAt += elapsedSeconds * 1000;
+        await this.incrementUsage(domain, { seconds: elapsedSeconds, countOpen: false });
     }
 
     handleTabChange(tabId) {
@@ -82,21 +118,43 @@ class UsageTracker {
         });
     }
 
-    startTracking(domain) {
-        if (this.activeDomain === domain) return;
+    startTracking(domain, tabId = null) {
+        if (this.activeDomain === domain) {
+            if (tabId !== null) this.activeTabId = tabId;
+            return;
+        }
+
         this.stopTracking();
         this.activeDomain = domain;
-        // Count an open immediately, then track every second
-        this.incrementUsage(domain, { countOpen: true });
-        this.intervalId = setInterval(() => this.incrementUsage(domain, { countOpen: false }), 1000);
+        this.activeTabId = tabId;
+        this.lastCheckpointAt = Date.now();
+
+        // Count a new site activation once. Elapsed seconds are checkpointed
+        // by the alarm, with the interval retained only for responsive UI.
+        this.incrementUsage(domain, { countOpen: true, seconds: 0 });
+        this.intervalId = setInterval(() => this.handleUsageAlarm(), 1000);
     }
 
     stopTracking() {
+        const previousDomain = this.activeDomain;
+        const checkpoint = this.lastCheckpointAt;
+
         if (this.intervalId) {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
         this.activeDomain = null;
+        this.activeTabId = null;
+        this.lastCheckpointAt = 0;
+
+        // Flush the final partial segment before switching or stopping. The
+        // per-domain queue keeps this write ordered with the next checkpoint.
+        if (previousDomain && checkpoint) {
+            const elapsedSeconds = Math.floor((Date.now() - checkpoint) / 1000);
+            if (elapsedSeconds > 0) {
+                this.incrementUsage(previousDomain, { seconds: elapsedSeconds, countOpen: false });
+            }
+        }
     }
 
     async sendToActiveTab(message) {
@@ -172,7 +230,7 @@ class UsageTracker {
         }
     }
 
-    async _incrementUsage(domain, { countOpen = false } = {}) {
+    async _incrementUsage(domain, { countOpen = false, seconds = 1 } = {}) {
         // Skip internal Chrome pages and extension pages (but NOT file:// PDFs)
         if (domain.startsWith('chrome://') || domain.startsWith('chrome-extension://')) {
             this.stopTracking();
@@ -206,12 +264,13 @@ class UsageTracker {
             data[today] = {};
         }
 
-        data[today][domain] = (data[today][domain] || 0) + 1;
+        const elapsedSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+        data[today][domain] = (data[today][domain] || 0) + elapsedSeconds;
 
         // Per‑hour timeline (for detailed graphs)
         if (!timeline[today]) timeline[today] = {};
         if (!timeline[today][domain]) timeline[today][domain] = new Array(24).fill(0);
-        timeline[today][domain][currentHour] = (timeline[today][domain][currentHour] || 0) + 1;
+        timeline[today][domain][currentHour] = (timeline[today][domain][currentHour] || 0) + elapsedSeconds;
 
         // Per‑day open counts (how many times a site was opened/activated)
         if (countOpen) {
