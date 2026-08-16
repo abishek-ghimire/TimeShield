@@ -58,10 +58,7 @@ class FocusBlockPage {
         document.querySelectorAll('.duration-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const duration = btn.dataset.minutes;
-                const isRestOfDay = duration === 'eod';
-                const durationMs = isRestOfDay
-                    ? Math.max(1, new Date(new Date().setHours(23, 59, 59, 999)).getTime() - Date.now())
-                    : Number(duration) * 60000;
+                const durationMs = Number(duration) * 60000;
                 const messageEl = pauseSection.querySelector('.pause-message');
 
                 if (!Number.isFinite(durationMs) || durationMs <= 0) return;
@@ -72,7 +69,7 @@ class FocusBlockPage {
                     const response = await chrome.runtime.sendMessage({
                         action: 'pauseBlocking',
                         durationMs,
-                        restOfDay: isRestOfDay
+                        pauseContext: 'general'
                     });
                     if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge?.render === 'function') {
                         window.TimeShieldPauseChallenge.render({

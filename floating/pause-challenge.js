@@ -10,24 +10,28 @@
     window.TimeShieldPauseChallenge = {
         render({ pauseSection, pauseButton, response, durationMs }) {
             const challenge = String(response?.challenge || '');
-            if (!/^[a-z]{25}$/.test(challenge)) {
-                pauseSection.innerHTML = '<p class="pause-message">Unable to create a valid pause challenge. Please try again.</p>';
+            const challengeLines = challenge.split('\n');
+            const validChallenge = challengeLines.length >= 2
+                && challengeLines.length <= 3
+                && challengeLines.every(line => /^[a-z]+(?: [a-z]+)*$/.test(line));
+            if (!validChallenge) {
+                pauseSection.innerHTML = '<p class="pause-message">Unable to create a valid motivational challenge. Please try again.</p>';
                 return;
             }
 
             pauseSection.innerHTML = `
-                <h3>🔐 Verification Required</h3>
-                <p class="pause-message">Type this 25-letter lowercase word exactly:</p>
-                <p class="pause-challenge-word" aria-label="Pause challenge word" style="font:700 1.1rem/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;word-break:break-all;color:#a5b4fc;"></p>
+                <h3>🔐 Stay Focused</h3>
+                <p class="pause-message">Type these motivational sentences exactly in lowercase. Use one line for each sentence:</p>
+                <p class="pause-challenge-word" aria-label="Motivational pause challenge" style="font:700 1rem/1.55 ui-sans-serif,system-ui,sans-serif;white-space:pre-line;word-break:normal;color:#a5b4fc;"></p>
                 <p class="pause-message" style="color:#f43f5e;">This challenge expires in 10 minutes.</p>
                 <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                    <input type="text" id="pauseChallenge" maxlength="25" autocomplete="off" autocapitalize="off" spellcheck="false"
-                        placeholder="type the word above"
-                        style="padding:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;border-radius:8px;flex:1 1 240px;min-width:0;">
+                    <textarea id="pauseChallenge" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"
+                        placeholder="type the sentences above"
+                        style="padding:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;border-radius:8px;flex:1 1 280px;min-width:0;resize:vertical;font:inherit;line-height:1.45;"></textarea>
                     <button class="duration-btn" id="submitChallenge" type="button">Continue Anyway</button>
                     <button class="cancel-pause-btn" id="cancelChallenge" type="button">Stay Focused</button>
                 </div>
-                <p class="pause-message" id="challengeError" style="display:none;color:#fb7185;">That word does not match. Try again.</p>
+                <p class="pause-message" id="challengeError" style="display:none;color:#fb7185;">Those sentences do not match. Try again.</p>
             `;
 
             const wordDisplay = pauseSection.querySelector('.pause-challenge-word');
@@ -47,9 +51,13 @@
             });
 
             submit.addEventListener('click', () => {
-                const value = input.value;
-                if (!/^[a-z]{25}$/.test(value)) {
-                    error.textContent = 'Use only the exact 25 lowercase letters shown above.';
+                const value = input.value.replace(/\r\n?/g, '\n').trim();
+                const valueLines = value.split('\n');
+                const validValue = valueLines.length >= 2
+                    && valueLines.length <= 3
+                    && valueLines.every(line => /^[a-z]+(?: [a-z]+)*$/.test(line));
+                if (!validValue) {
+                    error.textContent = 'Use only the exact lowercase words shown above, with one sentence per line and no punctuation.';
                     error.style.display = 'block';
                     return;
                 }
@@ -58,12 +66,12 @@
                 chrome.runtime.sendMessage({
                     action: 'pauseBlockingWithPassword',
                     durationMs,
-                    restOfDay: response?.restOfDay === true,
+                    pauseContext: response?.pauseContext === 'usageLimit' ? 'usageLimit' : 'general',
                     password: value
                 }, (result) => {
                     if (chrome.runtime.lastError || !result?.success) {
                         submit.disabled = false;
-                        error.textContent = result?.error || 'That word does not match. Try again.';
+                        error.textContent = result?.error || 'Those sentences do not match. Try again.';
                         error.style.display = 'block';
                         input.value = '';
                         input.focus();

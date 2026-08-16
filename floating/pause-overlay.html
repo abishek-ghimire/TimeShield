@@ -220,11 +220,11 @@
             <p class="message">How long would you like to pause all blocking protection?</p>
 
             <div class="duration-grid">
+                <button class="duration-btn" data-minutes="1">1 minute</button>
                 <button class="duration-btn" data-minutes="5">5 minutes</button>
-                <button class="duration-btn" data-minutes="15">15 minutes</button>
-                <button class="duration-btn" data-minutes="30">30 minutes</button>
+                <button class="duration-btn" data-minutes="10">10 minutes</button>
                 <button class="duration-btn" data-minutes="60">1 hour</button>
-                <button class="duration-btn" data-minutes="eod">Rest of the Day</button>
+                <button class="duration-btn" data-minutes="180">3 hours</button>
             </div>
 
             <button class="btn" id="cancelBtn1" style="background:rgba(255,255,255,0.1);">Cancel</button>
@@ -233,17 +233,17 @@
         <!-- Motivation View -->
         <div id="motivationView" class="section">
             <h1>Final Verification</h1>
-            <p class="message" style="color:var(--primary);">Type the 25-letter lowercase word below to confirm and proceed.</p>
+            <p class="message" style="color:var(--primary);">Type the two or three lowercase motivational sentences below exactly, one sentence per line, to confirm and proceed.</p>
 
             <div class="form-group">
                 <div class="challenge-text" id="motivationText" style="font-size: 0.95rem;"></div>
-                    <input type="text" id="motivationInput" maxlength="25" placeholder="Type the exact lowercase word above" autocomplete="off" autocapitalize="off" spellcheck="false"
-                        onpaste="return false;" ondrop="return false;" style="margin-bottom: 12px; font-size:0.9rem;">
+                    <textarea id="motivationInput" rows="3" placeholder="Type the exact lowercase sentences above" autocomplete="off" autocapitalize="off" spellcheck="false"
+                        onpaste="return false;" ondrop="return false;" style="margin-bottom: 12px; font-size:0.9rem; resize:vertical;"></textarea>
             </div>
 
             <button class="btn" id="confirmPauseBtn"
                 style="background:#0f172a; border:1px solid rgba(255,255,255,0.1);">Continue Anyway</button>
-            <div id="motivationErrorMsg" class="error-msg">The word does not match. Try again.</div>
+            <div id="motivationErrorMsg" class="error-msg">The sentences do not match. Try again.</div>
             <button class="btn" id="cancelBtn2" style="background:rgba(255,255,255,0.1); margin-top: 12px;">Nevermind, Keep
                 Me
                 Focused</button>

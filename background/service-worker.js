@@ -745,22 +745,22 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             case 'pauseBlocking': {
-                const durationMs = message.restOfDay === true
-                    ? this.getRestOfDayDurationMs()
-                    : Number(message.durationMs);
-                if (!Number.isFinite(durationMs) || durationMs <= 0) {
-                    sendResponse({ success: false, error: 'Pause duration must be greater than zero' });
+                const pauseContext = message.pauseContext === 'usageLimit' ? 'usageLimit' : 'general';
+                const durationMs = Number(message.durationMs);
+                if (!this.isAllowedPauseDuration(durationMs, pauseContext)) {
+                    const choices = pauseContext === 'usageLimit'
+                        ? '1, 5, or 10 minutes'
+                        : '1, 5, 10 minutes, 1 hour, or 3 hours';
+                    sendResponse({ success: false, error: `Choose one of these pause durations: ${choices}.` });
                     break;
                 }
 
-                // Every pause duration requires the same visible confirmation word. This keeps
-                // the duration picker from silently pausing protection, including five minutes.
                 const challenge = this.generatePauseChallenge();
                 await chrome.storage.local.set({
                     pauseChallenge: {
                         value: challenge,
                         durationMs,
-                        restOfDay: message.restOfDay === true,
+                        pauseContext,
                         expiresAt: Date.now() + (10 * 60 * 1000)
                     }
                 });
@@ -768,23 +768,28 @@ class BackgroundService {
                     success: false,
                     requiresPassword: true,
                     challenge,
-                    restOfDay: message.restOfDay === true
+                    pauseContext
                 });
                 break;
             }
             case 'pauseBlockingWithPassword': {
                 const challengeResult = await chrome.storage.local.get(['pauseChallenge']);
                 const challenge = challengeResult.pauseChallenge;
-                const submitted = String(message.password || '');
-                const isValid = challenge && Date.now() < challenge.expiresAt && submitted === challenge.value;
+                const submitted = String(message.password || '').replace(/\r\n?/g, '\n').trim();
+                const isValid = challenge
+                    && Date.now() < challenge.expiresAt
+                    && this.isValidPauseChallenge(submitted)
+                    && submitted === challenge.value;
                 if (!isValid) {
-                    sendResponse({ success: false, error: 'Incorrect challenge word or expired challenge' });
+                    sendResponse({ success: false, error: 'Incorrect motivational sentences or expired challenge' });
                     break;
                 }
 
-                const durationMs = challenge.restOfDay === true
-                    ? this.getRestOfDayDurationMs()
-                    : Number(challenge.durationMs);
+                const durationMs = Number(challenge.durationMs);
+                if (!this.isAllowedPauseDuration(durationMs, challenge.pauseContext)) {
+                    sendResponse({ success: false, error: 'This pause duration is no longer available.' });
+                    break;
+                }
                 const paused = await this.pauseBlocking(durationMs);
                 if (paused) {
                     await chrome.storage.local.remove('pauseChallenge');
@@ -820,18 +825,31 @@ class BackgroundService {
         return false;
     }
 
-    getRestOfDayDurationMs(now = new Date()) {
-        const nextLocalMidnight = new Date(now);
-        // Setting hour 24 preserves local timezone and daylight-saving behavior.
-        nextLocalMidnight.setHours(24, 0, 0, 0);
-        return nextLocalMidnight.getTime() - now.getTime();
+    getAllowedPauseDurationsMs(pauseContext = 'general') {
+        const minutes = pauseContext === 'usageLimit' ? [1, 5, 10] : [1, 5, 10, 60, 180];
+        return minutes.map(value => value * 60 * 1000);
+    }
+
+    isAllowedPauseDuration(durationMs, pauseContext = 'general') {
+        return this.getAllowedPauseDurationsMs(pauseContext).includes(Number(durationMs));
+    }
+
+    isValidPauseChallenge(value) {
+        const lines = String(value || '').split('\n');
+        return lines.length >= 2
+            && lines.length <= 3
+            && lines.every(line => /^[a-z]+(?: [a-z]+)*$/.test(line));
     }
 
     generatePauseChallenge() {
-        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-        const values = new Uint32Array(25);
+        const challenges = [
+            'you can protect your attention and finish what matters\nsmall focused steps today create meaningful progress tomorrow',
+            'stay with your plan and give your best work your full mind\nyour patient effort now will make tomorrow easier',
+            'clear attention creates meaningful progress\nkeep going one focused choice at a time\nyou are building work you can be proud of'
+        ];
+        const values = new Uint32Array(1);
         globalThis.crypto.getRandomValues(values);
-        return Array.from(values, value => alphabet[value % alphabet.length]).join('');
+        return challenges[values[0] % challenges.length];
     }
 
     async pauseBlocking(durationMs) {

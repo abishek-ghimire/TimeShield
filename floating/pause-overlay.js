@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const errorMsg = document.getElementById('errorMsg');
 
     let selectedDurationMs = 0;
-    let selectedIsRestOfDay = false;
     const motTextEl = document.getElementById('motivationText') || document.getElementById('motivationText1');
 
     // 0. Grace Pause Check
@@ -20,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Show Auth or Skip
     const needPass = settings.challengePasswordEnabled && settings.challengePasswordValue;
-    // The background generates a fresh 25-letter lowercase challenge after duration selection.
+    // The background generates fresh lowercase motivational sentences after duration selection.
 
     authView.dataset.initialRequired = needPass ? 'true' : 'false';
 
@@ -61,21 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const dur = btn.dataset.minutes;
-            const isRestOfDay = dur === 'eod';
-            selectedIsRestOfDay = isRestOfDay;
-
-            if (isRestOfDay) {
-                const now = new Date();
-                const eod = new Date();
-                eod.setHours(23, 59, 59, 999);
-                selectedDurationMs = eod.getTime() - now.getTime();
-            } else {
-                if (dur === '-1') {
-                    alert('Indefinite pause option removed. Please pick a timed duration.');
-                    return;
-                }
-                selectedDurationMs = Number.parseInt(dur, 10) * 60000;
-            }
+            selectedDurationMs = Number.parseInt(dur, 10) * 60000;
 
             if (!Number.isFinite(selectedDurationMs) || selectedDurationMs <= 0) return;
             btn.disabled = true;
@@ -83,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const response = await chrome.runtime.sendMessage({
                     action: 'pauseBlocking',
                     durationMs: selectedDurationMs,
-                    restOfDay: isRestOfDay
+                    pauseContext: 'general'
                 });
 
                 if (response?.success) {
@@ -91,14 +76,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                if (response?.requiresPassword && /^[a-z]{25}$/.test(response.challenge || '')) {
+                if (response?.requiresPassword && typeof response.challenge === 'string') {
                     durationView.classList.remove('active');
                     motivationView.classList.add('active');
                     if (motTextEl) motTextEl.textContent = response.challenge;
                     const input = document.getElementById('motivationInput');
                     if (input) {
                         input.value = '';
-                        input.placeholder = 'Type the 25 lowercase letters above';
+                        input.placeholder = 'Type the lowercase sentences above';
                         input.focus();
                     }
                     return;
@@ -121,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 4. Verify the returned 25-letter lowercase challenge word.
+    // 4. Verify the returned lowercase motivational sentence challenge.
     // Support either id for backward compatibility
     if (motTextEl) {
         // store expected to protect against accidental clearing
@@ -135,9 +120,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const value = input?.value || '';
             const error = document.getElementById('motivationErrorMsg');
 
-            if (!/^[a-z]{25}$/.test(value)) {
+            const normalizedValue = value.replace(/\r\n?/g, '\n').trim();
+            const valueLines = normalizedValue.split('\n');
+            const validValue = valueLines.length >= 2
+                && valueLines.length <= 3
+                && valueLines.every(line => /^[a-z]+(?: [a-z]+)*$/.test(line));
+            if (!validValue) {
                 if (error) {
-                    error.textContent = 'Type the exact 25 lowercase letters shown above.';
+                    error.textContent = 'Type the exact lowercase words shown above, one sentence per line, with no punctuation.';
                     error.style.display = 'block';
                 }
                 return;
@@ -147,15 +137,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const response = await chrome.runtime.sendMessage({
                 action: 'pauseBlockingWithPassword',
                 durationMs: selectedDurationMs,
-                password: value,
-                restOfDay: selectedIsRestOfDay
+                password: normalizedValue,
+                pauseContext: 'general'
             });
             confirmBtn.disabled = false;
 
             if (response?.success) {
                 window.close();
             } else if (error) {
-                error.textContent = response?.error || 'That word does not match. Try again.';
+                error.textContent = response?.error || 'Those sentences do not match. Try again.';
                 error.style.display = 'block';
                 input.value = '';
                 input.focus();
