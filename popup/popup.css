@@ -1203,3 +1203,112 @@ body {
         animation-duration: 0.01ms !important;
     }
 }
+
+
+/* Stable popup layout: keep every control readable in Chrome's action popup. */
+html,
+body {
+    width: 420px;
+    min-width: 420px;
+    max-width: 420px;
+    height: 590px;
+    min-height: 590px;
+    max-height: 590px;
+    overflow: hidden;
+}
+
+.popup-container {
+    width: 100%;
+    height: 590px;
+    min-height: 590px;
+    padding: 12px 14px 14px;
+    overflow: hidden;
+}
+
+.popup-header {
+    min-height: 44px;
+    margin-bottom: 10px;
+    padding: 0 2px 8px;
+}
+
+.brand h1 {
+    font-size: 1.06rem;
+    letter-spacing: 0.02em;
+}
+
+.current-time {
+    min-width: 112px;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+}
+
+.quick-actions-modern {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.quick-actions-modern .btn,
+.quick-actions-modern .btn-tiny-restore,
+.compact-action {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 10px;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: normal;
+}
+
+.quick-actions-modern .btn-primary {
+    grid-column: auto;
+}
+
+.popup-utility-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.compact-toggle {
+    grid-column: 1 / -1;
+    min-height: 34px;
+    padding: 6px 10px;
+}
+
+.popup-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.card.compact-card,
+.timer-card {
+    min-width: 0;
+    padding: 10px;
+}
+
+.card-title {
+    white-space: nowrap;
+}
+
+.ad-controls > div {
+    min-width: 0;
+}
+
+.ad-controls button {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.timer-card {
+    padding: 10px 12px;
+}
+
+@media (max-width: 430px) {
+    html,
+    body {
+        width: 420px;
+        min-width: 420px;
+        max-width: 420px;
+    }
+}

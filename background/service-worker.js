@@ -214,6 +214,64 @@ class BackgroundService {
         return `${(seconds / 3600).toFixed(1)} hours`;
     }
 
+    normalizeFocusSites(sites) {
+        return Array.isArray(sites)
+            ? [...new Set(sites
+                .filter(site => typeof site === 'string')
+                .map(site => site.trim().toLowerCase().replace(/^www\./, ''))
+                .filter(Boolean))]
+            : [];
+    }
+
+    getFocusSessionEndTime(focusState) {
+        const storedEndTime = Number(focusState?.endTime);
+        if (Number.isFinite(storedEndTime) && storedEndTime > 0) return storedEndTime;
+
+        const startTime = Number(focusState?.startTime);
+        const duration = Number(focusState?.duration);
+        return Number.isFinite(startTime) && startTime > 0
+            && Number.isFinite(duration) && duration > 0
+            ? startTime + (duration * 1000)
+            : 0;
+    }
+
+    isFocusSessionValid(focusState, sites = []) {
+        const normalizedSites = this.normalizeFocusSites(sites);
+        if (!focusState || focusState.isActive !== true || normalizedSites.length === 0) return false;
+
+        const startTime = Number(focusState.startTime);
+        const duration = Number(focusState.duration);
+        const endTime = this.getFocusSessionEndTime(focusState);
+        return Number.isFinite(startTime) && startTime > 0
+            && Number.isFinite(duration) && duration > 0
+            && Number.isFinite(endTime) && endTime > Date.now();
+    }
+
+    async clearInactiveFocusProtection(focusState = null) {
+        await chrome.alarms.clear('focusMode');
+        await this.disableSiteBlockingRange(101, 200);
+        await this.redirectTabsBack('floating/focus-block.html');
+
+        if (focusState?.isActive === true) {
+            const clearedState = {
+                ...focusState,
+                isActive: false,
+                deepWorkMode: false,
+                endTime: Date.now()
+            };
+            this.focusState = clearedState;
+            await chrome.storage.local.set({ focusState: clearedState });
+        } else {
+            this.focusState = {
+                ...this.focusState,
+                isActive: false,
+                deepWorkMode: false,
+                endTime: Date.now()
+            };
+        }
+        chrome.action.setBadgeText({ text: '' });
+    }
+
     async restoreState() {
 
         // Restore timer state
@@ -225,40 +283,29 @@ class BackgroundService {
             }
         }
 
-        // Restore focus state
+        // Restore Focus only when the stored session is complete, non-empty, and unexpired.
+        // Dynamic rules survive service-worker restarts, so inactive state must explicitly
+        // remove the old Focus range instead of leaving a previous session blocking sites.
         const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
-        if (focusResult.focusState) {
-            this.focusState = focusResult.focusState;
-            if (this.focusState.isActive) {
-                // Empty lists must never restore a Focus session or redirect the user.
-                const sites = Array.isArray(focusResult.focusBlockedSites)
-                    ? focusResult.focusBlockedSites.filter(site => typeof site === 'string' && site.trim())
-                    : [];
-                if (sites.length === 0) {
-                    this.focusState = { ...this.focusState, isActive: false, deepWorkMode: false, endTime: Date.now() };
-                    await chrome.alarms.clear('focusMode');
-                    await this.disableSiteBlockingRange(101, 200);
-                    await chrome.storage.local.set({ focusState: this.focusState });
-                    chrome.action.setBadgeText({ text: '' });
-                    return;
-                }
-                // If focus was active, ensure site blocking is re-enabled with correct sites
-                await this.enableSiteBlocking(sites, 101, 'focus');
+        const focusSites = this.normalizeFocusSites(focusResult.focusBlockedSites);
+        if (this.isFocusSessionValid(focusResult.focusState, focusSites)) {
+            this.focusState = {
+                ...focusResult.focusState,
+                endTime: this.getFocusSessionEndTime(focusResult.focusState)
+            };
+            await this.enableSiteBlocking(focusSites, 101, 'focus');
 
-                // Set badge and color
-                chrome.action.setBadgeText({ text: '🎯' });
-                chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+            chrome.action.setBadgeText({ text: '🎯' });
+            chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
 
-                // Re-create the completion alarm if duration is still pending
-                const elapsed = Math.floor((Date.now() - this.focusState.startTime) / 60000);
-                const remaining = this.focusState.duration - (elapsed * 60);
-                if (remaining > 0) {
-                    chrome.alarms.create('focusMode', { delayInMinutes: remaining / 60 });
-                } else {
-                    // If time passed while extension was off, complete it now
-                    this.focusModeComplete();
-                }
+            const remaining = this.focusState.endTime - Date.now();
+            if (remaining > 0) {
+                chrome.alarms.create('focusMode', { delayInMinutes: remaining / 60000 });
+            } else {
+                await this.clearInactiveFocusProtection(this.focusState);
             }
+        } else {
+            await this.clearInactiveFocusProtection(focusResult.focusState);
         }
 
         // Restore ad block state
@@ -529,7 +576,7 @@ class BackgroundService {
                 if (!sites.includes(hostname)) sites.push(hostname);
                 await chrome.storage.local.set({ focusBlockedSites: sites });
 
-                if (current.focusState?.isActive) {
+                if (this.isFocusSessionValid(current.focusState, sites)) {
                     await this.enableSiteBlocking(sites, 101, 'focus');
                     await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
                 }
@@ -552,7 +599,7 @@ class BackgroundService {
                     }
 
                     const focusResult = await chrome.storage.local.get(['focusState']);
-                    if (focusResult.focusState && focusResult.focusState.isActive) {
+                    if (this.isFocusSessionValid(focusResult.focusState, focusSitesList)) {
                         try {
                             // Update DNR rules immediately so new rules take effect for future navigations
                             await this.enableSiteBlocking(focusSitesList, 101, 'focus');
@@ -908,8 +955,8 @@ class BackgroundService {
 
         // Re-evaluate focus mode
         const focusResult = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
-        if (focusResult.focusState && focusResult.focusState.isActive) {
-            const sites = focusResult.focusBlockedSites || [];
+        const sites = this.normalizeFocusSites(focusResult.focusBlockedSites);
+        if (this.isFocusSessionValid(focusResult.focusState, sites)) {
             await this.enableSiteBlocking(sites, 101, 'focus');
             await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
             chrome.action.setBadgeText({ text: '🎯' });
@@ -979,9 +1026,12 @@ class BackgroundService {
 
     async refreshActiveFocusBlocking() {
         const result = await chrome.storage.local.get(['focusState', 'focusBlockedSites']);
-        if (!result.focusState?.isActive) return { active: false, sites: [] };
+        const sites = this.normalizeFocusSites(result.focusBlockedSites);
+        if (!this.isFocusSessionValid(result.focusState, sites)) {
+            await this.clearInactiveFocusProtection(result.focusState);
+            return { active: false, sites: [] };
+        }
 
-        const sites = result.focusBlockedSites || [];
         if (!await this.isPaused()) {
             await this.enableSiteBlocking(sites, 101, 'focus');
             await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
@@ -1312,7 +1362,7 @@ class BackgroundService {
         
         // Check focus blocking
         const focusResult = await chrome.storage.local.get(['focusState']);
-        if (focusResult.focusState && focusResult.focusState.isActive && focusSites.includes(hostname)) {
+        if (this.isFocusSessionValid(focusResult.focusState, focusSites) && focusSites.includes(hostname)) {
             return true;
         }
         
@@ -2047,7 +2097,7 @@ class BackgroundService {
         if (data.manualOnlyDefaultsClearedVersion === 1) return;
 
         const removeAutomaticDomains = (sites) => (Array.isArray(sites) ? sites : [])
-            .filter(site => !automaticDomains.has(String(site).toLowerCase().replace(/^www\\./, '')));
+            .filter(site => !automaticDomains.has(String(site).toLowerCase().replace(/^www\./, '')));
         const focusSites = removeAutomaticDomains(data.focusBlockedSites);
         const scheduledSites = removeAutomaticDomains(data.scheduledBlockedSites);
         const legacySites = removeAutomaticDomains(data.blockedSites);
