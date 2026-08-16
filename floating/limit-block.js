@@ -54,7 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     pauseButton: pauseBtn,
                     durationMs,
                     pauseContext: 'usageLimit',
-                    requestChallenge: () => chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'usageLimit' })
+                    requestChallenge: () => new Promise((resolve, reject) => {
+                        chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'usageLimit' }, response => {
+                            const error = chrome.runtime.lastError;
+                            if (error) reject(new Error(error.message));
+                            else resolve(response);
+                        });
+                    })
                 });
                 return;
             }

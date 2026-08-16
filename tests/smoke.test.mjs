@@ -422,3 +422,53 @@ test('Inactive Focus cleanup removes legacy redirect rules and clears on refresh
     assert.match(worker, /action\.redirect\.url\.startsWith\(extensionUrl\)/);
     assert.match(worker, /await this\.clearInactiveFocusProtection\(focusResult\.focusState\)/);
 });
+
+
+test('Existing installations remove seeded social sites without reintroducing automatic defaults', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /manualOnlyDefaultsClearedVersion\) >= 2/);
+    assert.match(worker, /manualOnlyDefaultsClearedVersion: 2/);
+    assert.match(worker, /removeAutomaticDomains/);
+    assert.match(worker, /const scheduledSites = removeAutomaticDomains\(data\.scheduledBlockedSites\)/);
+});
+
+test('Screen-time storage writes are serialized across domains', async () => {
+    const tracker = await read('background/usage-tracker.js');
+    assert.match(tracker, /this\.writeQueue = Promise\.resolve\(\)/);
+    assert.match(tracker, /complete usage object/);
+    assert.match(tracker, /this\.writeQueue\s*\.catch\(\(\) => undefined\)/);
+    assert.doesNotMatch(tracker, /this\.writeQueues\s*=\s*new Map/);
+});
+
+test('Pause block pages use callback-backed runtime responses', async () => {
+    const sources = await Promise.all([
+        read('floating/focus-block.js'),
+        read('floating/schedule-block.js'),
+        read('floating/sleep-block.js'),
+        read('floating/limit-block.js'),
+        read('floating/pause-overlay.js')
+    ]);
+    for (const source of sources) {
+        assert.match(source, /new Promise\(\(resolve, reject\) =>/);
+        assert.match(source, /chrome\.runtime\.lastError/);
+        assert.match(source, /else resolve\(response\)/);
+    }
+});
+
+
+test('Disabled schedule state remains opt-in and is immediately rechecked', async () => {
+    const options = await read('options/options.js');
+    const worker = await read('background/service-worker.js');
+    assert.match(options, /this\.scheduledBlocking\.enabled = wantsEnable/);
+    assert.match(options, /chrome\.runtime\.sendMessage\(\{ action: 'checkScheduledBlocking' \}\)/);
+    assert.match(worker, /if \(scheduledActive\)[\s\S]*?enableScheduledBlocking\(\);[\s\S]*?disableScheduledBlocking\(\);/);
+    assert.match(worker, /await this\.disableSiteBlockingRange\(201, 300\)/);
+});
+
+
+test('Pause preparation exposes a visible failure path instead of a stuck zero state', async () => {
+    const helper = await read('floating/pause-challenge.js');
+    assert.match(helper, /verification request timed out/);
+    assert.match(helper, /retryPausePreparation/);
+    assert.match(helper, /Unable to prepare verification/);
+});

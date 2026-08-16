@@ -2111,9 +2111,9 @@ class BackgroundService {
             'focusBlockedSites', 'scheduledBlockedSites', 'blockedSites',
             'focusState', 'scheduledBlocking', 'globalLimit', 'manualOnlyDefaultsClearedVersion'
         ]);
-        // Versioned so existing installations that already passed the old cleanup
-        // are also cleared of former starter domains exactly once.
-        if (data.manualOnlyDefaultsClearedVersion === 1) return;
+        // Versioned so installations that already passed the first cleanup also
+        // receive the stronger removal of former starter domains and stale state.
+        if (Number(data.manualOnlyDefaultsClearedVersion) >= 2) return;
 
         const removeAutomaticDomains = (sites) => (Array.isArray(sites) ? sites : [])
             .filter(site => !automaticDomains.has(String(site).toLowerCase().replace(/^www\./, '')));
@@ -2131,7 +2131,7 @@ class BackgroundService {
                 domains: cleanedGlobalDomains,
                 enabled: cleanedGlobalDomains.length > 0 && globalLimit.enabled === true
             },
-            manualOnlyDefaultsClearedVersion: 1
+            manualOnlyDefaultsClearedVersion: 2
         };
 
         if (data.focusState?.isActive && focusSites.length === 0) {

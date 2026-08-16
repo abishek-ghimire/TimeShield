@@ -40,8 +40,13 @@
             };
             const openChallenge = async () => {
                 stop();
+                if (message) message.textContent = 'loading your verification challenge';
+                if (countdown) countdown.textContent = '…';
                 try {
-                    const response = await requestChallenge();
+                    const response = await Promise.race([
+                        Promise.resolve().then(() => requestChallenge()),
+                        new Promise((_, reject) => window.setTimeout(() => reject(new Error('the verification request timed out')), 12000))
+                    ]);
                     if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge.render === 'function') {
                         window.TimeShieldPauseChallenge.render({ pauseSection, pauseButton, response, durationMs });
                         return;
@@ -104,6 +109,10 @@
             const input = pauseSection.querySelector('#pauseChallenge');
             const submit = pauseSection.querySelector('#submitChallenge');
             const cancel = pauseSection.querySelector('#cancelChallenge');
+            if (!wordDisplay || !input || !submit || !cancel) {
+                pauseSection.innerHTML = '<p class="pause-message" style="color:#fb7185;">The verification form could not be opened. Please reload the blocked page.</p>';
+                return;
+            }
             const error = pauseSection.querySelector('#challengeError');
             wordDisplay.textContent = challenge;
 

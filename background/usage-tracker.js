@@ -9,7 +9,10 @@ class UsageTracker {
         this.intervalId = null;
         this.injectionPromises = new Map();
         this.usageAlarmName = 'timeShieldUsageTick';
-        this.writeQueues = new Map();
+        // All domains share one queue because each write reads and rewrites the
+        // complete usage object; per-domain queues can still lose data when tabs
+        // change quickly and two domains update concurrently.
+        this.writeQueue = Promise.resolve();
         this.init();
     }
 
@@ -232,14 +235,11 @@ class UsageTracker {
     }
 
     async incrementUsage(domain, options = {}) {
-        const previous = this.writeQueues.get(domain) || Promise.resolve();
-        const operation = previous.catch(() => undefined).then(() => this._incrementUsage(domain, options));
-        this.writeQueues.set(domain, operation);
-        try {
-            return await operation;
-        } finally {
-            if (this.writeQueues.get(domain) === operation) this.writeQueues.delete(domain);
-        }
+        const operation = this.writeQueue
+            .catch(() => undefined)
+            .then(() => this._incrementUsage(domain, options));
+        this.writeQueue = operation.catch(() => undefined);
+        return operation;
     }
 
     async _incrementUsage(domain, { countOpen = false, seconds = 1 } = {}) {

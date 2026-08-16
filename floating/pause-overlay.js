@@ -70,10 +70,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     pauseButton: null,
                     durationMs: selectedDurationMs,
                     pauseContext: 'general',
-                    requestChallenge: () => chrome.runtime.sendMessage({
-                        action: 'pauseBlocking',
-                        durationMs: selectedDurationMs,
-                        pauseContext: 'general'
+                    requestChallenge: () => new Promise((resolve, reject) => {
+                        chrome.runtime.sendMessage({
+                            action: 'pauseBlocking',
+                            durationMs: selectedDurationMs,
+                            pauseContext: 'general'
+                        }, response => {
+                            const error = chrome.runtime.lastError;
+                            if (error) reject(new Error(error.message));
+                            else resolve(response);
+                        });
                     })
                 });
                 return;
