@@ -413,3 +413,12 @@ test('Screen-time tracking follows tab lifecycle changes without overcounting', 
     assert.match(tracker, /this\.handleTabChange\(addedTabId\)/);
     assert.match(tracker, /this\.startTracking\(domain, tabId\)/);
 });
+
+
+test('Inactive Focus cleanup removes legacy redirect rules and clears on refresh', async () => {
+    const worker = await read('background/service-worker.js');
+    assert.match(worker, /removeDynamicRulesForBlockPage\('floating\/focus-block\.html'\)/);
+    assert.match(worker, /await this\.disableSiteBlockingRange\(1, 200\)/);
+    assert.match(worker, /action\.redirect\.url\.startsWith\(extensionUrl\)/);
+    assert.match(worker, /await this\.clearInactiveFocusProtection\(focusResult\.focusState\)/);
+});

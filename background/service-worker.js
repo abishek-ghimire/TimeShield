@@ -249,7 +249,11 @@ class BackgroundService {
 
     async clearInactiveFocusProtection(focusState = null) {
         await chrome.alarms.clear('focusMode');
-        await this.disableSiteBlockingRange(101, 200);
+        // Older versions used the default 1-100 rule range. Remove Focus
+        // redirects by destination as well, so legacy rules cannot survive a
+        // migration and block sites when Focus Mode is inactive.
+        await this.removeDynamicRulesForBlockPage('floating/focus-block.html');
+        await this.disableSiteBlockingRange(1, 200);
         await this.redirectTabsBack('floating/focus-block.html');
 
         if (focusState?.isActive === true) {
@@ -961,6 +965,8 @@ class BackgroundService {
             await this.redirectTabsOnBlock(sites, 'floating/focus-block.html');
             chrome.action.setBadgeText({ text: '🎯' });
             chrome.action.setBadgeBackgroundColor({ color: '#dc3545' });
+        } else {
+            await this.clearInactiveFocusProtection(focusResult.focusState);
         }
     }
 
@@ -1829,6 +1835,19 @@ class BackgroundService {
     async disableSiteBlockingRange(startId, endId) {
         const rules = await chrome.declarativeNetRequest.getDynamicRules();
         const ruleIds = rules.map(r => r.id).filter(id => id >= startId && id <= endId);
+        if (ruleIds.length > 0) {
+            await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: ruleIds });
+        }
+    }
+
+    async removeDynamicRulesForBlockPage(blockPage) {
+        const extensionUrl = chrome.runtime.getURL(blockPage);
+        const rules = await chrome.declarativeNetRequest.getDynamicRules();
+        const ruleIds = rules
+            .filter(rule => rule.action?.type === 'redirect'
+                && typeof rule.action.redirect?.url === 'string'
+                && rule.action.redirect.url.startsWith(extensionUrl))
+            .map(rule => rule.id);
         if (ruleIds.length > 0) {
             await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: ruleIds });
         }
