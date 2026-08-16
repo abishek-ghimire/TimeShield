@@ -64,45 +64,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!Number.isFinite(selectedDurationMs) || selectedDurationMs <= 0) return;
             btn.disabled = true;
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    action: 'pauseBlocking',
+            if (typeof window.TimeShieldPauseChallenge?.startPreparation === 'function') {
+                window.TimeShieldPauseChallenge.startPreparation({
+                    pauseSection: durationView,
+                    pauseButton: null,
                     durationMs: selectedDurationMs,
-                    pauseContext: 'general'
+                    pauseContext: 'general',
+                    requestChallenge: () => chrome.runtime.sendMessage({
+                        action: 'pauseBlocking',
+                        durationMs: selectedDurationMs,
+                        pauseContext: 'general'
+                    })
                 });
-
-                if (response?.success) {
-                    window.close();
-                    return;
-                }
-
-                if (response?.requiresPassword && typeof response.challenge === 'string') {
-                    durationView.classList.remove('active');
-                    motivationView.classList.add('active');
-                    if (motTextEl) motTextEl.textContent = response.challenge;
-                    const input = document.getElementById('motivationInput');
-                    if (input) {
-                        input.value = '';
-                        input.placeholder = 'Type the lowercase sentences above';
-                        input.focus();
-                    }
-                    return;
-                }
-
-                const error = document.getElementById('motivationErrorMsg');
-                if (error) {
-                    error.textContent = response?.error || 'Unable to start verification. Please try again.';
-                    error.style.display = 'block';
-                }
-            } catch (error) {
-                const errorMessage = document.getElementById('motivationErrorMsg');
-                if (errorMessage) {
-                    errorMessage.textContent = 'Unable to start verification. Please try again.';
-                    errorMessage.style.display = 'block';
-                }
-            } finally {
-                btn.disabled = false;
+                return;
             }
+            btn.disabled = false;
         });
     });
 

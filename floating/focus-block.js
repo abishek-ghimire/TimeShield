@@ -63,33 +63,22 @@ class FocusBlockPage {
 
                 if (!Number.isFinite(durationMs) || durationMs <= 0) return;
                 btn.disabled = true;
-                if (messageEl) messageEl.textContent = 'Preparing your verification challenge…';
-
-                try {
-                    const response = await chrome.runtime.sendMessage({
-                        action: 'pauseBlocking',
+                if (typeof window.TimeShieldPauseChallenge?.startPreparation === 'function') {
+                    window.TimeShieldPauseChallenge.startPreparation({
+                        pauseSection,
+                        pauseButton: pauseBtn,
                         durationMs,
-                        pauseContext: 'general'
+                        pauseContext: 'general',
+                        requestChallenge: () => chrome.runtime.sendMessage({
+                            action: 'pauseBlocking',
+                            durationMs,
+                            pauseContext: 'general'
+                        })
                     });
-                    if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge?.render === 'function') {
-                        window.TimeShieldPauseChallenge.render({
-                            pauseSection,
-                            pauseButton: pauseBtn,
-                            response,
-                            durationMs
-                        });
-                        return;
-                    }
-                    if (response?.success) {
-                        pauseSection.innerHTML = '<h3>Blocking Paused</h3><p class="pause-message">Protection has been temporarily paused.</p>';
-                        window.setTimeout(() => window.close(), 2000);
-                        return;
-                    }
-                    throw new Error(response?.error || 'Unable to open verification.');
-                } catch (error) {
-                    btn.disabled = false;
-                    if (messageEl) messageEl.textContent = `${error.message || 'Unable to open verification.'} Please choose the duration again.`;
+                    return;
                 }
+                btn.disabled = false;
+                if (messageEl) messageEl.textContent = 'Unable to start verification. Please reload the page.';
             });
         });
     }

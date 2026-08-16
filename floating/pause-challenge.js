@@ -8,6 +8,72 @@
     };
 
     window.TimeShieldPauseChallenge = {
+        startPreparation({ pauseSection, pauseButton, durationMs, pauseContext, requestChallenge }) {
+            if (!pauseSection || typeof requestChallenge !== 'function') return;
+
+            let remaining = 10;
+            let countdownTimer = null;
+            pauseSection.innerHTML = `
+                <h3>🔐 Verification Countdown</h3>
+                <p class="pause-message" id="pausePreparationMessage">your verification challenge will appear after the countdown</p>
+                <div aria-live="polite" aria-atomic="true" style="display:grid;place-items:center;margin:18px auto;width:76px;height:76px;border:4px solid rgba(129,140,248,.35);border-top-color:#818cf8;border-radius:50%;font:700 1.8rem/1 ui-sans-serif,system-ui,sans-serif;color:#a5b4fc;">
+                    <span id="pausePreparationCountdown">10</span>
+                </div>
+                <button class="cancel-pause-btn" id="cancelPausePreparation" type="button">Cancel</button>
+            `;
+
+            const message = pauseSection.querySelector('#pausePreparationMessage');
+            const countdown = pauseSection.querySelector('#pausePreparationCountdown');
+            const cancel = pauseSection.querySelector('#cancelPausePreparation');
+            const stop = () => {
+                if (countdownTimer) window.clearInterval(countdownTimer);
+                countdownTimer = null;
+            };
+            const fail = (error) => {
+                stop();
+                pauseSection.innerHTML = `
+                    <h3>Unable to prepare verification</h3>
+                    <p class="pause-message" style="color:#fb7185;">${String(error?.message || 'Please try again.')}</p>
+                    <button class="duration-btn" id="retryPausePreparation" type="button">Try Again</button>
+                `;
+                pauseSection.querySelector('#retryPausePreparation')?.addEventListener('click', () => window.location.reload());
+            };
+            const openChallenge = async () => {
+                stop();
+                try {
+                    const response = await requestChallenge();
+                    if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge.render === 'function') {
+                        window.TimeShieldPauseChallenge.render({ pauseSection, pauseButton, response, durationMs });
+                        return;
+                    }
+                    if (response?.success) {
+                        showSuccess(pauseSection);
+                        return;
+                    }
+                    throw new Error(response?.error || 'Unable to open verification.');
+                } catch (error) {
+                    fail(error);
+                }
+            };
+            const tick = () => {
+                if (countdown) countdown.textContent = String(remaining);
+                if (message) message.textContent = remaining > 0
+                    ? `your verification challenge will appear in ${remaining} seconds`
+                    : 'your verification challenge is ready';
+                if (remaining <= 0) {
+                    openChallenge();
+                    return;
+                }
+                remaining -= 1;
+            };
+            cancel?.addEventListener('click', () => {
+                stop();
+                window.location.reload();
+            });
+            tick();
+            countdownTimer = window.setInterval(tick, 1000);
+        },
+
         render({ pauseSection, pauseButton, response, durationMs }) {
             const challenge = String(response?.challenge || '');
             const challengeLines = challenge.split('\n');
@@ -161,7 +227,7 @@
             cancel.addEventListener('click', () => {
                 stopCountdown();
                 pauseSection.style.display = 'none';
-                pauseButton.style.display = 'flex';
+                if (pauseButton) pauseButton.style.display = 'flex';
             });
             input.focus();
         }

@@ -163,10 +163,9 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
 
     const focusBlock = await read('floating/focus-block.js');
     const pauseOverlay = await read('floating/pause-overlay.js');
-    assert.match(focusBlock, /Preparing your verification challenge/);
-    assert.match(focusBlock, /TimeShieldPauseChallenge\.render/);
+    assert.match(focusBlock, /TimeShieldPauseChallenge\?\.startPreparation/);
     assert.match(pauseOverlay, /const motTextEl.*motivationText/);
-    assert.match(pauseOverlay, /requiresPassword/);
+    assert.match(pauseOverlay, /action: 'pauseBlockingWithPassword'/);
 
     for (const source of [options, popup]) {
         assert.match(source, /showProtectionWarning\(actionLabel\)/);
@@ -376,4 +375,30 @@ test('Screen-time renderer refreshes from storage changes and compares local cal
     assert.match(options, /changes\.siteUsageData \|\| changes\.siteUsageTimeline \|\| changes\.siteOpenCounts/);
     assert.match(options, /d\.setHours\(0, 0, 0, 0\)/);
     assert.match(options, /Math\.round\(\(refDay\.getTime\(\) - d\.getTime\(\)\)/);
+});
+
+
+test('Pause verification shows a ten-second countdown before the challenge', async () => {
+    const helper = await read('floating/pause-challenge.js');
+    assert.match(helper, /startPreparation\(/);
+    assert.match(helper, /let remaining = 10/);
+    assert.match(helper, /pausePreparationCountdown/);
+    assert.match(helper, /window\.setInterval\(tick, 1000\)/);
+    assert.match(helper, /window\.TimeShieldPauseChallenge\.render/);
+    assert.match(helper, /id="submitChallenge"/);
+    assert.match(helper, /Continue Anyway/);
+});
+
+test('All pause block pages use the shared preparation flow', async () => {
+    const sources = await Promise.all([
+        read('floating/focus-block.js'),
+        read('floating/schedule-block.js'),
+        read('floating/sleep-block.js'),
+        read('floating/limit-block.js')
+    ]);
+    for (const source of sources) {
+        assert.match(source, /TimeShieldPauseChallenge\?\.startPreparation/);
+        assert.match(source, /requestChallenge:/);
+        assert.match(source, /action: 'pauseBlocking'/);
+    }
 });
