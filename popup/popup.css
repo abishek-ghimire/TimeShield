@@ -1426,3 +1426,48 @@ body {
 .site-limit-status {
     gap: 3px;
 }
+
+
+/* High-contrast light-theme header controls */
+.btn-mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font-size: 0.7rem !important;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.btn-mini:hover,
+.btn-mini:focus-visible {
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.72);
+    color: #ffffff;
+}
+
+body.theme-light .popup-header .brand h1 {
+    background: none;
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    text-shadow: 0 1px 2px rgba(8, 20, 54, 0.34);
+}
+
+body.theme-light .popup-header #toggleFormat {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.48);
+    color: #ffffff;
+}
+
+body.theme-light .popup-header #toggleFormat:hover,
+body.theme-light .popup-header #toggleFormat:focus-visible {
+    background: rgba(255, 255, 255, 0.27);
+    border-color: #ffffff;
+    color: #ffffff;
+}

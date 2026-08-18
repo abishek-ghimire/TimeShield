@@ -581,3 +581,15 @@ test('Repository ignores generated metadata and local release archives', async (
     assert.match(ignore, /Manifest\.JSON/);
     assert.match(ignore, /\*\.zip/);
 });
+
+
+test('Light-theme popup header keeps the brand and format control readable', async () => {
+    const html = await read('popup/popup.html');
+    const css = await read('popup/popup.css');
+    assert.match(html, /id="toggleFormat" class="btn-mini"/);
+    assert.match(css, /body\.theme-light \.popup-header \.brand h1/);
+    assert.match(css, /-webkit-text-fill-color: #ffffff/);
+    assert.match(css, /body\.theme-light \.popup-header #toggleFormat/);
+    assert.match(css, /color: #ffffff/);
+    assert.match(css, /border-color: rgba\(255, 255, 255, 0\.48\)/);
+});
