@@ -3,7 +3,6 @@
 [![Latest Release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/smoke%20tests-49%20passing-2ea44f)](tests/smoke.test.mjs)
 [![Unique Visitors (14d)](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabishekgh-6%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge.json)](https://github.com/abishekgh-6/TimeShield/blob/main/data/repository-traffic.json)
 
 **A local-first productivity and focus extension for Chromium-based browsers.**

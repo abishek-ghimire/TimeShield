@@ -654,6 +654,7 @@ test('README links to the real release without a Visit Repository badge', async 
     assert.match(readme, /img\.shields\.io\/github\/v\/release\/abishekgh-6\/TimeShield\?display_name=tag&sort=semver/);
     assert.doesNotMatch(readme, /display_name=tag\\&sort=semver/);
     assert.doesNotMatch(readme, /\[!\[Visit Repository\]/);
+    assert.doesNotMatch(readme, /smoke%20tests|smoke tests-49/);
     assert.match(readme, /https:\/\/github\.com\/abishekgh-6\/TimeShield\)/);
     assert.match(readme, /releases\/download\/v2\.3\.3\/TimeShield-v2\.3\.3\.zip/);
 });
@@ -678,10 +679,12 @@ test('Repository traffic tracking uses official GitHub metrics and persists hist
     assert.equal(badge.label, 'unique visitors (14d)');
     assert.equal(typeof badge.message, 'string');
     assert.equal(snapshot.repository, 'abishekgh-6/TimeShield');
+    assert.match(collector, /https:\/\/api\.github\.com\/repos\/\$\{owner\}\/\$\{repo\}\/traffic/);
     assert.equal(snapshot.source, 'GitHub repository traffic API');
     assert.equal(snapshot.dataRetentionDays, 14);
     assert.ok(Object.keys(snapshot.daily).length > 0);
     assert.match(readme, /Unique Visitors \(14d\)/);
+    assert.match(readme, /img\.shields\.io\/endpoint\?url=https%3A%2F%2Fraw\.githubusercontent\.com%2Fabishekgh-6%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge\.json/);
     assert.match(readme, /data\/repository-traffic\.json/);
     assert.match(readme, /REPO_TRAFFIC_TOKEN/);
 });
