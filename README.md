@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/smoke%20tests-43%20passing-2ea44f)](tests/smoke.test.mjs)
+[![Tests](https://img.shields.io/badge/smoke%20tests-44%20passing-2ea44f)](tests/smoke.test.mjs)
 
 TimeShield is a local-first productivity extension for Chrome and other Chromium-based browsers. It combines a floating clock, focus sessions, scheduled blocking, sleep protection, usage limits, screen-time reports, tasks, and optional ad blocking in one place.
 
@@ -20,7 +20,7 @@ The extension is designed to stay out of the way until you choose to use it. **S
 
 ### Install from a release ZIP
 
-1. Download **`TimeShield-v2.3.0.zip`** from the [v2.3.0 release](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.0).
+1. Download **`TimeShield-v2.3.1.zip`** from the [v2.3.1 release](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.1).
 2. Extract the ZIP to a permanent folder. Do not select the ZIP file itself.
 3. Open `chrome://extensions` in Chrome, `brave://extensions` in Brave, or the equivalent Extensions page in another Chromium browser.
 4. Turn on **Developer mode**.
@@ -122,7 +122,7 @@ Chrome can keep an old popup or block page open. Reload the extension and close 
 
 ## Current release
 
-The current downloadable release is **[TimeShield v2.3.0](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.0)**. The release includes `TimeShield-v2.3.0.zip` and is intended for unpacked installation while the project is distributed through GitHub.
+The current downloadable release is **[TimeShield v2.3.1](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.1)**. The release includes `TimeShield-v2.3.1.zip` and is intended for unpacked installation while the project is distributed through GitHub.
 
 This project is not currently distributed through the Chrome Web Store. Browser extensions loaded from GitHub releases use the browser’s developer-mode workflow described above.
 
