@@ -657,3 +657,31 @@ test('README links to the real release and repository', async () => {
     assert.match(readme, /https:\/\/github\.com\/abishekgh-6\/TimeShield\)/);
     assert.match(readme, /releases\/download\/v2\.3\.3\/TimeShield-v2\.3\.3\.zip/);
 });
+
+
+test('Repository traffic tracking uses official GitHub metrics and persists history', async () => {
+    const workflow = await read('.github/workflows/repository-traffic.yml');
+    const collector = await read('scripts/collect-repository-traffic.mjs');
+    const badge = JSON.parse(await read('data/repository-traffic-badge.json'));
+    const snapshot = JSON.parse(await read('data/repository-traffic.json'));
+    const readme = await read('README.md');
+
+    assert.match(workflow, /cron: "17 2 \* \* \*"/);
+    assert.match(workflow, /REPO_TRAFFIC_TOKEN/);
+    assert.match(workflow, /node scripts\/collect-repository-traffic\.mjs/);
+    assert.match(workflow, /data\/repository-traffic-badge\.json/);
+    assert.match(workflow, /git push/);
+    assert.match(collector, /repos\/\$\{owner\}\/\$\{repo\}\/traffic\/\$\{endpoint\}/);
+    assert.match(collector, /uniqueVisitors/);
+    assert.match(collector, /uniqueCloners/);
+    assert.match(collector, /dataRetentionDays: 14/);
+    assert.equal(badge.label, 'unique visitors (14d)');
+    assert.equal(typeof badge.message, 'string');
+    assert.equal(snapshot.repository, 'abishekgh-6/TimeShield');
+    assert.equal(snapshot.source, 'GitHub repository traffic API');
+    assert.equal(snapshot.dataRetentionDays, 14);
+    assert.ok(Object.keys(snapshot.daily).length > 0);
+    assert.match(readme, /Unique Visitors \(14d\)/);
+    assert.match(readme, /data\/repository-traffic\.json/);
+    assert.match(readme, /REPO_TRAFFIC_TOKEN/);
+});

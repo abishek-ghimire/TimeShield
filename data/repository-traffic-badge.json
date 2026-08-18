@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "label": "unique visitors (14d)",
+  "message": "1",
+  "color": "brightgreen",
+  "cacheSeconds": 21600,
+  "isError": false
+}
