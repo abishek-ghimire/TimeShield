@@ -14,13 +14,6 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 
 [Visit the TimeShield repository](https://github.com/abishekgh-6/TimeShield) · [Download the latest release](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)
 
-## Repository Traffic
-
-TimeShield reports repository traffic using GitHub's official repository traffic API. The badge above shows **unique visitors from GitHub's latest 14-day traffic window**; it does not count extension users, README clicks, or badge requests. The detailed snapshot records page views, unique visitors, full clones, and unique cloners by day in [`data/repository-traffic.json`](data/repository-traffic.json).
-
-The repository uses a daily GitHub Actions workflow to preserve each 14-day API response in the repository, allowing historical reporting beyond GitHub's normal retention period. The workflow must use a repository secret named `REPO_TRAFFIC_TOKEN` with access to read repository traffic and permission to write repository contents so it can commit updated snapshots.
-
-To enable collection, create a fine-grained token limited to `abishekgh-6/TimeShield` with **Administration: Read** for the traffic API and **Contents: Read and write** for snapshot commits, add it under **Settings → Secrets and variables → Actions** as `REPO_TRAFFIC_TOKEN`, and run **Track repository traffic** once from the Actions tab. Scheduled runs then collect the official GitHub metrics daily.
 
 ![TimeShield Control Panel](assets/screenshots/control-panel.png)
 
