@@ -11,6 +11,31 @@
         startPreparation({ pauseSection, pauseButton, durationMs, pauseContext, requestChallenge }) {
             if (!pauseSection || typeof requestChallenge !== 'function') return;
 
+            // The background service worker decides whether this is one of the
+            // first two free one-minute pauses for today. Free responses close
+            // immediately; later responses render the normal challenge directly.
+            if (pauseContext === 'general' && durationMs === 60 * 1000) {
+                Promise.race([
+                    Promise.resolve().then(() => requestChallenge()),
+                    new Promise((_, reject) => window.setTimeout(() => reject(new Error('the pause request timed out')), 12000))
+                ]).then((response) => {
+                    if (response?.success) {
+                        showSuccess(pauseSection);
+                    } else if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge.render === 'function') {
+                        window.TimeShieldPauseChallenge.render({ pauseSection, pauseButton, response, durationMs });
+                    } else {
+                        throw new Error(response?.error || 'Unable to pause protection.');
+                    }
+                }).catch((error) => {
+                    pauseSection.innerHTML = `
+                        <h3>Unable to pause protection</h3>
+                        <p class="pause-message" style="color:#fb7185;">${String(error?.message || 'Please try again.')}</p>
+                        <button class="duration-btn" type="button" onclick="window.location.reload()">Try Again</button>
+                    `;
+                });
+                return;
+            }
+
             let remaining = 10;
             let countdownTimer = null;
             pauseSection.innerHTML = `

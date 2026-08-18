@@ -23,12 +23,12 @@ class BackgroundService {
 
         // sleepBlockingState removed
 
-        // Track short pause usage (5 min, max 2 per day)
-        this.shortPauseUsage = {
+        // Track challenge-free one-minute pauses (maximum two per local day).
+                this.shortPauseUsage = {
             count: 0,
             lastResetDate: new Date().toDateString()
         };
-
+        this.shortPauseRequestLock = Promise.resolve();
         this.adBlockEnabled = false; // Default to disabled to avoid altering site layout
         this.preActivationWarningCache = {};
         this.activeTabInjectionPromises = new Map();
@@ -381,8 +381,15 @@ class BackgroundService {
         await chrome.storage.local.remove(['pendingFocusActivation']);
     }
 
-    async checkShortPauseReset() {
+        async checkShortPauseReset() {
         const today = new Date().toDateString();
+        const stored = await chrome.storage.local.get(['shortPauseUsage']);
+        if (stored.shortPauseUsage && Number.isFinite(Number(stored.shortPauseUsage.count))) {
+            this.shortPauseUsage = {
+                count: Math.max(0, Number(stored.shortPauseUsage.count)),
+                lastResetDate: stored.shortPauseUsage.lastResetDate || today
+            };
+        }
         if (this.shortPauseUsage.lastResetDate !== today) {
             this.shortPauseUsage = {
                 count: 0,
@@ -391,7 +398,24 @@ class BackgroundService {
             await chrome.storage.local.set({ shortPauseUsage: this.shortPauseUsage });
         }
     }
-
+    async tryFreeOneMinutePause() {
+        const previousRequest = this.shortPauseRequestLock;
+        let releaseRequest;
+        this.shortPauseRequestLock = new Promise((resolve) => {
+            releaseRequest = resolve;
+        });
+        await previousRequest;
+        try {
+            await this.checkShortPauseReset();
+            if (this.shortPauseUsage.count >= 2) return null;
+            const paused = await this.pauseBlocking(60 * 1000);
+            if (!paused) return false;
+            await this.incrementShortPause();
+            return true;
+        } finally {
+            releaseRequest();
+        }
+    }
     async incrementShortPause() {
         await this.checkShortPauseReset();
         this.shortPauseUsage.count++;
@@ -832,6 +856,22 @@ class BackgroundService {
                         : '1, 5, 10 minutes, 1 hour, or 3 hours';
                     sendResponse({ success: false, error: `Choose one of these pause durations: ${choices}.` });
                     break;
+                }
+
+                // Focus, scheduled, and sleep pauses of exactly one minute are
+                // challenge-free twice per local day. The third and later requests
+                // continue through the normal motivational verification flow.
+                const isOneMinuteGeneralPause = pauseContext === 'general' && durationMs === 60 * 1000;
+                if (isOneMinuteGeneralPause) {
+                    const freePauseResult = await this.tryFreeOneMinutePause();
+                    if (freePauseResult === true) {
+                        sendResponse({ success: true, freePause: true, pauseContext });
+                        break;
+                    }
+                    if (freePauseResult === false) {
+                        sendResponse({ success: false, error: 'Unable to pause protection' });
+                        break;
+                    }
                 }
 
                 const challenge = this.generatePauseChallenge();

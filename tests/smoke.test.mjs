@@ -619,3 +619,21 @@ test('Pause screens keep readable typography at normal browser zoom', async () =
     assert.match(challenge, /class="pause-preparation-countdown"/);
     assert.match(challenge, /class="pause-challenge-actions"/);
 });
+
+
+test('One-minute general pauses get two daily free uses before verification', async () => {
+    const worker = await read('background/service-worker.js');
+    const helper = await read('floating/pause-challenge.js');
+    const options = await read('options/options.html');
+
+    assert.equal(options.includes('Free 5-minute pauses are limited'), false);
+    assert.match(worker, /shortPauseUsage: \{ count: 0, lastResetDate: today \}/);
+    assert.match(worker, /async tryFreeOneMinutePause\(\)/);
+    assert.match(worker, /if \(this\.shortPauseUsage\.count >= 2\) return null/);
+    assert.match(worker, /const isOneMinuteGeneralPause = pauseContext === 'general' && durationMs === 60 \* 1000/);
+    assert.match(worker, /const freePauseResult = await this\.tryFreeOneMinutePause\(\)/);
+    assert.match(worker, /freePause: true/);
+    assert.match(helper, /pauseContext === 'general' && durationMs === 60 \* 1000/);
+    assert.match(helper, /if \(response\?\.success\) \{\s*showSuccess\(pauseSection\)/);
+    assert.match(helper, /response\?\.requiresPassword[\s\S]*?TimeShieldPauseChallenge\.render/);
+});
