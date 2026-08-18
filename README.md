@@ -3,13 +3,54 @@
 [![Latest release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/smoke%20tests-44%20passing-2ea44f)](tests/smoke.test.mjs)
+[![Tests](https://img.shields.io/badge/smoke%20tests-47%20passing-2ea44f)](tests/smoke.test.mjs)
 
 TimeShield is a local-first productivity extension for Chrome and other Chromium-based browsers. It combines a floating clock, focus sessions, scheduled blocking, sleep protection, usage limits, screen-time reports, tasks, and optional ad blocking in one place.
 
 The extension is designed to stay out of the way until you choose to use it. **Sites are not blocked automatically.** You add the domains you want to manage and enable the protection mode that fits the moment.
 
 ![TimeShield control panel](assets/screenshots/control-panel.png)
+
+<details>
+<summary>View the TimeShield screenshots</summary>
+
+The gallery is collapsed by default. Select the arrow to expand it and browse the control center, settings pages, floating tools, and protection screens.
+
+### Control center
+
+![TimeShield control panel](assets/screenshots/control-panel.png)
+
+### Settings tabs
+
+![General settings](assets/screenshots/options-general.png)
+
+![Clock settings](assets/screenshots/options-clock.png)
+
+![Focus settings](assets/screenshots/options-focus.png)
+
+![Scheduled blocking and limits](assets/screenshots/optins-schedules-limits.png)
+
+![Ad blocker settings](assets/screenshots/options-adblock.png)
+
+![Tasks settings](assets/screenshots/options-tasks.png)
+
+![Screen Time settings](assets/screenshots/options-screentime.png)
+
+![Data management settings](assets/screenshots/options-data.png)
+
+### Clock, timers, and protection screens
+
+![Floating clock](assets/screenshots/floating-clock.png)
+
+![Flip clock](assets/screenshots/flip-clock.png)
+
+![Timer complete screen](assets/screenshots/timer-complete.png)
+
+![Focus block screen](assets/screenshots/focus-block.png)
+
+![Usage limit block screen](assets/screenshots/limit-block.png)
+
+</details>
 
 ## Choose how to install
 
@@ -20,7 +61,7 @@ The extension is designed to stay out of the way until you choose to use it. **S
 
 ### Install from a release ZIP
 
-1. Download **`TimeShield-v2.3.1.zip`** from the [v2.3.1 release](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.1).
+1. Download **`TimeShield-v2.3.2.zip`** from the [v2.3.2 release](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.2).
 2. Extract the ZIP to a permanent folder. Do not select the ZIP file itself.
 3. Open `chrome://extensions` in Chrome, `brave://extensions` in Brave, or the equivalent Extensions page in another Chromium browser.
 4. Turn on **Developer mode**.
@@ -122,7 +163,7 @@ Chrome can keep an old popup or block page open. Reload the extension and close 
 
 ## Current release
 
-The current downloadable release is **[TimeShield v2.3.1](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.1)**. The release includes `TimeShield-v2.3.1.zip` and is intended for unpacked installation while the project is distributed through GitHub.
+The current downloadable release is **[TimeShield v2.3.2](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.2)**. The release includes `TimeShield-v2.3.2.zip` and is intended for unpacked installation while the project is distributed through GitHub.
 
 This project is not currently distributed through the Chrome Web Store. Browser extensions loaded from GitHub releases use the browser’s developer-mode workflow described above.
 

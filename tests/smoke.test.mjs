@@ -637,3 +637,14 @@ test('One-minute general pauses get two daily free uses before verification', as
     assert.match(helper, /if \(response\?\.success\) \{\s*showSuccess\(pauseSection\)/);
     assert.match(helper, /response\?\.requiresPassword[\s\S]*?TimeShieldPauseChallenge\.render/);
 });
+
+
+test('README provides a collapsed gallery for every repository screenshot', async () => {
+    const readme = await read('README.md');
+    const screenshotFiles = await readdir('assets/screenshots');
+    assert.match(readme, /<details>\s*\n<summary>View the TimeShield screenshots<\/summary>/);
+    assert.match(readme, /<\/details>/);
+    for (const filename of screenshotFiles.filter((name) => /\.(png|jpe?g|webp)$/i.test(name))) {
+        assert.ok(readme.includes(`assets/screenshots/${filename}`), `README is missing ${filename}`);
+    }
+});
