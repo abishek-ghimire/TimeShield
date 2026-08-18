@@ -1,0 +1,9 @@
+# Chrome-generated extension metadata
+_metadata/
+
+# Legacy duplicate manifest retained only in old working copies
+Manifest.JSON
+
+# Local release artifacts
+release/
+*.zip

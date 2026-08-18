@@ -12,7 +12,7 @@
     <div class="popup-container">
         <header class="popup-header">
             <div class="brand">
-                <h1><span class="brand-logo-wrap"><img src="../assets/icons/iconi1.png" alt="TimeShield"
+                <h1><span class="brand-logo-wrap"><img src="../assets/icons/icon128.png" alt="TimeShield"
                             class="brand-logo"></span> TimeShield</h1>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -55,6 +55,13 @@
                     <span class="icon">➕</span> Add Current Site
                 </button>
             </div>
+
+            <section class="card site-limits-card compact-card" aria-labelledby="siteLimitsTitle">
+                <div class="card-title" id="siteLimitsTitle">
+                    <span class="icon">⏳</span> Site Limits
+                </div>
+                <div id="siteLimitStatus" class="site-limit-status" aria-live="polite"></div>
+            </section>
 
             <div class="popup-card-grid">
                 <section class="card todo-card compact-card">

@@ -290,7 +290,7 @@ class OptionsManager {
         on('exportData', () => this.exportData());
         on('importData', () => this.importData());
         on('resetSettings', () => this.resetSettings());
-        on('clearAllData', () => this.clearAllData());
+        on('resetAllUserData', () => this.resetAllUserData());
         on('cleanupUsageNow', () => this.cleanupUsageNow());
     }
 
@@ -911,15 +911,23 @@ class OptionsManager {
         }
     }
 
-    async clearAllData() {
-        if (confirm('Are you sure you want to clear ALL data? This includes settings, tasks, analytics, and everything else. This action cannot be undone!')) {
-            if (confirm('This is your final warning. All data will be permanently deleted. Continue?')) {
-                await chrome.storage.local.clear();
-                await this.loadData();
-                this.populateForm();
-                this.showNotification('All data cleared. Extension reset to defaults.', 'success');
-            }
+    async resetAllUserData() {
+        if (!confirm('Reset all TimeShield data? This removes every site, limit, schedule, task, usage record, and clock preference.')) return;
+        if (!confirm('This cannot be undone. Reset TimeShield now?')) return;
+
+        const response = await chrome.runtime.sendMessage({ action: 'resetAllUserData' }).catch(() => null);
+        if (!response?.success) {
+            this.showNotification(response?.error || 'Unable to reset TimeShield data.', 'error');
+            return;
         }
+        await this.loadData();
+        this.populateForm();
+        this.updateAccordionBadges();
+        this.showNotification('TimeShield was reset. Protection is disabled until you configure it again.', 'success');
+    }
+
+    async clearAllData() {
+        return this.resetAllUserData();
     }
 
     getDefaultScheduledBlocking() {

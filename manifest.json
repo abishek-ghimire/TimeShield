@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TimeShield",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Floating clock, website blocker, focus tools, and optional ad blocking",
   "permissions": [
     "storage",
@@ -52,7 +52,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "filters/*.txt",
         "floating/clock.html",
         "floating/clock.css",
         "floating/clock.js",
@@ -68,10 +67,8 @@
         "floating/sleep-block.html",
         "floating/timer-complete.html",
         "floating/focus-complete.html",
-        "floating/limit-block.html",
         "content/element-picker.css",
         "assets/sounds/*",
-        "assets/fonts/*",
         "assets/icons/*"
       ],
       "matches": [
@@ -82,10 +79,10 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "assets/icons/iconi1.png",
-      "32": "assets/icons/iconi1.png",
-      "48": "assets/icons/iconi1.png",
-      "128": "assets/icons/iconi1.png"
+      "16": "assets/icons/icon128.png",
+      "32": "assets/icons/icon128.png",
+      "48": "assets/icons/icon128.png",
+      "128": "assets/icons/icon128.png"
     }
   },
   "options_ui": {
@@ -93,9 +90,9 @@
     "open_in_tab": true
   },
   "icons": {
-    "16": "assets/icons/iconi1.png",
-    "32": "assets/icons/iconi1.png",
-    "48": "assets/icons/iconi1.png",
-    "128": "assets/icons/iconi1.png"
+    "16": "assets/icons/icon128.png",
+    "32": "assets/icons/icon128.png",
+    "48": "assets/icons/icon128.png",
+    "128": "assets/icons/icon128.png"
   }
 }
