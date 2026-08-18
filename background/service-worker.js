@@ -547,6 +547,11 @@ class BackgroundService {
 
     async handleMessage(message, sender, sendResponse) {
         switch (message.action) {
+            case 'resetAllUserData': {
+                await this.resetAllUserData();
+                sendResponse({ success: true });
+                break;
+            }
             case 'startTimer':
                 await this.startTimer(message.duration, 'custom');
                 sendResponse({ success: true });
@@ -1660,7 +1665,7 @@ class BackgroundService {
             // Send message to all tabs to hide focus timer
             const tabs = await chrome.tabs.query({});
             for (const tab of tabs) {
-                if (tab.url && (tab.url.includes('focus-timer.html') || tab.url.includes('flip-clock.html'))) {
+                if (tab.url && tab.url.includes('flip-clock.html')) {
                     chrome.tabs.sendMessage(tab.id, { action: 'hideFocusTimer' }).catch(() => { });
                 }
             }
@@ -2169,32 +2174,107 @@ class BackgroundService {
         await chrome.storage.local.set(updates);
     }
 
-    async initializeStorage() {
-        const defaults = {
+    getCleanUserDataDefaults() {
+        const today = new Date().toDateString();
+        return {
             settings: {
-                theme: 'solar',
+                theme: 'light',
+                timeFormat: '12h',
                 soundEnabled: true,
                 notificationsEnabled: true,
                 breakReminders: true,
                 clockPosition: { x: 20, y: 20 },
                 clockSize: 'medium',
                 focusTimerWidgetEnabled: true,
-                timerWidgetEnabled: true
+                timerWidgetEnabled: true,
+                autoStartClock: false,
+                showBlockingCountdown: true,
+                usageRetentionDays: 90,
+                safeModeEnabled: false
             },
-            // Blocking begins empty. Users choose every protected domain themselves.
-            blockedSites: [],
-            gracePauses: {
-                count: 0,
-                lastResetDate: new Date().toDateString()
+            focusBlockedSites: [],
+            scheduledBlockedSites: [],
+            scheduledBlocking: {
+                enabled: false,
+                startTime: '09:00',
+                endTime: '17:00',
+                days: [1, 2, 3, 4, 5]
             },
+            sleepBlocking: {
+                enabled: false,
+                startTime: '22:00',
+                endTime: '06:00',
+                days: [1, 2, 3, 4, 5],
+                blockAll: true,
+                whitelist: []
+            },
+            timeLimits: [],
+            timeLimitsEnabled: false,
+            globalLimit: { enabled: false, minutes: 60, domains: [] },
+            focusState: { isActive: false, startTime: null, duration: 0, focusBlockedSites: [] },
+            timerState: { isRunning: false, startTime: null, duration: 0, type: null },
+            pauseBlockingUntil: null,
+            pauseChallenge: null,
+            siteUsageData: {},
+            siteUsageTimeline: {},
+            siteOpenCounts: {},
+            timeLimitWarningCache: {},
             todos: [],
-            todayStats: {
-                focusTime: 0,
-                tasksCompleted: 0,
-                sessionsCompleted: 0,
-                date: new Date().toDateString()
-            }
+            gracePauses: { count: 0, lastResetDate: today },
+            shortPauseUsage: { count: 0, lastResetDate: today },
+            clockVisible: false,
+            clockPos: { x: 0, y: 20, w: 280, h: 160 },
+            clockMinimized: false,
+            sessionOverlayDismissed: false,
+            adBlockEnabled: false,
+            adBlockStats: { adsBlocked: 0, bandwidthSaved: 0, timeSaved: 0, lastUpdated: Date.now() },
+            blockedSites: [],
+            whitelist: [],
+            filterLists: {},
+            customFilters: [],
+            todayStats: { focusTime: 0, tasksCompleted: 0, sessionsCompleted: 0, date: today }
         };
+    }
+
+    async resetAllUserData() {
+        const protectionAlarms = [
+            'timer', 'focusMode', 'focusModeActivation', 'pauseExpires', 'breakReminder'
+        ];
+        await Promise.all(protectionAlarms.map((name) => chrome.alarms.clear(name).catch(() => false)));
+        await this.disableSiteBlockingRange(101, 500).catch(() => undefined);
+        await this.adBlocker.clearRules().catch(() => undefined);
+        try {
+            await chrome.declarativeNetRequest.updateEnabledRulesets({
+                disableRulesetIds: ['base-adblock', 'focus-rules']
+            });
+        } catch (error) {
+            if (!/not found|does not exist|unknown ruleset/i.test(String(error?.message || error))) {
+                console.warn('TimeShield: ruleset cleanup during reset failed', error);
+            }
+        }
+        await chrome.storage.local.clear();
+        await chrome.storage.local.set(this.getCleanUserDataDefaults());
+
+        this.timerState = { isRunning: false, startTime: null, duration: 0, type: null };
+        this.focusState = { isActive: false, startTime: null, duration: 0, focusBlockedSites: [] };
+        this.shortPauseUsage = { count: 0, lastResetDate: new Date().toDateString() };
+        this.gracePauses = { count: 0, lastResetDate: new Date().toDateString() };
+        this.adBlockEnabled = false;
+        this.adsBlocked = 0;
+        this.bandwidthSaved = 0;
+        this.timeSaved = 0;
+        await chrome.action.setBadgeText({ text: '' });
+        await this.redirectTabsBack('floating/focus-block.html').catch(() => undefined);
+        await this.redirectTabsBack('floating/schedule-block.html').catch(() => undefined);
+        await this.redirectTabsBack('floating/sleep-block.html').catch(() => undefined);
+        await this.redirectTabsBack('floating/limit-block.html').catch(() => undefined);
+        await this.ensureContentScriptInjected();
+        await this.toggleFloatingClock(false);
+        return true;
+    }
+
+    async initializeStorage() {
+        const defaults = this.getCleanUserDataDefaults();
 
         for (const [key, value] of Object.entries(defaults)) {
             const result = await chrome.storage.local.get(key);

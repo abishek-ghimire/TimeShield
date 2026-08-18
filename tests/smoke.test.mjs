@@ -513,3 +513,71 @@ test('Focus block page reports a retryable pause request failure', async () => {
     assert.match(helper, /verification request timed out/);
     assert.match(helper, /Try Again/);
 });
+
+
+test('Reset All Data restores a clean disabled state without automatic sites', async () => {
+    const worker = await read('background/service-worker.js');
+    const options = await read('options/options.html');
+    const optionsJs = await read('options/options.js');
+    assert.match(options, /id="resetAllUserData"/);
+    assert.match(optionsJs, /action: 'resetAllUserData'/);
+    assert.match(worker, /case 'resetAllUserData'/);
+    assert.match(worker, /await chrome\.storage\.local\.clear\(\)/);
+    assert.match(worker, /getCleanUserDataDefaults\(\)/);
+    assert.match(worker, /focusBlockedSites: \[\]/);
+    assert.match(worker, /scheduledBlockedSites: \[\]/);
+    assert.match(worker, /timeLimits: \[\]/);
+    assert.match(worker, /scheduledBlocking: \{\s*enabled: false/);
+    assert.match(worker, /sleepBlocking: \{\s*enabled: false/);
+    assert.match(worker, /timeLimitsEnabled: false/);
+    assert.match(worker, /clockVisible: false/);
+});
+
+
+test('Release manifest contains only unique runtime resources', async () => {
+    const manifest = JSON.parse(await read('manifest.json'));
+    const resources = manifest.web_accessible_resources.flatMap((entry) => entry.resources || []);
+    assert.equal(resources.filter((resource) => resource === 'floating/limit-block.html').length, 1);
+    assert.equal(resources.includes('assets/fonts/*'), false);
+    assert.equal(manifest.declarative_net_request?.rule_resources?.some((resource) => resource.id === 'focus-rules'), false);
+});
+
+
+test('Floating clock follows the Fullscreen API and keeps all-tab visibility synchronized', async () => {
+    const blocker = await read('content/blocker.js');
+    const worker = await read('background/service-worker.js');
+    assert.match(blocker, /document\.addEventListener\('fullscreenchange'/);
+    assert.match(blocker, /document\.fullscreenElement/);
+    assert.match(blocker, /nextParent\.appendChild\(widget\)/);
+    assert.match(blocker, /widget\.style\.zIndex = '2147483647'/);
+    assert.match(worker, /case 'toggleClock':[\s\S]*?await this\.toggleFloatingClock\(message\.visible\);[\s\S]*?await this\.ensureContentScriptInjected\(\)/);
+    assert.match(worker, /tabs\.forEach\(tab => \{[\s\S]*?action: 'toggleClock'/);
+    assert.match(blocker, /clockVisible: false/);
+    assert.match(blocker, /action: 'toggleClock', visible: false/);
+});
+
+
+test('Control center renders remaining time for configured site limits', async () => {
+    const html = await read('popup/popup.html');
+    const popup = await read('popup/popup.js');
+    const css = await read('popup/popup.css');
+    assert.match(html, /id="siteLimitStatus"/);
+    assert.match(html, /Site Limits/);
+    assert.match(popup, /loadTimeLimitStatus\(\)/);
+    assert.match(popup, /timeLimitsEnabled/);
+    assert.match(popup, /siteUsageData/);
+    assert.match(popup, /new Date\(\)\.toDateString\(\)/);
+    assert.match(popup, /remainingSeconds/);
+    assert.match(popup, /30_000/);
+    assert.match(popup, /chrome\.storage\.onChanged\.addListener/);
+    assert.match(css, /site-limit-track/);
+    assert.match(css, /site-limit-remaining\.is-critical/);
+});
+
+
+test('Repository ignores generated metadata and local release archives', async () => {
+    const ignore = await read('.gitignore');
+    assert.match(ignore, /_metadata\//);
+    assert.match(ignore, /Manifest\.JSON/);
+    assert.match(ignore, /\*\.zip/);
+});

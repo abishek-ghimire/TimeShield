@@ -19,6 +19,7 @@ class ContentBlocker {
     async init() {
         this.setupMessageHandlers();
         this.setupStorageListeners();
+        this.setupFullscreenListener();
         await this.injectFloatingClock();
     }
 
@@ -94,6 +95,29 @@ class ContentBlocker {
                 await this._restoreVisibility(this.refs.widget);
             }
         });
+    }
+
+    setupFullscreenListener() {
+        document.addEventListener('fullscreenchange', () => {
+            const widget = this.refs.widget;
+            if (!widget) return;
+
+            const fullscreenElement = document.fullscreenElement;
+            const nextParent = fullscreenElement || document.body;
+            if (nextParent && widget.parentElement !== nextParent) {
+                nextParent.appendChild(widget);
+            }
+
+            // Fullscreen stacking contexts can hide ordinary fixed elements. Keep the
+            // widget above the player while it is inside the fullscreen tree.
+            widget.style.zIndex = '2147483647';
+            if (fullscreenElement) {
+                widget.style.position = 'fixed';
+                this._applyScale(true);
+            } else {
+                this._restorePositionAndSize(widget).catch(() => undefined);
+            }
+        }, true);
     }
 
     async injectFloatingClock() {

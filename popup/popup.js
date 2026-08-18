@@ -7,6 +7,7 @@ class PopupController {
             timerMinutes: document.getElementById('timerMinutes'),
             timerSeconds: document.getElementById('timerSeconds'),
             todoList: document.getElementById('todoList'),
+            siteLimitStatus: document.getElementById('siteLimitStatus'),
             startTimerBtn: document.getElementById('startTimer'),
             startFocusBtn: document.getElementById('startFocus'),
         };
@@ -18,7 +19,8 @@ class PopupController {
             isTimerRunning: false,
             focusInterval: null,
             isPaused: false,
-            timeFormat: '12h'
+            timeFormat: '12h',
+            timeLimitInterval: null
         };
 
         this.init();
@@ -28,6 +30,7 @@ class PopupController {
         this.setupEventListeners();
         await this.loadAllData();
         this.startClock();
+        this.state.timeLimitInterval = setInterval(() => this.loadTimeLimitStatus(), 30_000);
     }
 
     async loadAllData() {
@@ -35,7 +38,8 @@ class PopupController {
             ['settings', () => this.loadSettings()],
             ['todos', () => this.loadTodos()],
             ['timer state', () => this.restoreTimerState()],
-            ['pause state', () => this.checkPauseState()]
+            ['pause state', () => this.checkPauseState()],
+            ['site limit status', () => this.loadTimeLimitStatus()]
         ];
         const results = await Promise.allSettled(tasks.map(([, task]) => task()));
         results.forEach((result, index) => {
@@ -118,6 +122,87 @@ class PopupController {
                 console.error('Failed to update timer widget setting:', error);
             });
         });
+
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (areaName !== 'local') return;
+            if (changes.timeLimits || changes.timeLimitsEnabled || changes.siteUsageData) {
+                this.loadTimeLimitStatus().catch((error) => console.error('Failed to refresh site limits:', error));
+            }
+        });
+    }
+
+    async loadTimeLimitStatus() {
+        const container = this.elements.siteLimitStatus;
+        if (!container) return [];
+
+        const result = await chrome.storage.local.get(['timeLimits', 'timeLimitsEnabled', 'siteUsageData']);
+        const limits = Array.isArray(result.timeLimits) ? result.timeLimits : [];
+        const today = new Date().toDateString();
+        const usageToday = result.siteUsageData?.[today] || {};
+        const enabled = result.timeLimitsEnabled === true || result.timeLimitsEnabled === 'enabled' || result.timeLimitsEnabled === 'true' || result.timeLimitsEnabled === 1;
+        const statuses = limits
+            .filter((limit) => limit && typeof limit.site === 'string' && Number(limit.minutes) > 0)
+            .map((limit) => {
+                const limitMinutes = Number(limit.minutes);
+                const usedSeconds = Math.max(0, Number(usageToday[limit.site]) || 0);
+                const remainingSeconds = Math.max(0, Math.floor(limitMinutes * 60 - usedSeconds));
+                return { site: limit.site, limitMinutes, usedSeconds, remainingSeconds };
+            });
+
+        container.replaceChildren();
+        if (!statuses.length) {
+            const empty = document.createElement('div');
+            empty.className = 'site-limit-empty';
+            empty.textContent = 'No site limits configured.';
+            container.appendChild(empty);
+            return statuses;
+        }
+
+        const summary = document.createElement('div');
+        summary.className = 'site-limit-summary';
+        summary.textContent = enabled ? 'remaining today' : 'limits currently disabled';
+        container.appendChild(summary);
+
+        statuses.forEach((status) => {
+            const row = document.createElement('div');
+            row.className = 'site-limit-row';
+
+            const top = document.createElement('div');
+            top.className = 'site-limit-row-top';
+            const site = document.createElement('span');
+            site.className = 'site-limit-site';
+            site.textContent = status.site;
+            const remaining = document.createElement('span');
+            remaining.className = `site-limit-remaining${status.remainingSeconds <= 60 ? ' is-critical' : status.remainingSeconds <= 300 ? ' is-warning' : ''}`;
+            remaining.textContent = enabled
+                ? this.formatRemainingLimit(status.remainingSeconds)
+                : `${this.formatRemainingLimit(status.remainingSeconds)} · off`;
+            top.append(site, remaining);
+
+            const track = document.createElement('div');
+            track.className = 'site-limit-track';
+            const fill = document.createElement('div');
+            fill.className = 'site-limit-fill';
+            const usedRatio = Math.min(1, status.usedSeconds / Math.max(1, status.limitMinutes * 60));
+            fill.style.width = `${usedRatio * 100}%`;
+            if (status.remainingSeconds <= 60) fill.classList.add('is-critical');
+            else if (status.remainingSeconds <= 300) fill.classList.add('is-warning');
+            track.appendChild(fill);
+
+            row.append(top, track);
+            container.appendChild(row);
+        });
+        return statuses;
+    }
+
+    formatRemainingLimit(seconds) {
+        const remaining = Math.max(0, Math.floor(Number(seconds) || 0));
+        if (remaining <= 0) return 'limit reached';
+        if (remaining < 60) return `${remaining}s left`;
+        const minutes = Math.floor(remaining / 60);
+        const hours = Math.floor(minutes / 60);
+        if (hours > 0) return `${hours}h ${minutes % 60}m left`;
+        return `${minutes}m left`;
     }
 
     async updateWidgetSetting(key, enabled) {
