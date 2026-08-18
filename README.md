@@ -1,162 +1,623 @@
 # TimeShield
 
-[![Latest release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
+[![Latest Release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag\&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Tests](https://img.shields.io/badge/smoke%20tests-47%20passing-2ea44f)](tests/smoke.test.mjs)
 
-TimeShield is a local-first productivity extension for Chrome and other Chromium-based browsers. It combines a floating clock, focus sessions, scheduled blocking, sleep protection, usage limits, screen-time reports, tasks, and optional ad blocking in one place.
+**A local-first productivity and focus extension for Chromium-based browsers.**
 
-The extension is designed to stay out of the way until you choose to use it. **Sites are not blocked automatically.** You add the domains you want to manage and enable the protection mode that fits the moment.
+TimeShield brings a floating clock, focus sessions, website blocking, scheduled protection, sleep protection, usage limits, screen-time tracking, tasks, and optional ad protection into a single lightweight browser extension.
 
-![TimeShield control panel](assets/screenshots/control-panel.png)
+**No account. No cloud sync. No required internet connection for core features. Your data stays in your browser.**
+
+![TimeShield Control Panel](assets/screenshots/control-panel.png)
+
+---
+
+## Why TimeShield?
+
+Modern browsers make it easy to lose focus.
+
+TimeShield is designed to give us control over distracting websites without turning the browser into an overly complicated productivity system.
+
+We can decide:
+
+* Which websites should be restricted
+* When restrictions should be active
+* How long we can use a website
+* When we want to start a focus session
+* How much screen time we are spending
+* Whether we want a floating clock
+* Whether we want optional ad protection
+
+**Nothing is blocked automatically.**
+
+TimeShield only acts on the websites and protection modes that we configure.
+
+---
+
+## Features
+
+| Feature | What it does |
+| --- | --- |
+| 🕐 Floating Clock | Displays a draggable, resizable clock over supported webpages |
+| ⏱️ Timers | Run timers directly from the extension |
+| 🎯 Focus Mode | Restricts selected websites during focused work sessions |
+| 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
+| 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
+| ⏳ Usage Limits | Set daily limits for individual websites |
+| 📊 Screen Time | Track active browsing time by website |
+| 📝 Tasks | Maintain a small local task list |
+| 🛡️ Ad Protection | Optional local rule-based ad protection |
+| 🎨 Themes | Choose between Light, Dark, and Solar Ember themes |
+| ⚙️ Customization | Configure clocks, animations, blocking behavior, and other settings |
+| 💾 Local Storage | Store settings and activity data locally in the browser |
+| 🔒 No Account Required | Core functionality does not require registration or cloud accounts |
+
+---
+
+## Screenshots
 
 <details>
 <summary>View the TimeShield screenshots</summary>
 
-The gallery is collapsed by default. Select the arrow to expand it and browse the control center, settings pages, and feature views.
+### Control Center
 
-### Control center
+![TimeShield Control Panel](assets/screenshots/control-panel.png)
 
-![TimeShield control panel](assets/screenshots/control-panel.png)
+### General Settings
 
-### Settings and feature tabs
+![General Settings](assets/screenshots/general.png)
 
-![General settings](assets/screenshots/general.png)
+### Clock
 
-![Clock settings](assets/screenshots/clock.png)
+![Clock Settings](assets/screenshots/clock.png)
 
-![Focus settings](assets/screenshots/focus.png)
+### Focus Mode
 
-![Scheduled blocking and limits](assets/screenshots/schedule.png)
+![Focus Settings](assets/screenshots/focus.png)
 
-![Ad blocker settings](assets/screenshots/ad.png)
+### Scheduled Blocking
 
-![Tasks settings](assets/screenshots/task.png)
+![Scheduled Blocking](assets/screenshots/schedule.png)
 
-![Screen Time settings](assets/screenshots/screen.png)
+### Ad Protection
 
-![Data management settings](assets/screenshots/data.png)
+![Ad Protection](assets/screenshots/ad.png)
+
+### Tasks
+
+![Tasks](assets/screenshots/task.png)
+
+### Screen Time
+
+![Screen Time](assets/screenshots/screen.png)
+
+### Data Management
+
+![Data Management](assets/screenshots/data.png)
 
 </details>
 
-## Choose how to install
+---
 
-| Option | Best for | Instructions |
-|---|---|---|
-| Download a release | The quickest way to try TimeShield | Download the ZIP from the [latest release](https://github.com/abishekgh-6/TimeShield/releases/latest), extract it, and load the extracted folder as an unpacked extension. |
-| Clone the repository | Development, inspection, or contributing | Clone `main`, then load the repository folder containing `manifest.json` through the browser’s Extensions page. |
+# Installation
 
-### Install from a release ZIP
+TimeShield is currently distributed as an **unpacked Chromium extension** through the GitHub repository. Downloadable release packages may be published in the future.
 
-1. Download **`TimeShield-v2.3.2.zip`** from the [v2.3.2 release](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.2).
-2. Extract the ZIP to a permanent folder. Do not select the ZIP file itself.
-3. Open `chrome://extensions` in Chrome, `brave://extensions` in Brave, or the equivalent Extensions page in another Chromium browser.
-4. Turn on **Developer mode**.
-5. Click **Load unpacked** and select the extracted folder that contains `manifest.json`.
-6. Pin TimeShield from the browser toolbar if you want quick access to the popup.
+There are two ways to install it.
 
-### Install by cloning the repository
+## Option 1 — Download a Release
+
+When a release is available, this is the easiest method.
+
+1. Open the [TimeShield releases page](https://github.com/abishekgh-6/TimeShield/releases).
+2. Download the release ZIP.
+3. Extract the ZIP to a permanent folder.
+4. Open your browser's extension page:
+
+   * Chrome → `chrome://extensions`
+   * Brave → `brave://extensions`
+   * Edge → `edge://extensions`
+   * Other Chromium browsers → open their Extensions page
+
+5. Enable **Developer mode**.
+6. Click **Load unpacked**.
+7. Select the extracted TimeShield folder containing `manifest.json`.
+8. Pin TimeShield to the browser toolbar if desired.
+
+> **Important:** Select the extracted folder, not the ZIP file itself.
+
+---
+
+## Option 2 — Clone the Repository
+
+For development or inspection:
 
 ```bash
 git clone https://github.com/abishekgh-6/TimeShield.git
 cd TimeShield
 ```
 
-Then load the cloned `TimeShield` folder through **Load unpacked** on the browser’s Extensions page. The repository already contains the files required to run the extension; no build step is required.
+Then:
 
-For local development, run the smoke tests with:
+1. Open the browser's Extensions page.
+2. Enable **Developer mode**.
+3. Select **Load unpacked**.
+4. Choose the cloned `TimeShield` directory.
+
+### Build step
+
+TimeShield currently does **not require a build step**.
+
+The repository can be loaded directly as an unpacked extension.
+
+---
+
+# Core Features
+
+## Floating Clock
+
+TimeShield can display a floating clock directly on supported webpages.
+
+The floating clock can:
+
+* Be moved around the page
+* Be resized
+* Remember its position and size
+* Synchronize its state across open tabs
+* Use 12-hour or 24-hour time
+* Be displayed independently from the main Clock View
+* Remain visible when supported pages enter fullscreen mode
+
+A separate Flip Clock view is also available.
+
+---
+
+## Focus Mode
+
+Focus Mode allows us to restrict websites during a focused work session.
+
+We choose the websites that should be restricted and start the session when we are ready.
+
+The current website can also be added to the Focus list directly from the popup.
+
+When a restricted website is opened, TimeShield displays its focus/block interface instead of allowing normal browsing.
+
+Pause requests are deliberate. The first two eligible one-minute general pauses each day can begin without a challenge; later attempts use the normal verification flow.
+
+---
+
+## Scheduled Blocking
+
+Scheduled Blocking lets us configure website restrictions for specific:
+
+* Days
+* Start times
+* End times
+* Websites
+
+The feature remains inactive until it is explicitly enabled and configured.
+
+This makes it possible to create different protection periods without permanently blocking a website.
+
+---
+
+## Sleep Protection
+
+Sleep Protection provides a separate protection system for websites that we want restricted during sleep hours.
+
+It supports schedules that cross midnight.
+
+For example, a schedule can begin during one calendar day and continue into the next.
+
+The Sleep Protection list is separate from the normal scheduled-blocking list.
+
+---
+
+## Usage Limits
+
+Usage Limits allow us to set a daily limit for individual domains.
+
+TimeShield can warn us as a limit approaches and displays the remaining configured time in the control center.
+
+When a limit is reached, the website can be paused for:
+
+* 1 minute
+* 5 minutes
+* 10 minutes
+
+Protection modes such as Focus, Schedule, and Sleep support longer pause options:
+
+* 1 minute
+* 5 minutes
+* 1 hour
+* 3 hours
+
+Pause requests use a visible **10-second countdown** followed by a lowercase motivational sentence challenge when verification is required.
+
+Usage-limit pauses also include an additional confirmation step so extending a limit is intentional.
+
+---
+
+## Screen Time
+
+Screen Time records active browsing time by website.
+
+Reports are available in:
+
+* Daily view
+* Weekly view
+* Monthly view
+
+Tracking data is stored locally in the browser.
+
+TimeShield periodically checkpoints tracking information so that usage data can continue to be recorded even when the Manifest V3 service worker is suspended.
+
+### Important limitation
+
+TimeShield cannot recover browsing time that occurred before tracking was active.
+
+For example, if the extension was disabled for part of the day, that missing period cannot be reconstructed afterward.
+
+### Local files and PDFs
+
+To allow TimeShield to track local documents and PDFs:
+
+1. Open the browser's Extensions page.
+2. Open TimeShield's details.
+3. Enable **Allow access to file URLs**.
+
+Browser-internal pages such as `chrome://settings` and the Chrome Web Store cannot receive normal extension content scripts.
+
+---
+
+## Optional Ad Protection
+
+Ad Protection is completely optional.
+
+It uses TimeShield's local rule lists and can be disabled without affecting:
+
+* The clock
+* Focus Mode
+* Screen Time
+* Tasks
+* Other productivity features
+
+The Ad Protection settings include:
+
+* Local filtering rules
+* Element picker
+* Custom filter controls
+
+---
+
+## Tasks
+
+TimeShield includes a lightweight local task list for everyday work.
+
+Tasks are stored locally and do not require an external account or task-management service.
+
+The goal is intentionally simple: keep small tasks close to the tools we are already using.
+
+---
+
+## Themes and Personalization
+
+TimeShield includes:
+
+* Light theme
+* Dark theme
+* Solar Ember theme
+* Configurable animations
+* Compact popup controls
+* Expandable settings sections
+* Custom clock settings
+
+Settings sections remain collapsed until we need them, keeping the interface cleaner.
+
+---
+
+# Privacy
+
+TimeShield follows a **local-first** approach.
+
+Your:
+
+* Settings
+* Tasks
+* Website lists
+* Protection configuration
+* Screen-time records
+* Other extension data
+
+are stored in the browser's local storage.
+
+TimeShield does **not require an account** for its core functionality and does not require cloud synchronization.
+
+There is no TimeShield server required for the extension's core productivity features.
+
+> Local storage is still controlled by the browser profile. Removing the extension, clearing browser extension data, or resetting the browser can affect locally stored data.
+
+---
+
+# Permissions
+
+TimeShield requests browser permissions because different features require access to different browser APIs.
+
+| Permission / Access | Purpose |
+| --- | --- |
+| `storage` | Stores settings, tasks, protection lists, and Screen Time data |
+| `alarms` | Performs scheduled checks and Screen Time checkpoints |
+| `tabs` | Detects active browser tabs |
+| `webNavigation` | Helps track navigation and browsing activity |
+| `scripting` | Injects supported TimeShield interfaces into webpages |
+| Host permissions | Allows configured website protection and page overlays |
+| Declarative Net Request | Handles configured blocking and optional ad-protection rules |
+| File URL access | Allows supported functionality on local files when manually enabled |
+
+TimeShield cannot access every browser page.
+
+Pages such as:
+
+* `chrome://*`
+* Browser settings
+* Chrome Web Store pages
+* Other protected browser pages
+
+are restricted by the browser itself.
+
+This is a Chromium security limitation and cannot be removed by a normal extension permission.
+
+---
+
+# Data and Internet Usage
+
+TimeShield is designed to work locally.
+
+### Core functionality
+
+Core features do not require:
+
+* An account
+* Email registration
+* Cloud storage
+* A TimeShield server
+* Mandatory internet access
+
+### Optional external connectivity
+
+Browser or extension functionality may still be affected by external resources, browser updates, or optional services depending on how the extension is configured.
+
+TimeShield does not use cloud synchronization for its local data.
+
+---
+
+# Browser Compatibility
+
+TimeShield targets browsers that support the **Chromium Manifest V3 extension platform**.
+
+This includes browsers such as:
+
+* Google Chrome
+* Brave
+* Microsoft Edge
+* Other Chromium-based browsers
+
+Feature availability can vary slightly between browsers because browser permissions and protected pages are controlled by each browser.
+
+---
+
+# Troubleshooting
+
+## A website is blocked unexpectedly
+
+Check the following TimeShield features:
+
+* Focus Mode
+* Scheduled Blocking
+* Sleep Protection
+* Usage Limits
+* Global Limits
+
+Disable the protection mode that should not currently be active.
+
+After updating TimeShield:
+
+1. Open the browser's Extensions page.
+2. Click **Reload** on TimeShield.
+3. Close old TimeShield block tabs.
+4. Open the website again in a new tab.
+
+---
+
+## Screen Time is empty
+
+Try the following:
+
+1. Open a normal website.
+2. Keep the website active for at least 30–60 seconds.
+3. Open Screen Time.
+4. Select **Refresh Data**.
+5. Confirm that TimeShield is enabled.
+
+Avoid testing Screen Time on protected browser pages such as `chrome://` pages.
+
+For local files, enable **Allow access to file URLs** from the extension details page.
+
+---
+
+## The pause challenge does not appear
+
+Some eligible one-minute pauses are intentionally challenge-free. For a pause that requires verification:
+
+1. Open the browser's Extensions page.
+2. Reload TimeShield.
+3. Close the existing blocked page.
+4. Open a new blocked website.
+5. Select a pause duration.
+6. Wait for the 10-second countdown.
+7. Complete the challenge.
+
+---
+
+## The popup looks outdated after an update
+
+The browser may still have an older TimeShield page open.
+
+Try:
+
+1. Reloading the extension.
+2. Closing the existing TimeShield popup.
+3. Closing old TimeShield tabs.
+4. Opening the popup again.
+
+---
+
+# Project Structure
+
+```text
+TimeShield/
+│
+├── background/
+│   └── Service-worker logic, protection enforcement, Screen Time tracking
+│
+├── content/
+│   └── Page-level scripts and floating interfaces
+│
+├── floating/
+│   └── Clock, timer, block page, and pause challenge views
+│
+├── options/
+│   └── Settings and Screen Time dashboard
+│
+├── popup/
+│   └── Browser toolbar popup
+│
+├── rules/
+│   └── Local declarative network rules
+│
+├── assets/
+│   └── Icons, screenshots, sounds, and other static assets
+│
+├── tests/
+│   └── Smoke and regression tests
+│
+├── manifest.json
+└── README.md
+```
+
+---
+
+# Development
+
+TimeShield does not currently require a framework build pipeline.
+
+After cloning the repository, we can load the project directly into a Chromium-based browser using **Load unpacked**.
+
+Run the automated smoke tests with:
 
 ```bash
 node --test tests/smoke.test.mjs
 ```
 
-## What TimeShield does
+Before submitting changes, we should verify:
 
-### Floating clock and timers
+* The extension loads without manifest errors.
+* The popup opens correctly.
+* The options page loads correctly.
+* Clock functionality still works.
+* Protection modes behave correctly.
+* Screen Time continues recording.
+* Existing settings are preserved.
+* No unexpected permissions are introduced.
+* Smoke tests pass.
 
-The floating display can be shown independently of the full Clock View. It can be dragged and resized, and its position and size are synchronized across open tabs. Clock text scales with the display, and the standard clock can open the Flip Clock in a separate tab. A 12-hour or 24-hour format can be selected in settings.
+---
 
-### Focus Mode
+# Testing
 
-Focus Mode starts immediately after the save-work warning is acknowledged. You choose the sites that should be restricted, and the block page provides a clear way to remain focused or request a deliberate pause. The current tab can be added to the Focus list directly from the popup.
+TimeShield includes Node-based smoke and regression tests.
 
-### Scheduled and sleep protection
+Run:
 
-Scheduled Blocking can restrict a manually maintained site list during selected times and days. Sleep protection can cover a separate list and can handle schedules that cross midnight. Both modes remain inactive until you enable them and configure the sites and schedule you want.
+```bash
+node --test tests/smoke.test.mjs
+```
 
-### Usage limits
+Current repository status:
 
-Set a daily limit for individual domains and receive warnings before the limit is reached. When a limit is reached, the site can be paused for **1, 5, or 10 minutes**. Focus, Schedule, and Sleep pauses use **1 minute, 5 minutes, 1 hour, or 3 hours**. Pause requests begin with a visible 10-second countdown, followed by a lowercase motivational sentence challenge. Usage-limit pauses include an additional confirmation step so extending the limit is intentional.
+**47 smoke tests passing**
 
-### Screen Time
+Tests are intended to catch regressions in important extension behavior without requiring a full browser automation environment.
 
-Screen Time records active browsing time by site and presents it in daily, weekly, and monthly views. Tracking is stored locally in the browser and continues to checkpoint while the Manifest V3 service worker is suspended. Time is not recovered retroactively if the extension was not installed or tracking was not running at the time.
+---
 
-To track local documents and local PDFs, open the TimeShield details page at `chrome://extensions` and enable **Allow access to file URLs**. Chrome internal pages such as `chrome://settings` and the Chrome Web Store cannot receive extension content scripts.
+# Limitations
 
-### Optional ad protection
+TimeShield is intentionally built within the security restrictions imposed by Chromium.
 
-Ad Protection is optional. It uses the extension’s local rule lists and can be disabled without affecting the clock, focus tools, or screen-time tracking. The element picker and custom filter controls are available from the Ad Protection settings when enabled.
+Some limitations include:
 
-### Tasks and personalization
+* Protected browser pages cannot be controlled.
+* `chrome://` pages cannot receive normal content scripts.
+* Chrome Web Store pages cannot be modified.
+* Screen Time cannot recover historical usage that was never recorded.
+* Local-file functionality requires manually enabling **Allow access to file URLs**.
+* Browser-specific behavior can vary between Chromium-based browsers.
+* No downloadable GitHub release is currently published; the repository is loaded as an unpacked extension.
 
-The Tasks section provides a small local task list for daily work. TimeShield also includes dark, light, and Solar Ember themes, compact popup controls, configurable animations, and settings accordions that open only when you need them.
+These are expected platform or distribution limitations rather than hidden functionality.
 
-## Privacy and permissions
+---
 
-TimeShield is built around local storage. Settings, task data, screen-time records, and protection lists remain in the browser profile on your device. The extension does not require an account or cloud synchronization.
+# Current Release
 
-| Permission or access | Why it is used |
-|---|---|
-| `storage` | Saves settings, tasks, protection lists, and screen-time records locally. |
-| `alarms` | Checkpoints screen-time usage and evaluates scheduled features reliably. |
-| `tabs` and `webNavigation` | Detects active-tab changes and keeps usage tracking accurate. |
-| `scripting` and host access | Displays the floating clock and timer overlays on eligible pages. |
-| Declarative Net Request permissions | Applies configured blocking and optional ad-blocking rules. |
-| File URL access, when enabled by you | Allows overlays and tracking on local documents and PDFs. |
+There is currently **no published GitHub release**. Existing release pages and ZIP assets were removed at the user's request.
 
-TimeShield does not promise access to protected browser pages. This is a Chrome platform restriction, not an extension setting.
+To use the current source, clone the repository and follow [Option 2 — Clone the Repository](#option-2--clone-the-repository) above.
 
-## Troubleshooting
+TimeShield is not currently distributed through the Chrome Web Store.
 
-### A website is blocked unexpectedly
+---
 
-Open the TimeShield popup and check Focus Mode, Scheduled Blocking, Sleep protection, Usage Limits, and Global Limits. Disable any mode that you do not intend to use. After updating the extension, open `chrome://extensions`, click **Reload**, close old TimeShield block tabs, and open the website in a new tab.
+# Contributing
 
-### Screen Time is empty
+Contributions, bug reports, feature ideas, and improvements are welcome.
 
-Leave a normal website active for at least 30–60 seconds, then open the Screen Time page and select **Refresh Data**. Make sure the extension is enabled and that you are not testing on a protected `chrome://` page. For local files, enable **Allow access to file URLs**.
+Before making a change, we should:
 
-### The pause challenge does not appear
+1. Understand the existing feature behavior.
+2. Keep the extension local-first where possible.
+3. Avoid introducing unnecessary external services.
+4. Avoid breaking existing settings or stored data.
+5. Run the available tests.
+6. Keep permissions to the minimum required.
+7. Update the README when user-visible behavior changes.
 
-Reload TimeShield from `chrome://extensions`, close the existing block page, and open a new blocked tab. Select a pause duration and wait for the visible 10-second countdown to finish. The challenge should then appear with its input and **Continue Anyway** button.
+For larger changes, opening an issue first can help us discuss the approach before implementation.
 
-### The popup looks outdated after an update
+---
 
-Chrome can keep an old popup or block page open. Reload the extension and close the old TimeShield tab before opening a new popup or website tab.
+# License
 
-## Repository layout
+TimeShield is licensed under the [Apache License 2.0](LICENSE).
 
-| Directory | Purpose |
-|---|---|
-| `background/` | Service-worker logic, protection enforcement, and Screen Time tracking. |
-| `content/` | Floating clock, overlay, and page-level controls. |
-| `floating/` | Clock, timer, block-page, and pause-challenge views. |
-| `options/` | The full settings and Screen Time dashboard. |
-| `popup/` | The compact toolbar popup. |
-| `rules/` | Local declarative rule resources. |
-| `assets/` | Icons, screenshots, and optional sounds. |
-| `tests/` | Node-based smoke and regression tests. |
+---
 
-## Current release
+## Project Philosophy
 
-The current downloadable release is **[TimeShield v2.3.2](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.2)**. The release includes `TimeShield-v2.3.2.zip` and is intended for unpacked installation while the project is distributed through GitHub.
+TimeShield is built around a simple idea:
 
-This project is not currently distributed through the Chrome Web Store. Browser extensions loaded from GitHub releases use the browser’s developer-mode workflow described above.
+> **Productivity tools should help us control our attention, not demand more of it.**
 
-## License
+No unnecessary account.
 
-TimeShield is available under the [Apache License 2.0](LICENSE).
+No mandatory cloud.
 
-Built to make focused work easier, one deliberate session at a time.
+No automatic blocking.
+
+Just the tools we choose, when we choose to use them.
+
+**TimeShield — take control of your time, one deliberate session at a time.**
