@@ -1,15 +1,18 @@
 # TimeShield
 
-[![Latest Release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag\&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
+[![Latest Release](https://img.shields.io/github/v/release/abishekgh-6/TimeShield?display_name=tag&sort=semver)](https://github.com/abishekgh-6/TimeShield/releases)
+[![Visit Repository](https://img.shields.io/badge/Visit%20Repository-GitHub-181717?logo=github)](https://github.com/abishekgh-6/TimeShield)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/smoke%20tests-47%20passing-2ea44f)](tests/smoke.test.mjs)
+[![Tests](https://img.shields.io/badge/smoke%20tests-48%20passing-2ea44f)](tests/smoke.test.mjs)
 
 **A local-first productivity and focus extension for Chromium-based browsers.**
 
 TimeShield brings a floating clock, focus sessions, website blocking, scheduled protection, sleep protection, usage limits, screen-time tracking, tasks, and optional ad protection into a single lightweight browser extension.
 
 **No account. No cloud sync. No required internet connection for core features. Your data stays in your browser.**
+
+[Visit the TimeShield repository](https://github.com/abishekgh-6/TimeShield) · [Download the latest release](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)
 
 ![TimeShield Control Panel](assets/screenshots/control-panel.png)
 
@@ -548,7 +551,7 @@ node --test tests/smoke.test.mjs
 
 Current repository status:
 
-**47 smoke tests passing**
+**48 smoke tests passing**
 
 Tests are intended to catch regressions in important extension behavior without requiring a full browser automation environment.
 
