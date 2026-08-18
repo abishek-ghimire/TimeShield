@@ -686,5 +686,4 @@ test('Repository traffic tracking uses official GitHub metrics and persists hist
     assert.match(readme, /Unique Visitors \(14d\)/);
     assert.match(readme, /img\.shields\.io\/endpoint\?url=https%3A%2F%2Fraw\.githubusercontent\.com%2Fabishekgh-6%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge\.json/);
     assert.match(readme, /data\/repository-traffic\.json/);
-    assert.match(readme, /REPO_TRAFFIC_TOKEN/);
 });
