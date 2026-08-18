@@ -14,41 +14,29 @@ The extension is designed to stay out of the way until you choose to use it. **S
 <details>
 <summary>View the TimeShield screenshots</summary>
 
-The gallery is collapsed by default. Select the arrow to expand it and browse the control center, settings pages, floating tools, and protection screens.
+The gallery is collapsed by default. Select the arrow to expand it and browse the control center, settings pages, and feature views.
 
 ### Control center
 
 ![TimeShield control panel](assets/screenshots/control-panel.png)
 
-### Settings tabs
+### Settings and feature tabs
 
-![General settings](assets/screenshots/options-general.png)
+![General settings](assets/screenshots/general.png)
 
-![Clock settings](assets/screenshots/options-clock.png)
+![Clock settings](assets/screenshots/clock.png)
 
-![Focus settings](assets/screenshots/options-focus.png)
+![Focus settings](assets/screenshots/focus.png)
 
-![Scheduled blocking and limits](assets/screenshots/optins-schedules-limits.png)
+![Scheduled blocking and limits](assets/screenshots/schedule.png)
 
-![Ad blocker settings](assets/screenshots/options-adblock.png)
+![Ad blocker settings](assets/screenshots/ad.png)
 
-![Tasks settings](assets/screenshots/options-tasks.png)
+![Tasks settings](assets/screenshots/task.png)
 
-![Screen Time settings](assets/screenshots/options-screentime.png)
+![Screen Time settings](assets/screenshots/screen.png)
 
-![Data management settings](assets/screenshots/options-data.png)
-
-### Clock, timers, and protection screens
-
-![Floating clock](assets/screenshots/floating-clock.png)
-
-![Flip clock](assets/screenshots/flip-clock.png)
-
-![Timer complete screen](assets/screenshots/timer-complete.png)
-
-![Focus block screen](assets/screenshots/focus-block.png)
-
-![Usage limit block screen](assets/screenshots/limit-block.png)
+![Data management settings](assets/screenshots/data.png)
 
 </details>
 
