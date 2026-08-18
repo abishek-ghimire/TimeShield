@@ -1,0 +1,226 @@
+/* Shared readable pause-screen presentation */
+:root {
+    --pause-content-width: min(760px, calc(100vw - 40px));
+    --pause-text: #f8fafc;
+    --pause-muted: #cbd5e1;
+    --pause-accent: #fb7185;
+    --pause-accent-soft: rgba(244, 63, 94, 0.18);
+    --pause-panel: rgba(15, 23, 42, 0.34);
+    --pause-border: rgba(255, 255, 255, 0.22);
+}
+
+/* The standalone Protection Pause Menu */
+body:has(#durationView),
+body:has(#motivationView),
+body:has(#authView) {
+    padding: 32px 20px;
+}
+
+body:has(#durationView) .glass-container,
+body:has(#motivationView) .glass-container,
+body:has(#authView) .glass-container {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: var(--pause-content-width);
+    max-width: 760px;
+    padding: 42px 36px;
+    margin: 0 auto;
+}
+
+body:has(#durationView) .brand-badge,
+body:has(#motivationView) .brand-badge,
+body:has(#authView) .brand-badge {
+    margin-bottom: 30px;
+    padding: 10px 18px;
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+}
+
+#durationView h1,
+#durationView > h3,
+#motivationView h1,
+#motivationView > h3,
+#authView h1,
+#authView > h3,
+.pause-duration-section > h3,
+.pause-title {
+    font-size: clamp(2rem, 4vw, 3.25rem) !important;
+    line-height: 1.15;
+    margin-bottom: 18px;
+}
+
+#durationView .message,
+#motivationView .message,
+#authView .message,
+.pause-duration-section > .pause-message,
+.pause-message {
+    max-width: 760px;
+    margin-bottom: 28px;
+    color: var(--pause-muted);
+    font-size: clamp(1.05rem, 2vw, 1.25rem) !important;
+    line-height: 1.55;
+}
+
+.duration-grid {
+    width: 100%;
+    gap: 18px;
+    margin: 28px auto 30px;
+}
+
+.duration-btn,
+.cancel-pause-btn,
+.pause-block-btn,
+#durationView .btn,
+#authView .btn,
+#motivationView .btn {
+    min-height: 60px;
+    padding: 16px 24px;
+    font-size: clamp(1.05rem, 1.8vw, 1.25rem) !important;
+    line-height: 1.25;
+    font-weight: 600;
+}
+
+.duration-btn {
+    border-color: var(--pause-border);
+    background: var(--pause-panel);
+}
+
+.duration-btn:hover,
+.duration-btn:focus-visible {
+    background: var(--pause-accent-soft);
+    border-color: var(--pause-accent);
+}
+
+/* Shared countdown inserted into a duration section */
+.pause-preparation-countdown {
+    display: grid !important;
+    place-items: center;
+    width: 112px !important;
+    height: 112px !important;
+    margin: 28px auto 30px !important;
+    border-width: 5px !important;
+    font-size: 3rem !important;
+    line-height: 1 !important;
+}
+
+.pause-preparation-message {
+    font-size: clamp(1.1rem, 2vw, 1.35rem) !important;
+}
+
+#motivationView,
+#durationView {
+    width: 100%;
+}
+
+/* Shared challenge renderer */
+.pause-challenge-word {
+    display: block;
+    width: 100%;
+    padding: 20px 24px;
+    margin: 18px 0 14px;
+    border: 1px dashed rgba(165, 180, 252, 0.55);
+    border-radius: 14px;
+    background: rgba(129, 140, 248, 0.1);
+    color: #c4b5fd !important;
+    font: 700 clamp(1.15rem, 2.2vw, 1.45rem)/1.6 ui-sans-serif, system-ui, sans-serif !important;
+    letter-spacing: 0.01em;
+    white-space: pre-line;
+    word-break: normal;
+}
+
+.pause-challenge-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 14px !important;
+    align-items: stretch !important;
+    width: 100%;
+    margin-top: 24px !important;
+}
+
+.pause-challenge-actions textarea,
+#motivationInput {
+    width: 100%;
+    min-height: 132px;
+    padding: 16px 18px !important;
+    border: 1px solid rgba(255, 255, 255, 0.34) !important;
+    border-radius: 12px !important;
+    background: rgba(0, 0, 0, 0.24) !important;
+    color: #ffffff !important;
+    font-size: 1.1rem !important;
+    line-height: 1.55 !important;
+}
+
+.pause-challenge-actions textarea::placeholder,
+#motivationInput::placeholder {
+    color: #aebbd0;
+    opacity: 1;
+}
+
+.pause-challenge-actions .duration-btn,
+.pause-challenge-actions .cancel-pause-btn,
+#motivationView .btn {
+    min-width: 150px;
+    min-height: 58px;
+    align-self: center;
+}
+
+.pause-challenge-actions .cancel-pause-btn {
+    color: var(--pause-muted);
+}
+
+#challengeError,
+#motivationErrorMsg,
+.error-msg {
+    margin-top: 16px;
+    font-size: 1rem !important;
+    line-height: 1.45;
+}
+
+/* Keep the expanded controls usable on narrow windows. */
+@media (max-width: 720px) {
+    body:has(#durationView) .glass-container,
+    body:has(#motivationView) .glass-container,
+    body:has(#authView) .glass-container {
+        padding: 30px 20px;
+    }
+
+    .pause-challenge-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .pause-challenge-actions textarea {
+        grid-column: 1 / -1;
+    }
+
+    .pause-challenge-actions .duration-btn,
+    .pause-challenge-actions .cancel-pause-btn,
+    #motivationView .btn {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    body:has(#durationView) .glass-container,
+    body:has(#motivationView) .glass-container,
+    body:has(#authView) .glass-container {
+        width: calc(100vw - 24px);
+        padding: 24px 14px;
+    }
+
+    .duration-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .duration-btn,
+    .cancel-pause-btn,
+    .pause-block-btn,
+    #durationView .btn,
+    #authView .btn,
+    #motivationView .btn {
+        min-height: 56px;
+    }
+}

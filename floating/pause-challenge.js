@@ -15,8 +15,8 @@
             let countdownTimer = null;
             pauseSection.innerHTML = `
                 <h3>🔐 Verification Countdown</h3>
-                <p class="pause-message" id="pausePreparationMessage">your verification challenge will appear after the countdown</p>
-                <div aria-live="polite" aria-atomic="true" style="display:grid;place-items:center;margin:18px auto;width:76px;height:76px;border:4px solid rgba(129,140,248,.35);border-top-color:#818cf8;border-radius:50%;font:700 1.8rem/1 ui-sans-serif,system-ui,sans-serif;color:#a5b4fc;">
+                <p class="pause-message pause-preparation-message" id="pausePreparationMessage">your verification challenge will appear after the countdown</p>
+                <div class="pause-preparation-countdown" aria-live="polite" aria-atomic="true" style="display:grid;place-items:center;margin:18px auto;width:76px;height:76px;border:4px solid rgba(129,140,248,.35);border-top-color:#818cf8;border-radius:50%;font:700 1.8rem/1 ui-sans-serif,system-ui,sans-serif;color:#a5b4fc;">
                     <span id="pausePreparationCountdown">10</span>
                 </div>
                 <button class="cancel-pause-btn" id="cancelPausePreparation" type="button">Cancel</button>
@@ -93,9 +93,9 @@
             pauseSection.innerHTML = `
                 <h3>🔐 Stay Focused</h3>
                 <p class="pause-message">Type these motivational sentences exactly in lowercase. Use one line for each sentence:</p>
-                <p class="pause-challenge-word" aria-label="Motivational pause challenge" style="font:700 1rem/1.55 ui-sans-serif,system-ui,sans-serif;white-space:pre-line;word-break:normal;color:#a5b4fc;"></p>
+                <p class="pause-challenge-word" aria-label="Motivational pause challenge"></p>
                 <p class="pause-message" style="color:#f43f5e;">This challenge expires in 10 minutes.</p>
-                <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <div class="pause-challenge-actions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                     <textarea id="pauseChallenge" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false"
                         placeholder="type the sentences above"
                         style="padding:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;border-radius:8px;flex:1 1 280px;min-width:0;resize:vertical;font:inherit;line-height:1.45;"></textarea>

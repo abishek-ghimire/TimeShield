@@ -593,3 +593,29 @@ test('Light-theme popup header keeps the brand and format control readable', asy
     assert.match(css, /color: #ffffff/);
     assert.match(css, /border-color: rgba\(255, 255, 255, 0\.48\)/);
 });
+
+
+test('Pause screens keep readable typography at normal browser zoom', async () => {
+    const stylesheet = await read('floating/pause-screen.css');
+    const challenge = await read('floating/pause-challenge.js');
+    const manifest = JSON.parse(await read('manifest.json'));
+    const pausePages = await Promise.all([
+        'floating/pause-overlay.html',
+        'floating/focus-block.html',
+        'floating/schedule-block.html',
+        'floating/limit-block.html',
+        'floating/sleep-block.html'
+    ].map(read));
+    const resources = manifest.web_accessible_resources.flatMap((entry) => entry.resources || []);
+
+    assert.equal(resources.includes('floating/pause-screen.css'), true);
+    pausePages.forEach((page) => assert.match(page, /rel="stylesheet" href="pause-screen\.css"/));
+    assert.match(stylesheet, /#durationView > h3/);
+    assert.match(stylesheet, /font-size: clamp\(2rem, 4vw, 3\.25rem\)/);
+    assert.match(stylesheet, /pause-preparation-countdown/);
+    assert.match(stylesheet, /font-size: 3rem/);
+    assert.match(stylesheet, /pause-challenge-actions/);
+    assert.match(stylesheet, /font-size: 1\.1rem !important/);
+    assert.match(challenge, /class="pause-preparation-countdown"/);
+    assert.match(challenge, /class="pause-challenge-actions"/);
+});

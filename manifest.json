@@ -60,6 +60,7 @@
         "floating/flip-clock.js",
         "floating/complete.js",
         "floating/pause-overlay.html",
+        "floating/pause-screen.css",
         "floating/focus-block.html",
         "floating/schedule-block.html",
         "floating/limit-block.html",
