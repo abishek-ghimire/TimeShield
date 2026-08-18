@@ -104,16 +104,16 @@ TimeShield only acts on the websites and protection modes that we configure.
 
 # Installation
 
-TimeShield is currently distributed as an **unpacked Chromium extension** through the GitHub repository. Downloadable release packages may be published in the future.
+TimeShield is distributed as an unpacked Chromium extension and as a downloadable ZIP through GitHub Releases. The current package is [TimeShield-v2.3.3.zip](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip).
 
 There are two ways to install it.
 
 ## Option 1 — Download a Release
 
-When a release is available, this is the easiest method.
+The current package can be downloaded directly here: [Download TimeShield-v2.3.3.zip](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip).
 
-1. Open the [TimeShield releases page](https://github.com/abishekgh-6/TimeShield/releases).
-2. Download the release ZIP.
+1. Open the [TimeShield v2.3.3 release page](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.3).
+2. Download **[TimeShield-v2.3.3.zip](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)**.
 3. Extract the ZIP to a permanent folder.
 4. Open your browser's extension page:
 
@@ -566,7 +566,7 @@ Some limitations include:
 * Screen Time cannot recover historical usage that was never recorded.
 * Local-file functionality requires manually enabling **Allow access to file URLs**.
 * Browser-specific behavior can vary between Chromium-based browsers.
-* No downloadable GitHub release is currently published; the repository is loaded as an unpacked extension.
+* The current release is distributed through GitHub Releases and can also be loaded directly as an unpacked extension.
 
 These are expected platform or distribution limitations rather than hidden functionality.
 
@@ -574,11 +574,13 @@ These are expected platform or distribution limitations rather than hidden funct
 
 # Current Release
 
-There is currently **no published GitHub release**. Existing release pages and ZIP assets were removed at the user's request.
+The current published release is **[TimeShield v2.3.3](https://github.com/abishekgh-6/TimeShield/releases/tag/v2.3.3)**.
 
-To use the current source, clone the repository and follow [Option 2 — Clone the Repository](#option-2--clone-the-repository) above.
+Download the package directly:
 
-TimeShield is not currently distributed through the Chrome Web Store.
+**[Download TimeShield-v2.3.3.zip](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)**
+
+The release is intended to be installed using the browser's **Load unpacked** workflow. TimeShield is not currently distributed through the Chrome Web Store.
 
 ---
 
