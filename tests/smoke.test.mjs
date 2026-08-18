@@ -649,11 +649,11 @@ test('README provides a collapsed gallery for every repository screenshot', asyn
     }
 });
 
-test('README links to the real release and repository', async () => {
+test('README links to the real release without a Visit Repository badge', async () => {
     const readme = await read('README.md');
     assert.match(readme, /img\.shields\.io\/github\/v\/release\/abishekgh-6\/TimeShield\?display_name=tag&sort=semver/);
     assert.doesNotMatch(readme, /display_name=tag\\&sort=semver/);
-    assert.match(readme, /Visit Repository/);
+    assert.doesNotMatch(readme, /\[!\[Visit Repository\]/);
     assert.match(readme, /https:\/\/github\.com\/abishekgh-6\/TimeShield\)/);
     assert.match(readme, /releases\/download\/v2\.3\.3\/TimeShield-v2\.3\.3\.zip/);
 });
