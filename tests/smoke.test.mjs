@@ -534,6 +534,7 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /disableSiteBlockingRange\(501, 600\)/);
     assert.match(worker, /updateSessionRules/);
     assert.match(worker, /clearLegacyDynamicTabScopedRules/);
+    assert.match(worker, /clearInactiveNuclearProtection/);
     assert.match(worker, /condition\.tabIds/);
     assert.match(worker, /condition\.excludedTabIds/);
     assert.match(worker, /NUCLEAR_OPEN_TAB_SESSION_RULE_ID/);
@@ -571,6 +572,7 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popupJs, /excludedTabIds: this\.state\.nuclearExcludeOpenTabs/);
     assert.match(worker, /disableSiteBlockingRange[\s\S]*clearNuclearOpenTabSessionRule/);
     assert.match(worker, /clearLegacyAutomaticProtection\(\);[\s\S]*clearLegacyDynamicTabScopedRules\(\);[\s\S]*restoreState\(\);/);
+    assert.match(worker, /if \(type === 'nuclear'\)[\s\S]*isNuclearSessionValid\(nuclearResult\.nuclearMode\)[\s\S]*disableSiteBlockingRange\(501, 600\)/);
     assert.match(popupJs, /renderNuclearSavedEntries/);
     assert.match(popupJs, /without an explicit user action/);
     assert.match(popupJs, /durationSeconds = \(hours \* 3600\) \+ \(minutes \* 60\)/);

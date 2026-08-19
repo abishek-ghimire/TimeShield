@@ -72,6 +72,7 @@ class BackgroundService {
         await this.restoreState();
         await this.initializeAdBlocking();
         await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
+        await this.clearInactiveNuclearProtection();
         // Auto-start floating clock on browser launch if enabled in settings
         try {
             const settings = await this.getSettings();
@@ -2179,6 +2180,14 @@ class BackgroundService {
     }
 
     async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = [], excludedTabIds = []) {
+        if (type === 'nuclear') {
+            const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
+            if (!this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
+                await this.disableSiteBlockingRange(501, 600);
+                return;
+            }
+        }
+
         const blockPage = type === 'schedule' ? 'floating/schedule-block.html' :
             type === 'sleep' ? 'floating/sleep-block.html' :
                 type === 'nuclear' ? 'floating/nuclear-block.html' : 'floating/focus-block.html';
@@ -2640,6 +2649,16 @@ class BackgroundService {
             this._onCommittedHandler = null;
         }
         console.log('Deep Work Strict Mode disabled - chrome://extensions access restored');
+    }
+
+    async clearInactiveNuclearProtection() {
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        if (this.isNuclearSessionValid(result.nuclearMode)) return false;
+
+        await chrome.alarms.clear('nuclearMode').catch(() => false);
+        await this.disableSiteBlockingRange(501, 600).catch(() => undefined);
+        await this.clearNuclearOpenTabSessionRule();
+        return true;
     }
 
     async clearLegacyDynamicTabScopedRules() {
