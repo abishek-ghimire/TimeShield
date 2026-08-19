@@ -810,7 +810,7 @@ class OptionsManager {
 
     getDefaultSettings() {
         return {
-            theme: 'light',
+            theme: 'solar',
             timeFormat: '12h',
             clockSize: 'medium',
             clockOpacity: 90,

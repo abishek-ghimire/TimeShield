@@ -733,12 +733,34 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             }
-            case 'toggleClock':
+            case 'toggleClock': {
+                const openingClockView = message.visible === true;
+                const fromFlipClock = openingClockView
+                    && sender?.tab?.url
+                    && sender.tab.url.includes('/floating/flip-clock.html');
+                let returnTab = null;
+
+                if (fromFlipClock) {
+                    returnTab = await this.findClockViewReturnTab(sender.tab);
+                    if (!returnTab) {
+                        sendResponse({ success: false, error: 'No eligible browser tab is open for Clock View.' });
+                        break;
+                    }
+                }
+
                 await this.toggleFloatingClock(message.visible);
                 // Ensure scripts are injected after toggle to make it work immediately everywhere
-                if (message.visible) await this.ensureContentScriptInjected();
-                sendResponse({ success: true });
+                if (openingClockView) await this.ensureContentScriptInjected();
+
+                if (fromFlipClock) {
+                    await chrome.windows.update(returnTab.windowId, { focused: true }).catch(() => undefined);
+                    await chrome.tabs.update(returnTab.id, { active: true }).catch(() => undefined);
+                    await chrome.tabs.remove(sender.tab.id).catch(() => undefined);
+                }
+
+                sendResponse({ success: true, focusedTabId: returnTab?.id || null });
                 break;
+            }
             case 'settingsUpdated': {
                 await this.ensureContentScriptInjected();
                 const tabs = await chrome.tabs.query({});
@@ -1742,6 +1764,23 @@ class BackgroundService {
         return /^(https?:|file:|ftp:)/i.test(String(url));
     }
 
+    async findClockViewReturnTab(sourceTab = {}) {
+        const tabs = await chrome.tabs.query({});
+        const candidates = tabs.filter((tab) => (
+            tab.id != null
+            && tab.id !== sourceTab.id
+            && this.isEligibleOverlayTab(tab.url)
+        ));
+        if (candidates.length === 0) return null;
+
+        const sameWindow = candidates.filter((tab) => tab.windowId === sourceTab.windowId);
+        const pool = sameWindow.length > 0 ? sameWindow : candidates;
+        const previousTab = pool
+            .filter((tab) => Number.isFinite(sourceTab.index) && tab.index < sourceTab.index)
+            .sort((a, b) => b.index - a.index)[0];
+        return previousTab || pool.find((tab) => tab.active) || pool[0];
+    }
+
     async ensureContentScriptInjected() {
         const tabs = await chrome.tabs.query({});
         for (const tab of tabs.filter(candidate => candidate.id != null && this.isEligibleOverlayTab(candidate.url))) {
@@ -2218,7 +2257,7 @@ class BackgroundService {
         const today = new Date().toDateString();
         return {
             settings: {
-                theme: 'light',
+                theme: 'solar',
                 timeFormat: '12h',
                 soundEnabled: true,
                 notificationsEnabled: true,

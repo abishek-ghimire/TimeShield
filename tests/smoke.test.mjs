@@ -308,6 +308,22 @@ test('Clock controls reflect the current view and support reverse navigation', a
 });
 
 
+test('Flip Clock returns to a browser tab and Solar Ember is the default theme', async () => {
+    const worker = await read('background/service-worker.js');
+    const flip = await read('floating/flip-clock.js');
+    const options = await read('options/options.js');
+    assert.match(flip, /action: 'toggleClock', visible: true/);
+    assert.match(worker, /fromFlipClock = openingClockView/);
+    assert.match(worker, /findClockViewReturnTab\(sender\.tab\)/);
+    assert.match(worker, /windows\.update\(returnTab\.windowId, \{ focused: true \}\)/);
+    assert.match(worker, /tabs\.update\(returnTab\.id, \{ active: true \}\)/);
+    assert.match(worker, /tabs\.remove\(sender\.tab\.id\)/);
+    assert.match(worker, /findClockViewReturnTab\(sourceTab = \{\}\)/);
+    assert.match(options, /getDefaultSettings\(\)[\s\S]*?theme: 'solar'/);
+    assert.match(worker, /getCleanUserDataDefaults\(\)[\s\S]*?theme: 'solar'/);
+});
+
+
 test('Clock geometry is broadcast and applied across open sites', async () => {
     const blocker = await read('content/blocker.js');
     const worker = await read('background/service-worker.js');
