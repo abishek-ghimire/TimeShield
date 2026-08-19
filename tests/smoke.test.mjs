@@ -468,6 +468,8 @@ test('All pause block pages use the shared preparation flow', async () => {
         assert.match(source, /requestChallenge:/);
         assert.match(source, /action: 'pauseBlocking'/);
     }
+    assert.match(sources[4], /pauseContext: 'nuclear'/);
+    assert.match(sources[4], /durationMs,\s*pauseContext: 'nuclear'/);
 });
 
 test('Pause Protection accordion exposes useful settings and supported durations', async () => {
@@ -505,13 +507,16 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.ok(resources.includes('floating/nuclear-block.js'));
     assert.match(blockPage, /Nuclear Mode Active/);
     assert.match(blockPage, /pause-challenge\.js/);
-    assert.match(blockController, /pauseContext: 'general'/);
+    assert.match(blockController, /pauseContext: 'nuclear'/);
     assert.match(blockController, /requestNuclearExitChallenge/);
     assert.match(blockController, /showNuclearExitBtn/);
     assert.match(pauseHelper, /completeNuclearExitWithPassword/);
     assert.match(worker, /startNuclearMode/);
     assert.match(worker, /excludedTabIds/);
     assert.match(worker, /normalizeNuclearExcludedTabIds/);
+    assert.match(worker, /freeOneMinutePauseUsed/);
+    assert.match(worker, /tryFreeNuclearOneMinutePause/);
+    assert.match(worker, /pauseContext === 'nuclear' && durationMs === 60 \* 1000/);
     assert.match(worker, /stopNuclearMode/);
     assert.match(worker, /getNuclearModeState/);
     assert.match(worker, /addNuclearWhitelistSite/);
@@ -521,6 +526,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /Nuclear Mode can only be ended through the verified block-page challenge/);
     assert.match(worker, /pauseContext: 'nuclearExit'/);
     assert.match(pauseHelper, /pauseContext === 'nuclearExit'/);
+    assert.match(pauseHelper, /pauseContext === 'nuclear'/);
+    assert.match(pauseHelper, /pauseContext === 'general' \|\| pauseContext === 'nuclear'/);
     assert.match(worker, /enableSiteBlocking\(\['\*'\], 501, 'nuclear'/);
     assert.match(worker, /isNuclearAutomaticException/);
     assert.ok(worker.includes("target.startsWith('file://')"));
@@ -834,7 +841,8 @@ test('One-minute general pauses get two daily free uses before verification', as
     assert.match(worker, /const isOneMinuteGeneralPause = pauseContext === 'general' && durationMs === 60 \* 1000/);
     assert.match(worker, /const freePauseResult = await this\.tryFreeOneMinutePause\(\)/);
     assert.match(worker, /freePause: true/);
-    assert.match(helper, /pauseContext === 'general' && durationMs === 60 \* 1000/);
+    assert.match(helper, /pauseContext === 'general' \|\| pauseContext === 'nuclear'/);
+    assert.match(helper, /durationMs === 60 \* 1000/);
     assert.match(helper, /if \(response\?\.success\) \{\s*showSuccess\(pauseSection\)/);
     assert.match(helper, /response\?\.requiresPassword[\s\S]*?TimeShieldPauseChallenge\.render/);
 });

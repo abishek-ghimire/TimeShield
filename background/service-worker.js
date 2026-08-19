@@ -399,9 +399,11 @@ class BackgroundService {
             endTime: null,
             whitelist: [],
             excludedTabIds: [],
+            freeOneMinutePauseUsed: overrides.freeOneMinutePauseUsed === true,
             ...overrides,
             whitelist: this.normalizeNuclearWhitelist(overrides.whitelist || []),
-            excludedTabIds: this.normalizeNuclearExcludedTabIds(overrides.excludedTabIds || [])
+            excludedTabIds: this.normalizeNuclearExcludedTabIds(overrides.excludedTabIds || []),
+            freeOneMinutePauseUsed: overrides.freeOneMinutePauseUsed === true
         };
     }
 
@@ -566,6 +568,34 @@ class BackgroundService {
             await chrome.storage.local.set({ shortPauseUsage: this.shortPauseUsage });
         }
     }
+    async tryFreeNuclearOneMinutePause() {
+        const previousRequest = this.nuclearPauseRequestLock || Promise.resolve();
+        let releaseRequest;
+        this.nuclearPauseRequestLock = new Promise((resolve) => {
+            releaseRequest = resolve;
+        });
+        await previousRequest;
+        try {
+            const result = await chrome.storage.local.get(['nuclearMode']);
+            const nuclearState = result.nuclearMode;
+            if (!this.isNuclearSessionValid(nuclearState)) return false;
+            if (nuclearState.freeOneMinutePauseUsed === true) return null;
+
+            const paused = await this.pauseBlocking(60 * 1000);
+            if (!paused) return false;
+
+            const latest = await chrome.storage.local.get(['nuclearMode']);
+            const nextState = this.getCleanNuclearModeState({
+                ...(latest.nuclearMode || nuclearState),
+                freeOneMinutePauseUsed: true
+            });
+            await chrome.storage.local.set({ nuclearMode: nextState });
+            return true;
+        } finally {
+            releaseRequest();
+        }
+    }
+
     async tryFreeOneMinutePause() {
         const previousRequest = this.shortPauseRequestLock;
         let releaseRequest;
@@ -1111,7 +1141,9 @@ class BackgroundService {
                 break;
             }
             case 'pauseBlocking': {
-                const pauseContext = message.pauseContext === 'usageLimit' ? 'usageLimit' : 'general';
+                const pauseContext = message.pauseContext === 'usageLimit'
+                    ? 'usageLimit'
+                    : (message.pauseContext === 'nuclear' ? 'nuclear' : 'general');
                 const durationMs = Number(message.durationMs);
                 if (!this.isAllowedPauseDuration(durationMs, pauseContext)) {
                     const choices = pauseContext === 'usageLimit'
@@ -1121,9 +1153,22 @@ class BackgroundService {
                     break;
                 }
 
-                // Focus, scheduled, and sleep pauses of exactly one minute are
-                // challenge-free twice per local day. The third and later requests
-                // continue through the normal motivational verification flow.
+                // Focus, scheduled, and sleep pauses keep their existing daily allowance.
+                // Nuclear Mode has its own single free one-minute pause per session;
+                // later Nuclear requests use the motivational verification flow.
+                const isOneMinuteNuclearPause = pauseContext === 'nuclear' && durationMs === 60 * 1000;
+                if (isOneMinuteNuclearPause) {
+                    const freePauseResult = await this.tryFreeNuclearOneMinutePause();
+                    if (freePauseResult === true) {
+                        sendResponse({ success: true, freePause: true, pauseContext });
+                        break;
+                    }
+                    if (freePauseResult === false) {
+                        sendResponse({ success: false, error: 'Unable to pause Nuclear Mode' });
+                        break;
+                    }
+                }
+
                 const isOneMinuteGeneralPause = pauseContext === 'general' && durationMs === 60 * 1000;
                 if (isOneMinuteGeneralPause) {
                     const freePauseResult = await this.tryFreeOneMinutePause();
@@ -1329,7 +1374,8 @@ class BackgroundService {
             duration,
             endTime: now + (duration * 1000),
             whitelist: cleanWhitelist,
-            excludedTabIds: cleanExcludedTabIds
+            excludedTabIds: cleanExcludedTabIds,
+            freeOneMinutePauseUsed: false
         });
         await chrome.alarms.clear('nuclearMode');
         await chrome.storage.local.set({ nuclearMode: nuclearState, sessionOverlayDismissed: false });
@@ -2769,7 +2815,8 @@ class BackgroundService {
                 duration: 0,
                 endTime: null,
                 whitelist: [...DEFAULT_NUCLEAR_WHITELIST],
-                excludedTabIds: []
+                excludedTabIds: [],
+                freeOneMinutePauseUsed: false
             },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,

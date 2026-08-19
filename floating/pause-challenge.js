@@ -12,10 +12,10 @@
         startPreparation({ pauseSection, pauseButton, durationMs, pauseContext, requestChallenge }) {
             if (!pauseSection || typeof requestChallenge !== 'function') return;
 
-            // The background service worker decides whether this is one of the
-            // first two free one-minute pauses for today. Free responses close
-            // immediately; later responses render the normal challenge directly.
-            if (pauseContext === 'general' && durationMs === 60 * 1000) {
+            // The background service worker decides whether this request still
+            // qualifies for a free one-minute pause. Nuclear Mode has one free
+            // request per session; later requests render the normal challenge.
+            if ((pauseContext === 'general' || pauseContext === 'nuclear') && durationMs === 60 * 1000) {
                 Promise.race([
                     Promise.resolve().then(() => requestChallenge()),
                     new Promise((_, reject) => window.setTimeout(() => reject(new Error('the pause request timed out')), 12000))
@@ -143,6 +143,7 @@
             wordDisplay.textContent = challenge;
 
             const isUsageLimit = response?.pauseContext === 'usageLimit';
+            const isNuclearPause = response?.pauseContext === 'nuclear';
             const isNuclearExit = response?.pauseContext === 'nuclearExit';
             let submittedValue = '';
             let finalConfirmationReady = false;
@@ -161,7 +162,7 @@
                 chrome.runtime.sendMessage({
                     action: isNuclearExit ? 'completeNuclearExitWithPassword' : 'pauseBlockingWithPassword',
                     durationMs,
-                    pauseContext: isNuclearExit ? 'nuclearExit' : (isUsageLimit ? 'usageLimit' : 'general'),
+                    pauseContext: isNuclearExit ? 'nuclearExit' : (isUsageLimit ? 'usageLimit' : (isNuclearPause ? 'nuclear' : 'general')),
                     password,
                     confirmUsagePause
                 }, (result) => {
