@@ -148,6 +148,15 @@ test('Light theme defines readable surfaces and visible focus states', async () 
 });
 
 
+test('Short settings tabs keep the shared footer at the bottom of the page', async () => {
+    const options = await read('options/options.html');
+    assert.match(options, /body\s*\{[\s\S]*?min-height:\s*100vh;[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column;/);
+    assert.match(options, /\.container\s*\{[\s\S]*?flex:\s*1 0 auto;[\s\S]*?width:\s*100%;/);
+    assert.match(options, /\.app-footer\s*\{[\s\S]*?flex-shrink:\s*0;/);
+    assert.match(options, /<div id="tasks" class="tab-content">/);
+});
+
+
 test('Manual blocking lists, independent sleep enforcement, and delayed focus confirmations are wired', async () => {
     const options = await read('options/options.js');
     const worker = await read('background/service-worker.js');

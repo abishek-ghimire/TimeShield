@@ -36,10 +36,15 @@
             background: var(--page-bg);
             color: var(--text-main);
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             transition: background 0.3s ease, color 0.3s ease;
         }
 
         .container {
+            flex: 1 0 auto;
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
             padding: 24px;
@@ -1247,6 +1252,7 @@
 
         /* Footer Styles */
         .app-footer {
+            flex-shrink: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 40px 20px 20px;

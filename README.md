@@ -551,7 +551,7 @@ node --test tests/smoke.test.mjs
 
 Current repository status:
 
-**49 smoke tests passing**
+**50 smoke tests passing**
 
 Tests are intended to catch regressions in important extension behavior without requiring a full browser automation environment.
 
