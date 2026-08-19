@@ -470,6 +470,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     const worker = await read('background/service-worker.js');
     const popup = await read('popup/popup.html');
     const popupJs = await read('popup/popup.js');
+    const options = await read('options/options.html');
+    const optionsJs = await read('options/options.js');
     const blockPage = await read('floating/nuclear-block.html');
     const blockController = await read('floating/nuclear-block.js');
 
@@ -493,6 +495,17 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popup, /id="nuclearWhitelist"/);
     assert.match(popupJs, /handleNuclearMode/);
     assert.match(popupJs, /showNuclearStartWarning/);
+    assert.match(options, /id="acc-foc-nuclear"/);
+    assert.match(options, /id="nuclearWhitelistList"/);
+    assert.match(options, /id="newNuclearWhitelistSite"/);
+    assert.match(options, /id="addNuclearWhitelistSite"/);
+    assert.match(optionsJs, /addNuclearWhitelistSite/);
+    assert.match(optionsJs, /removeNuclearWhitelistSite/);
+    assert.match(optionsJs, /action: 'addNuclearWhitelistSite'/);
+    assert.match(optionsJs, /action: 'removeNuclearWhitelistSite'/);
+    for (const domain of ['chatgpt.com', 'gemini.google.com', 'notebooklm.google.com', 'claude.ai', 'deepseek.com', 'grok.com', 'web.whatsapp.com']) {
+        assert.match(worker, new RegExp(domain.replaceAll('.', '\\.')));
+    }
 });
 
 

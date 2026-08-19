@@ -5,6 +5,16 @@ import { RuleCompiler } from './adblock-rules.js';
 import { StorageManager } from '../lib/storage-manager.js';
 import { usageTracker } from './usage-tracker.js';
 
+const DEFAULT_NUCLEAR_WHITELIST = [
+    'chatgpt.com',
+    'gemini.google.com',
+    'notebooklm.google.com',
+    'claude.ai',
+    'deepseek.com',
+    'grok.com',
+    'web.whatsapp.com'
+];
+
 class BackgroundService {
     constructor() {
         this.timerState = {
@@ -54,6 +64,7 @@ class BackgroundService {
         await chrome.storage.local.remove(['firebaseUser', 'customFirebaseConfig', 'syncStatus', 'syncDirty', 'lastSyncTime', 'syncConflict']);
         await this.disablePackagedFocusRuleset();
         await this.initializeStorage();
+        await this.migrateNuclearWhitelistDefaults();
         await this.migrateOldSettings();
         await this.clearLegacyAutomaticProtection();
         await this.restoreState();
@@ -256,6 +267,10 @@ class BackgroundService {
         return Array.isArray(sites)
             ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))].slice(0, 8)
             : [];
+    }
+
+    getDefaultNuclearWhitelist() {
+        return [...DEFAULT_NUCLEAR_WHITELIST];
     }
 
     getNuclearSessionEndTime(nuclearState) {
@@ -1197,7 +1212,10 @@ class BackgroundService {
         await chrome.alarms.clear('nuclearMode');
         await this.disableSiteBlockingRange(501, 600);
         await this.redirectTabsBack('floating/nuclear-block.html');
-        const nuclearState = this.getCleanNuclearModeState();
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const nuclearState = this.getCleanNuclearModeState({
+            whitelist: this.normalizeNuclearWhitelist(result.nuclearMode?.whitelist)
+        });
         await chrome.storage.local.set({ nuclearMode: nuclearState });
         return nuclearState;
     }
@@ -2511,7 +2529,13 @@ class BackgroundService {
             timeLimitsEnabled: false,
             globalLimit: { enabled: false, minutes: 60, domains: [] },
             focusState: { isActive: false, startTime: null, duration: 0, focusBlockedSites: [] },
-            nuclearMode: { isActive: false, startTime: null, duration: 0, endTime: null, whitelist: [] },
+            nuclearMode: {
+                isActive: false,
+                startTime: null,
+                duration: 0,
+                endTime: null,
+                whitelist: [...DEFAULT_NUCLEAR_WHITELIST]
+            },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,
             pauseChallenge: null,
@@ -2572,6 +2596,24 @@ class BackgroundService {
         await this.ensureContentScriptInjected();
         await this.toggleFloatingClock(false);
         return true;
+    }
+
+    async migrateNuclearWhitelistDefaults() {
+        const result = await chrome.storage.local.get(['nuclearMode', 'nuclearModeWhitelistDefaultsApplied']);
+        if (result.nuclearModeWhitelistDefaultsApplied === true) return;
+
+        const current = result.nuclearMode && typeof result.nuclearMode === 'object'
+            ? result.nuclearMode
+            : this.getCleanNuclearModeState();
+        const hasWhitelist = Array.isArray(current.whitelist) && current.whitelist.length > 0;
+        const next = hasWhitelist
+            ? current
+            : { ...current, whitelist: this.getDefaultNuclearWhitelist() };
+
+        await chrome.storage.local.set({
+            nuclearMode: this.getCleanNuclearModeState(next),
+            nuclearModeWhitelistDefaultsApplied: true
+        });
     }
 
     async initializeStorage() {

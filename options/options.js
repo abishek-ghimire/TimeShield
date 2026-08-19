@@ -3,6 +3,7 @@ class OptionsManager {
         this.settings = {};
         this.focusBlockedSites = [];
         this.scheduledBlockedSites = [];
+        this.nuclearWhitelist = [];
         this.screenTimeRefDate = new Date();
 
         this.init();
@@ -19,7 +20,7 @@ class OptionsManager {
     async loadData() {
         const result = await chrome.storage.local.get([
             'settings', 'focusBlockedSites', 'scheduledBlockedSites',
-            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist',
+            'scheduledBlocking', 'timeLimits', 'timeLimitsEnabled', 'filterLists', 'customFilters', 'globalLimit', 'sleepBlocking', 'whitelist', 'nuclearMode',
         ]);
 
         this.settings = {
@@ -51,6 +52,9 @@ class OptionsManager {
         };
         this.sleepBlocking.enabled = this.toBooleanSetting(this.sleepBlocking.enabled);
         this.whitelist = result.whitelist || [];
+        this.nuclearWhitelist = result.nuclearMode && Array.isArray(result.nuclearMode.whitelist)
+            ? this.normalizeNuclearWhitelist(result.nuclearMode.whitelist)
+            : this.getDefaultNuclearWhitelist();
         await chrome.storage.local.remove(['siteCategories', 'customCategories', 'blockingCategories']);
     }
 
@@ -241,6 +245,7 @@ class OptionsManager {
         const sleepDays = ['sleepSunday', 'sleepMonday', 'sleepTuesday', 'sleepWednesday', 'sleepThursday', 'sleepFriday', 'sleepSaturday'];
 
         on('addFocusSite', 'click', () => this.addFocusSite());
+        on('addNuclearWhitelistSite', 'click', () => this.addNuclearWhitelistSite());
         on('addScheduledSite', 'click', () => this.addScheduledSite());
         on('scheduledBlocking', 'change', (event) => this.toggleScheduledBlocking(event.target.value));
         on('blockingStartTime', 'change', () => this.saveScheduledBlocking());
@@ -272,6 +277,9 @@ class OptionsManager {
         on('addTimeLimit', 'click', () => this.addTimeLimit());
         on('newFocusSite', 'keypress', (event) => {
             if (event.key === 'Enter') this.addFocusSite();
+        });
+        on('newNuclearWhitelistSite', 'keypress', (event) => {
+            if (event.key === 'Enter') this.addNuclearWhitelistSite();
         });
         on('newScheduledSite', 'keypress', (event) => {
             if (event.key === 'Enter') this.addScheduledSite();
@@ -316,6 +324,7 @@ class OptionsManager {
         });
 
         this.updateSiteLists();
+        this.populateNuclearWhitelist();
         this.populateScheduledBlocking();
         this.populateSleepBlocking();
         this.populateTimeLimits();
@@ -612,6 +621,103 @@ class OptionsManager {
         });
     }
 
+    getDefaultNuclearWhitelist() {
+        return [
+            'chatgpt.com',
+            'gemini.google.com',
+            'notebooklm.google.com',
+            'claude.ai',
+            'deepseek.com',
+            'grok.com',
+            'web.whatsapp.com'
+        ];
+    }
+
+    normalizeNuclearSite(site) {
+        const value = String(site || '').trim().toLowerCase();
+        if (!value || value === '*') return '';
+        try {
+            const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+            if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
+            return url.hostname.replace(/^www\./, '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    normalizeNuclearWhitelist(sites) {
+        return Array.isArray(sites)
+            ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))].slice(0, 8)
+            : [];
+    }
+
+    populateNuclearWhitelist() {
+        const list = document.getElementById('nuclearWhitelistList');
+        const badge = document.getElementById('badge-nuclear-whitelist');
+        if (!list) return;
+
+        this.nuclearWhitelist = this.normalizeNuclearWhitelist(this.nuclearWhitelist);
+        list.innerHTML = '';
+        this.nuclearWhitelist.forEach((site) => {
+            const item = this.createSiteItem(site, 'nuclear');
+            list.appendChild(item);
+        });
+        if (badge) {
+            badge.textContent = this.nuclearWhitelist.length === 1
+                ? '1 site'
+                : `${this.nuclearWhitelist.length} sites`;
+        }
+    }
+
+    async addNuclearWhitelistSite() {
+        const input = document.getElementById('newNuclearWhitelistSite');
+        const site = this.normalizeNuclearSite(input?.value);
+        if (!site) {
+            this.showNotification('Enter a valid website domain.', 'error');
+            return;
+        }
+        if (this.nuclearWhitelist.includes(site)) {
+            this.showNotification('That site is already on the Nuclear Mode whitelist.', 'warning');
+            return;
+        }
+        if (this.nuclearWhitelist.length >= 8) {
+            this.showNotification('Nuclear Mode allows up to 8 sites.', 'error');
+            return;
+        }
+
+        const response = await chrome.runtime.sendMessage({
+            action: 'addNuclearWhitelistSite',
+            site
+        }).catch(() => null);
+        if (!response?.success) {
+            this.showNotification(response?.error || 'Unable to add the Nuclear Mode site.', 'error');
+            return;
+        }
+
+        this.nuclearWhitelist = this.normalizeNuclearWhitelist(response.whitelist);
+        this.populateNuclearWhitelist();
+        if (input) input.value = '';
+        this.showNotification('Site added to the Nuclear Mode whitelist.', 'success');
+    }
+
+    async removeNuclearWhitelistSite(site) {
+        const allowed = await this.runProtectionSequence(`Remove ${site} from Nuclear Mode whitelist`);
+        if (!allowed) return;
+
+        const response = await chrome.runtime.sendMessage({
+            action: 'removeNuclearWhitelistSite',
+            site
+        }).catch(() => null);
+        if (!response?.success) {
+            this.showNotification(response?.error || 'Unable to remove the Nuclear Mode site.', 'error');
+            return;
+        }
+
+        this.nuclearWhitelist = this.normalizeNuclearWhitelist(response.whitelist);
+        this.populateNuclearWhitelist();
+        this.showNotification('Site removed from the Nuclear Mode whitelist.', 'warning');
+    }
+
     createSiteItem(site, type) {
         const div = document.createElement('div');
         div.className = 'site-item';
@@ -621,7 +727,11 @@ class OptionsManager {
         `;
 
         div.querySelector('.remove-site').addEventListener('click', (e) => {
-            this.removeSite(e.target.dataset.site, e.target.dataset.type);
+            if (e.target.dataset.type === 'nuclear') {
+                this.removeNuclearWhitelistSite(e.target.dataset.site);
+            } else {
+                this.removeSite(e.target.dataset.site, e.target.dataset.type);
+            }
         });
 
         return div;
@@ -1677,6 +1787,11 @@ class OptionsManager {
                 if (changes.siteUsageData || changes.siteUsageTimeline || changes.siteOpenCounts) {
                     this.renderScreenTime();
                 }
+                if (changes.nuclearMode) {
+                    this.nuclearWhitelist = this.normalizeNuclearWhitelist(changes.nuclearMode.newValue?.whitelist);
+                    this.populateNuclearWhitelist();
+                    this.updateAccordionBadges();
+                }
             });
         }
     }
@@ -2021,6 +2136,11 @@ class OptionsManager {
             glBadge.style.color = isEnabled ? '#34d399' : '#818cf8';
         }
         // Focus Blocklist — count
+        const nuclearBadge = document.getElementById('badge-nuclear-whitelist');
+        if (nuclearBadge) {
+            const n = this.nuclearWhitelist ? this.nuclearWhitelist.length : 0;
+            nuclearBadge.textContent = n === 1 ? '1 site' : `${n} sites`;
+        }
         const fblBadge = document.getElementById('badge-focuslist') || document.getElementById('badge-focus-blocklist');
         if (fblBadge) {
             const n = this.focusBlockedSites ? this.focusBlockedSites.length : 0;

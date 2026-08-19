@@ -2050,6 +2050,32 @@
                         </div>
                     </div>
 
+                    <!-- Nuclear Mode Whitelist -->
+                    <div class="accordion-item" id="acc-foc-nuclear">
+                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-nuclear">
+                            <span class="accordion-icon">☢️</span>
+                            <span class="accordion-title-wrap">
+                                <span class="accordion-title">Nuclear Mode Whitelist</span>
+                                <span class="accordion-subtitle">Sites allowed during strict Nuclear Mode sessions</span>
+                            </span>
+                            <span class="accordion-badge" id="badge-nuclear-whitelist">0 sites</span>
+                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg></span>
+                        </button>
+                        <div class="accordion-body">
+                            <div class="accordion-inner">
+                                <div class="accordion-divider"></div>
+                                <p class="hint" style="margin-bottom:12px;">Only these sites remain available when Nuclear Mode is active. Up to 8 domains are allowed. The defaults include common AI tools and WhatsApp Web.</p>
+                                <div class="site-list" id="nuclearWhitelistList"></div>
+                                <div class="add-site-form" style="margin-top:12px;">
+                                    <input type="text" id="newNuclearWhitelistSite" placeholder="Enter domain (e.g., chatgpt.com)">
+                                    <button class="btn btn-primary" id="addNuclearWhitelistSite">Add Site</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Protection Challenges -->
                     <div class="accordion-item" id="acc-foc-challenges">
                         <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-challenges">
