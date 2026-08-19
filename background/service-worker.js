@@ -240,6 +240,59 @@ class BackgroundService {
             : [];
     }
 
+    normalizeNuclearSite(site) {
+        const value = String(site || '').trim().toLowerCase();
+        if (!value || value === '*') return '';
+        try {
+            const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+            if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
+            return url.hostname.replace(/^www\./, '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    normalizeNuclearWhitelist(sites) {
+        return Array.isArray(sites)
+            ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))].slice(0, 8)
+            : [];
+    }
+
+    getNuclearSessionEndTime(nuclearState) {
+        const storedEndTime = Number(nuclearState?.endTime);
+        if (Number.isFinite(storedEndTime) && storedEndTime > 0) return storedEndTime;
+        const startTime = Number(nuclearState?.startTime);
+        const duration = Number(nuclearState?.duration);
+        return Number.isFinite(startTime) && startTime > 0
+            && Number.isFinite(duration) && duration > 0
+            ? startTime + (duration * 1000)
+            : 0;
+    }
+
+    isNuclearSessionValid(nuclearState) {
+        if (!nuclearState || nuclearState.isActive !== true) return false;
+        const whitelist = this.normalizeNuclearWhitelist(nuclearState.whitelist);
+        if (whitelist.length === 0) return false;
+        const startTime = Number(nuclearState.startTime);
+        const duration = Number(nuclearState.duration);
+        const endTime = this.getNuclearSessionEndTime(nuclearState);
+        return Number.isFinite(startTime) && startTime > 0
+            && Number.isFinite(duration) && duration > 0
+            && Number.isFinite(endTime) && endTime > Date.now();
+    }
+
+    getCleanNuclearModeState(overrides = {}) {
+        return {
+            isActive: false,
+            startTime: null,
+            duration: 0,
+            endTime: null,
+            whitelist: [],
+            ...overrides,
+            whitelist: this.normalizeNuclearWhitelist(overrides.whitelist || [])
+        };
+    }
+
     getFocusSessionEndTime(focusState) {
         const storedEndTime = Number(focusState?.endTime);
         if (Number.isFinite(storedEndTime) && storedEndTime > 0) return storedEndTime;
@@ -329,6 +382,9 @@ class BackgroundService {
             await this.clearInactiveFocusProtection(focusResult.focusState);
         }
 
+        // Restore Nuclear Mode independently from Focus, Schedule, Sleep, and Usage Limits.
+        await this.restoreNuclearMode();
+
         // Restore ad block state
         const adResult = await chrome.storage.local.get(['adBlockStats', 'adBlockEnabled']);
         if (adResult.adBlockStats) {
@@ -355,10 +411,10 @@ class BackgroundService {
         const pauseResult = await chrome.storage.local.get(['pauseBlockingUntil']);
         const pauseUntil = Number(pauseResult.pauseBlockingUntil);
         if (pauseUntil === -1) {
-            await this.disableSiteBlockingRange(101, 500);
+            await this.disableSiteBlockingRange(101, 600);
         } else if (Number.isFinite(pauseUntil) && pauseUntil > Date.now()) {
             chrome.alarms.create('pauseExpires', { when: pauseUntil });
-            await this.disableSiteBlockingRange(101, 500);
+            await this.disableSiteBlockingRange(101, 600);
         } else if (pauseResult.pauseBlockingUntil !== undefined) {
             await chrome.storage.local.remove('pauseBlockingUntil');
             await this.resumeBlocking();
@@ -511,6 +567,11 @@ class BackgroundService {
                 await this.focusModeComplete();
                 break;
 
+            case 'nuclearMode':
+                await this.stopNuclearMode();
+                await this.sendNotification('Nuclear Mode complete', 'Your protected session has ended.', false, `nuclear-complete-${Date.now()}`);
+                break;
+
             case 'breakReminder':
                 this.sendBreakReminder();
                 break;
@@ -592,6 +653,37 @@ class BackgroundService {
                 await this.startFocusMode(message.duration, fSites);
                 sendResponse({ success: true });
                 break;
+            case 'startNuclearMode': {
+                const state = await this.startNuclearMode(message.duration, message.whitelist);
+                sendResponse({ success: true, nuclearMode: state });
+                break;
+            }
+            case 'stopNuclearMode': {
+                const allowed = await this.canRunProtectedDisable();
+                if (!allowed) {
+                    sendResponse({ success: false, error: 'PROTECTION_LOCKED' });
+                    break;
+                }
+                const state = await this.stopNuclearMode();
+                sendResponse({ success: true, nuclearMode: state });
+                break;
+            }
+            case 'getNuclearModeState': {
+                const result = await chrome.storage.local.get(['nuclearMode']);
+                const state = this.getCleanNuclearModeState(result.nuclearMode || {});
+                sendResponse({ success: true, nuclearMode: state });
+                break;
+            }
+            case 'addNuclearWhitelistSite': {
+                const whitelist = await this.addNuclearWhitelistSite(message.site);
+                sendResponse({ success: true, whitelist });
+                break;
+            }
+            case 'removeNuclearWhitelistSite': {
+                const whitelist = await this.removeNuclearWhitelistSite(message.site);
+                sendResponse({ success: true, whitelist });
+                break;
+            }
             case 'stopFocusMode':
                 {
                     const allowed = await this.canRunProtectedDisable();
@@ -1008,9 +1100,9 @@ class BackgroundService {
 
     generatePauseChallenge() {
         const challenges = [
-'i choose to protect my attention and finish what matters\nwe make meaningful progress one focused step at a time',
-'i return my full attention to the work in front of me\nwe make today easier by doing the important work now',
-            'i am building work i will be proud to complete\nwe keep moving forward with one focused choice at a time\ni can finish what matters with patience and purpose'
+'i am focused and i will not get distracted\ni choose to protect my time and finish what matters',
+            'i am building the discipline to finish what matters most\ni return my attention to the work in front of me',
+            'i choose to stay on task and honor the commitment i made to myself\ni will not let distraction win today'
         ];
         const values = new Uint32Array(1);
         globalThis.crypto.getRandomValues(values);
@@ -1027,14 +1119,15 @@ class BackgroundService {
         await chrome.storage.local.set({ pauseBlockingUntil: expire });
         await chrome.alarms.clear('pauseExpires');
         chrome.alarms.create('pauseExpires', { when: expire });
-        // Remove ALL active blocking rules immediately (focus: 101-200, scheduled: 201-300, sleep: 301-400, time limits: 401-500)
-        await this.disableSiteBlockingRange(101, 500);
+        // Remove ALL active blocking rules immediately (focus: 101-200, scheduled: 201-300, sleep: 301-400, time limits: 401-500, Nuclear Mode: 501-600)
+        await this.disableSiteBlockingRange(101, 600);
         chrome.action.setBadgeText({ text: '' });
         // Redirect tabs back from ALL block pages
         await this.redirectTabsBack('floating/focus-block.html');
         await this.redirectTabsBack('floating/schedule-block.html');
         await this.redirectTabsBack('floating/sleep-block.html');
         await this.redirectTabsBack('floating/limit-block.html');
+        await this.redirectTabsBack('floating/nuclear-block.html');
         return true;
     }
 
@@ -1058,6 +1151,120 @@ class BackgroundService {
         } else {
             await this.clearInactiveFocusProtection(focusResult.focusState);
         }
+
+        await this.restoreNuclearMode();
+    }
+
+    async startNuclearMode(durationSeconds, whitelist = []) {
+        const duration = Math.floor(Number(durationSeconds));
+        if (!Number.isFinite(duration) || duration <= 0) {
+            throw new Error('Nuclear Mode duration must be greater than zero');
+        }
+
+        const candidateSites = Array.isArray(whitelist)
+            ? whitelist.map(site => this.normalizeNuclearSite(site)).filter(Boolean)
+            : [];
+        const cleanWhitelist = [...new Set(candidateSites)];
+        if (cleanWhitelist.length === 0) {
+            throw new Error('Add at least one allowed site before starting Nuclear Mode.');
+        }
+        if (cleanWhitelist.length > 8) {
+            throw new Error('Nuclear Mode allows up to 8 sites.');
+        }
+
+        const now = Date.now();
+        const nuclearState = this.getCleanNuclearModeState({
+            isActive: true,
+            startTime: now,
+            duration,
+            endTime: now + (duration * 1000),
+            whitelist: cleanWhitelist
+        });
+        await chrome.alarms.clear('nuclearMode');
+        await chrome.storage.local.set({ nuclearMode: nuclearState, sessionOverlayDismissed: false });
+        chrome.alarms.create('nuclearMode', { when: nuclearState.endTime });
+
+        if (!await this.isPaused()) {
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', cleanWhitelist);
+            await this.redirectAllTabs('floating/nuclear-block.html', cleanWhitelist);
+            chrome.action.setBadgeText({ text: '☢' });
+            chrome.action.setBadgeBackgroundColor({ color: '#b45309' });
+        }
+        return nuclearState;
+    }
+
+    async stopNuclearMode() {
+        await chrome.alarms.clear('nuclearMode');
+        await this.disableSiteBlockingRange(501, 600);
+        await this.redirectTabsBack('floating/nuclear-block.html');
+        const nuclearState = this.getCleanNuclearModeState();
+        await chrome.storage.local.set({ nuclearMode: nuclearState });
+        return nuclearState;
+    }
+
+    async restoreNuclearMode() {
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const storedState = result.nuclearMode;
+        if (!this.isNuclearSessionValid(storedState)) {
+            if (storedState?.isActive === true) {
+                await this.stopNuclearMode();
+            } else {
+                await this.disableSiteBlockingRange(501, 600);
+                await this.redirectTabsBack('floating/nuclear-block.html');
+            }
+            return false;
+        }
+
+        const nuclearState = this.getCleanNuclearModeState({
+            ...storedState,
+            endTime: this.getNuclearSessionEndTime(storedState)
+        });
+        await chrome.storage.local.set({ nuclearMode: nuclearState });
+        const remaining = nuclearState.endTime - Date.now();
+        chrome.alarms.create('nuclearMode', { when: nuclearState.endTime });
+        if (await this.isPaused()) {
+            await this.disableSiteBlockingRange(501, 600);
+            await this.redirectTabsBack('floating/nuclear-block.html');
+            return true;
+        }
+
+        await this.enableSiteBlocking(['*'], 501, 'nuclear', nuclearState.whitelist);
+        await this.redirectAllTabs('floating/nuclear-block.html', nuclearState.whitelist);
+        chrome.action.setBadgeText({ text: '☢' });
+        chrome.action.setBadgeBackgroundColor({ color: '#b45309' });
+        return remaining > 0;
+    }
+
+    async addNuclearWhitelistSite(site) {
+        const normalized = this.normalizeNuclearSite(site);
+        if (!normalized) throw new Error('Enter a valid website domain.');
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const whitelist = this.normalizeNuclearWhitelist(current.whitelist);
+        if (whitelist.includes(normalized)) return whitelist;
+        if (whitelist.length >= 8) throw new Error('Nuclear Mode allows up to 8 sites.');
+        whitelist.push(normalized);
+        const next = this.getCleanNuclearModeState({ ...current, whitelist });
+        await chrome.storage.local.set({ nuclearMode: next });
+        if (this.isNuclearSessionValid(next) && !await this.isPaused()) {
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist);
+            await this.redirectAllTabs('floating/nuclear-block.html', whitelist);
+        }
+        return whitelist;
+    }
+
+    async removeNuclearWhitelistSite(site) {
+        const normalized = this.normalizeNuclearSite(site);
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const whitelist = this.normalizeNuclearWhitelist(current.whitelist).filter(item => item !== normalized);
+        const next = this.getCleanNuclearModeState({ ...current, whitelist });
+        await chrome.storage.local.set({ nuclearMode: next });
+        if (this.isNuclearSessionValid(next) && !await this.isPaused()) {
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist);
+            await this.redirectAllTabs('floating/nuclear-block.html', whitelist);
+        }
+        return whitelist;
     }
 
     async isScheduledBlockingActive() {
@@ -1485,6 +1692,14 @@ class BackgroundService {
             }
         }
         
+        // Nuclear Mode is the strictest all-sites protection and allows only its stored whitelist.
+        const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
+        if (this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
+            const nuclearWhitelist = this.normalizeNuclearWhitelist(nuclearResult.nuclearMode.whitelist);
+            const isWhitelisted = nuclearWhitelist.some(allowed => hostname === allowed || hostname.endsWith(`.${allowed}`));
+            if (!isWhitelisted && hostname !== 'localhost' && hostname !== '127.0.0.1') return true;
+        }
+
         // Sleep blocking stays independent from the scheduled blocklist and blocks all sites except its whitelist.
         if (await this.isSleepBlockingActive()) {
             const whitelist = Array.isArray(result.sleepBlocking?.whitelist) ? result.sleepBlocking.whitelist : [];
@@ -1803,20 +2018,21 @@ class BackgroundService {
 
     async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = []) {
         const blockPage = type === 'schedule' ? 'floating/schedule-block.html' :
-            type === 'sleep' ? 'floating/sleep-block.html' : 'floating/focus-block.html';
+            type === 'sleep' ? 'floating/sleep-block.html' :
+                type === 'nuclear' ? 'floating/nuclear-block.html' : 'floating/focus-block.html';
         const extensionUrl = chrome.runtime.getURL(blockPage);
 
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
         await this.disableSiteBlockingRange(startId, startId + 99);
 
-        // Special handling for sleep blocking - block all sites except whitelist, localhost, and PDFs
-        if (type === 'sleep' && blockedSites.includes('*')) {
+        // Sleep and Nuclear Mode block all sites except their whitelist, localhost, and PDFs.
+        if ((type === 'sleep' || type === 'nuclear') && blockedSites.includes('*')) {
             // Normalize whitelist domains
             const normalizedWhitelist = whitelist.map(site => {
                 return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
             }).filter(domain => domain);
 
-            console.log('🔍 Sleep blocking rules:', { originalWhitelist: whitelist, normalizedWhitelist });
+            console.log(`🔍 ${type} blocking rules:`, { originalWhitelist: whitelist, normalizedWhitelist });
 
             // Create individual rules for each whitelist domain
             const rules = [];
@@ -1824,7 +2040,7 @@ class BackgroundService {
             // Main blocking rule for all sites (excluding PDFs)
             rules.push({
                 id: startId,
-                priority: 3, // Highest priority for sleep blocking
+                    priority: 3, // Highest priority for all-sites protection
                 action: {
                     type: 'redirect',
                     redirect: { url: extensionUrl }
@@ -2006,7 +2222,7 @@ class BackgroundService {
 
     async getProtectionStatus() {
         const result = await chrome.storage.local.get([
-            'pauseBlockingUntil', 'focusState', 'timerState', 'todayStats',
+            'pauseBlockingUntil', 'focusState', 'timerState', 'nuclearMode', 'todayStats',
             'siteUsageData', 'scheduledBlocking', 'sleepBlocking', 'settings'
         ]);
         const settings = { ...this.getDefaultSettings(), ...(result.settings || {}) };
@@ -2018,12 +2234,15 @@ class BackgroundService {
             this.isScheduledBlockingActive(),
             this.isSleepBlockingActive()
         ]);
+        const nuclearActive = this.isNuclearSessionValid(result.nuclearMode);
         return {
-            active: Boolean(result.focusState?.isActive || result.timerState?.isActive || scheduleActive || sleepActive),
+            active: Boolean(result.focusState?.isActive || result.timerState?.isActive || nuclearActive || scheduleActive || sleepActive),
             paused: pauseUntil === -1 || (Number.isFinite(pauseUntil) && pauseUntil > Date.now()),
             pauseUntil: pauseUntil > 0 ? pauseUntil : null,
             scheduleActive,
             sleepActive,
+            nuclearActive,
+            nuclearMode: this.getCleanNuclearModeState(result.nuclearMode || {}),
             focusActive: Boolean(result.focusState?.isActive),
             timerActive: Boolean(result.timerState?.isActive),
             safeMode: settings.safeModeEnabled === true,
@@ -2036,7 +2255,7 @@ class BackgroundService {
         const alarms = await chrome.alarms.getAll();
         const tabs = await chrome.tabs.query({});
         const storage = await chrome.storage.local.get([
-            'settings', 'pauseBlockingUntil', 'focusState', 'timerState',
+            'settings', 'pauseBlockingUntil', 'focusState', 'timerState', 'nuclearMode',
             'scheduledBlocking', 'sleepBlocking', 'timeLimits', 'globalLimit',
             'siteUsageData', 'timeLimitWarningCache', 'preActivationWarningCache',
             'syncStatus', 'lastSyncTime'
@@ -2052,6 +2271,7 @@ class BackgroundService {
             globalLimitEnabled: Boolean(storage.globalLimit?.enabled),
             scheduledBlockingEnabled: Boolean(storage.scheduledBlocking?.enabled),
             sleepBlockingEnabled: Boolean(storage.sleepBlocking?.enabled),
+            nuclearModeActive: this.isNuclearSessionValid(storage.nuclearMode),
             warningCacheDomains: Object.keys(storage.timeLimitWarningCache || {}).length,
             syncStatus: storage.syncStatus || null,
             lastSyncTime: storage.lastSyncTime || null
@@ -2291,6 +2511,7 @@ class BackgroundService {
             timeLimitsEnabled: false,
             globalLimit: { enabled: false, minutes: 60, domains: [] },
             focusState: { isActive: false, startTime: null, duration: 0, focusBlockedSites: [] },
+            nuclearMode: { isActive: false, startTime: null, duration: 0, endTime: null, whitelist: [] },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,
             pauseChallenge: null,
@@ -2317,10 +2538,10 @@ class BackgroundService {
 
     async resetAllUserData() {
         const protectionAlarms = [
-            'timer', 'focusMode', 'focusModeActivation', 'pauseExpires', 'breakReminder'
+            'timer', 'focusMode', 'focusModeActivation', 'nuclearMode', 'pauseExpires', 'breakReminder'
         ];
         await Promise.all(protectionAlarms.map((name) => chrome.alarms.clear(name).catch(() => false)));
-        await this.disableSiteBlockingRange(101, 500).catch(() => undefined);
+        await this.disableSiteBlockingRange(101, 600).catch(() => undefined);
         await this.adBlocker.clearRules().catch(() => undefined);
         try {
             await chrome.declarativeNetRequest.updateEnabledRulesets({
@@ -2347,6 +2568,7 @@ class BackgroundService {
         await this.redirectTabsBack('floating/schedule-block.html').catch(() => undefined);
         await this.redirectTabsBack('floating/sleep-block.html').catch(() => undefined);
         await this.redirectTabsBack('floating/limit-block.html').catch(() => undefined);
+        await this.redirectTabsBack('floating/nuclear-block.html').catch(() => undefined);
         await this.ensureContentScriptInjected();
         await this.toggleFloatingClock(false);
         return true;

@@ -20,7 +20,9 @@ class PopupController {
             focusInterval: null,
             isPaused: false,
             timeFormat: '12h',
-            timeLimitInterval: null
+            timeLimitInterval: null,
+            nuclearInterval: null,
+            nuclearState: null
         };
 
         this.init();
@@ -40,7 +42,8 @@ class PopupController {
             ['todos', () => this.loadTodos()],
             ['timer state', () => this.restoreTimerState()],
             ['pause state', () => this.checkPauseState()],
-            ['site limit status', () => this.loadTimeLimitStatus()]
+            ['site limit status', () => this.loadTimeLimitStatus()],
+            ['nuclear mode', () => this.loadNuclearModeState()]
         ];
         const results = await Promise.allSettled(tasks.map(([, task]) => task()));
         results.forEach((result, index) => {
@@ -84,6 +87,16 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
+        bind('nuclearAddSite', () => this.addNuclearWhitelistSite());
+        bind('nuclearToggle', () => this.handleNuclearMode());
+        bind('nuclearStop', () => this.stopNuclearMode());
+
+        document.getElementById('nuclearSiteInput')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById('nuclearAddSite')?.click();
+            }
+        });
 
         this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
@@ -131,6 +144,9 @@ class PopupController {
             }
             if (changes.clockVisible) {
                 this.updateClockViewButton(changes.clockVisible.newValue).catch((error) => console.error('Failed to refresh Clock View label:', error));
+            }
+            if (changes.nuclearMode) {
+                this.loadNuclearModeState().catch((error) => console.error('Failed to refresh Nuclear Mode:', error));
             }
         });
 
@@ -461,6 +477,181 @@ class PopupController {
         this.showToast(`${response.site} added to the Focus list.`);
     }
 
+    async loadNuclearModeState() {
+        const response = await chrome.runtime.sendMessage({ action: 'getNuclearModeState' });
+        const state = response?.nuclearMode || {
+            isActive: false,
+            startTime: null,
+            duration: 0,
+            endTime: null,
+            whitelist: []
+        };
+        this.state.nuclearState = state;
+        this.renderNuclearWhitelist(state.whitelist);
+
+        const endTime = Number(state.endTime);
+        const active = state.isActive === true && Number.isFinite(endTime) && endTime > Date.now();
+        const status = document.getElementById('nuclearModeStatus');
+        const setup = document.getElementById('nuclearSetup');
+        const activeView = document.getElementById('nuclearActiveView');
+        if (status) {
+            status.textContent = active ? 'active' : 'inactive';
+            status.classList.toggle('is-active', active);
+        }
+        if (setup) setup.style.display = active ? 'none' : 'block';
+        if (activeView) activeView.style.display = active ? 'block' : 'none';
+
+        if (active) this.startNuclearInterval(state);
+        else if (this.state.nuclearInterval) {
+            clearInterval(this.state.nuclearInterval);
+            this.state.nuclearInterval = null;
+        }
+        return state;
+    }
+
+    renderNuclearWhitelist(whitelist = []) {
+        const container = document.getElementById('nuclearWhitelist');
+        const count = document.getElementById('nuclearWhitelistCount');
+        const sites = [...new Set((Array.isArray(whitelist) ? whitelist : [])
+            .map(site => String(site || '').trim().toLowerCase().replace(/^www\./, ''))
+            .filter(Boolean))].slice(0, 8);
+        if (count) count.textContent = `${sites.length}/8`;
+        if (!container) return;
+        container.replaceChildren();
+        if (!sites.length) {
+            const empty = document.createElement('span');
+            empty.className = 'site-limit-empty';
+            empty.textContent = 'Add at least one site.';
+            container.appendChild(empty);
+            return;
+        }
+        sites.forEach((site) => {
+            const chip = document.createElement('span');
+            chip.className = 'nuclear-site-chip';
+            const label = document.createElement('span');
+            label.textContent = site;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '×';
+            remove.setAttribute('aria-label', `Remove ${site}`);
+            remove.addEventListener('click', () => this.removeNuclearWhitelistSite(site));
+            chip.append(label, remove);
+            container.appendChild(chip);
+        });
+    }
+
+    formatNuclearRemaining(seconds) {
+        const remaining = Math.max(0, Math.ceil(Number(seconds) || 0));
+        const hours = Math.floor(remaining / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const secs = remaining % 60;
+        return [hours, minutes, secs].map(value => String(value).padStart(2, '0')).join(':');
+    }
+
+    startNuclearInterval(state) {
+        if (this.state.nuclearInterval) clearInterval(this.state.nuclearInterval);
+        const update = () => {
+            const remaining = Math.max(0, (Number(state.endTime) - Date.now()) / 1000);
+            const countdown = document.getElementById('nuclearCountdown');
+            if (countdown) countdown.textContent = `Protected time remaining: ${this.formatNuclearRemaining(remaining)}`;
+            if (remaining <= 0) {
+                clearInterval(this.state.nuclearInterval);
+                this.state.nuclearInterval = null;
+                this.loadNuclearModeState().catch(() => undefined);
+            }
+        };
+        update();
+        this.state.nuclearInterval = setInterval(update, 1000);
+    }
+
+    async addNuclearWhitelistSite() {
+        const input = document.getElementById('nuclearSiteInput');
+        const site = input?.value.trim();
+        if (!site) {
+            this.showToast('Enter a website domain first.');
+            return;
+        }
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'addNuclearWhitelistSite', site });
+            if (response?.success === false) throw new Error(response.error || 'Unable to add site');
+            if (input) input.value = '';
+            await this.loadNuclearModeState();
+            this.showToast('Allowed site added.');
+        } catch (error) {
+            console.error('Failed to add Nuclear Mode site:', error);
+            this.showToast(error.message || 'Unable to add that site.');
+        }
+    }
+
+    async removeNuclearWhitelistSite(site) {
+        const current = this.state.nuclearState;
+        if (current?.isActive) return;
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'removeNuclearWhitelistSite', site });
+            if (response?.success === false) throw new Error(response.error || 'Unable to remove site');
+            await this.loadNuclearModeState();
+            this.showToast('Allowed site removed.');
+        } catch (error) {
+            console.error('Failed to remove Nuclear Mode site:', error);
+            this.showToast('Unable to remove that site.');
+        }
+    }
+
+    async handleNuclearMode() {
+        const state = this.state.nuclearState || await this.loadNuclearModeState();
+        if (state?.isActive === true && Number(state.endTime) > Date.now()) {
+            await this.stopNuclearMode();
+            return;
+        }
+
+        const hours = Math.max(0, Math.floor(Number(document.getElementById('nuclearHours')?.value) || 0));
+        const minutes = Math.max(0, Math.min(59, Math.floor(Number(document.getElementById('nuclearMinutes')?.value) || 0)));
+        const durationSeconds = (hours * 3600) + (minutes * 60);
+        if (durationSeconds <= 0) {
+            this.showToast('Choose at least one minute for Nuclear Mode.');
+            return;
+        }
+        const whitelist = Array.isArray(state?.whitelist) ? state.whitelist : [];
+        if (!whitelist.length) {
+            this.showToast('Add at least one allowed site before activating Nuclear Mode.');
+            return;
+        }
+
+        const ready = await this.showNuclearStartWarning(hours, minutes);
+        if (!ready) return;
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'startNuclearMode',
+                duration: durationSeconds,
+                whitelist
+            });
+            if (response?.success === false) throw new Error(response.error || 'Unable to start Nuclear Mode');
+            await this.loadNuclearModeState();
+            window.close();
+        } catch (error) {
+            console.error('Failed to start Nuclear Mode:', error);
+            this.showToast(error.message || 'Unable to start Nuclear Mode.');
+        }
+    }
+
+    async stopNuclearMode() {
+        const canStop = await this.runProtectionSequence('Stop Nuclear Mode');
+        if (!canStop) return;
+        await chrome.runtime.sendMessage({ action: 'authorizeDisableActions', ttlMs: 45000 });
+        const response = await chrome.runtime.sendMessage({ action: 'stopNuclearMode' });
+        if (response?.success === false) {
+            this.showToast(response.error || 'Nuclear Mode is still active.');
+            return;
+        }
+        await this.loadNuclearModeState();
+        this.showToast('Nuclear Mode stopped.');
+    }
+
+    showNuclearStartWarning(hours, minutes) {
+        const totalMinutes = (Math.max(0, Number(hours) || 0) * 60) + Math.max(0, Number(minutes) || 0);
+        return this.showFocusStartWarning(totalMinutes, 'Nuclear Mode');
+    }
+
     async handleFocusMode() {
         const result = await chrome.storage.local.get(['focusState', 'pendingFocusActivation']);
         if (result.focusState?.isActive) {
@@ -510,7 +701,7 @@ class PopupController {
         }
     }
 
-    showFocusStartWarning(durationMinutes) {
+    showFocusStartWarning(durationMinutes, modeName = 'Focus Mode') {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
@@ -519,13 +710,15 @@ class PopupController {
                 padding: 16px; background: rgba(2, 6, 23, 0.86);
                 font-family: Inter, system-ui, sans-serif;
             `;
+            const warningHeading = modeName === 'Focus Mode' ? 'Save your work before Focus Mode' : `Save your work before ${modeName}`;
+            const startButtonLabel = modeName === 'Focus Mode' ? 'Start Focus Now' : `Start ${modeName} Now`;
             overlay.innerHTML = `
                 <section style="width: min(340px, 100%); padding: 22px; border-radius: 18px;
                     background: #111126; color: #f8fafc; border: 1px solid rgba(139,92,246,.45);
                     box-shadow: 0 20px 60px rgba(0,0,0,.45);">
-                    <h2 style="margin:0 0 10px; font-size:1.15rem;">Save your work before Focus Mode</h2>
+                    <h2 style="margin:0 0 10px; font-size:1.15rem;">${warningHeading}</h2>
                     <p style="margin:0 0 12px; color:#cbd5e1; line-height:1.5; font-size:.9rem;">
-                        Focus Mode will begin immediately and block the sites on your Focus list for ${durationMinutes} minutes.
+                        ${modeName} will begin immediately and enforce your protection settings for ${durationMinutes} minutes.
                     </p>
                     <ul style="margin:0 0 18px; padding-left:20px; color:#cbd5e1; line-height:1.6; font-size:.85rem;">
                         <li>Save documents and submit any pending work.</li>
@@ -534,7 +727,7 @@ class PopupController {
                     </ul>
                     <div style="display:flex; gap:10px; justify-content:flex-end;">
                         <button data-action="cancel" style="padding:9px 13px; border-radius:9px; border:1px solid #475569; background:transparent; color:#cbd5e1; cursor:pointer;">Not yet</button>
-                        <button data-action="start" style="padding:9px 13px; border:0; border-radius:9px; background:#7c3aed; color:white; font-weight:700; cursor:pointer;">Start Focus Now</button>
+                        <button data-action="start" style="padding:9px 13px; border:0; border-radius:9px; background:#7c3aed; color:white; font-weight:700; cursor:pointer;">${startButtonLabel}</button>
                     </div>
                 </section>
             `;

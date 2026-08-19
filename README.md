@@ -24,6 +24,7 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 | 🔢 Flip Clock | Opens a dedicated split-flap clock in a separate browser tab |
 | ⏱️ Timers | Run timers directly from the extension |
 | 🎯 Focus Mode | Restricts selected websites during focused work sessions |
+| ☢️ Nuclear Mode | Allows only a small whitelist of sites during a timed protection session |
 | 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
 | 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
 | ⏳ Usage Limits | Set daily limits for individual websites |
@@ -196,6 +197,14 @@ The current website can also be added to the Focus list directly from the popup.
 When a restricted website is opened, TimeShield displays its focus/block interface instead of allowing normal browsing.
 
 Pause requests are deliberate. The first two eligible one-minute general pauses each day can begin without a challenge; later attempts use the normal verification flow.
+
+---
+
+## Nuclear Mode
+
+Nuclear Mode is an opt-in, all-sites protection session for times when ordinary blocking is not strict enough. A session allows only the explicitly configured whitelist, with a maximum of eight domains, and blocks every other website until the selected hour-and-minute duration ends.
+
+The control panel shows a save-work warning before activation. Non-whitelisted pages use a dedicated Nuclear Mode block screen with the same deliberate pause flow used by the other protection modes.
 
 ---
 
@@ -558,7 +567,7 @@ node --test tests/smoke.test.mjs
 
 Current repository status:
 
-**52 smoke tests passing**
+**53 smoke tests passing**
 
 Tests are intended to catch regressions in important extension behavior without requiring a full browser automation environment.
 

@@ -68,6 +68,8 @@
         "floating/limit-block.html",
         "floating/limit-block.js",
         "floating/sleep-block.html",
+        "floating/nuclear-block.html",
+        "floating/nuclear-block.js",
         "floating/timer-complete.html",
         "floating/focus-complete.html",
         "content/element-picker.css",

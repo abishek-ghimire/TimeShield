@@ -78,14 +78,15 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(helper, /valueLines\.length >= 2/);
     assert.match(helper, /\^\[a-z\]\+\(\?: \[a-z\]\+\)\*\$/);
     assert.match(worker, /generatePauseChallenge/);
-    assert.match(worker, /i choose to protect my attention/);
-    assert.match(worker, /we make meaningful progress/);
-    assert.match(worker, /i return my full attention/);
+    assert.match(worker, /i am focused and i will not get distracted/);
+    assert.match(worker, /i choose to protect my time and finish what matters/);
+    assert.match(worker, /i return my attention to the work in front of me/);
+    assert.match(worker, /'i am focused and i will not get distracted\\ni choose to protect my time and finish what matters'/);
+    assert.match(worker, /'i am building the discipline to finish what matters most\\ni return my attention to the work in front of me'/);
+    assert.match(worker, /'i choose to stay on task and honor the commitment i made to myself\\ni will not let distraction win today'/);
     assert.match(worker, /isValidPauseChallenge/);
-    assert.match(worker, /'i choose to protect my attention and finish what matters\\nwe make meaningful progress one focused step at a time'/);
-    assert.match(worker, /'i return my full attention to the work in front of me\\nwe make today easier by doing the important work now'/);
-    assert.match(worker, /'i am building work i will be proud to complete\\nwe keep moving forward with one focused choice at a time\\ni can finish what matters with patience and purpose'/);
     const challengeSource = worker.match(/const challenges = \[([\s\S]*?)\n        \];/)?.[1] || '';
+    assert.doesNotMatch(challengeSource, /\bwe\b/);
     const challengeText = challengeSource.replace(/,\s*/g, '');
     assert.doesNotMatch(challengeText, /[A-Z]|[.,!?]/);
     assert.match(worker, /pauseContext === 'usageLimit'/);
@@ -452,13 +453,46 @@ test('All pause block pages use the shared preparation flow', async () => {
         read('floating/focus-block.js'),
         read('floating/schedule-block.js'),
         read('floating/sleep-block.js'),
-        read('floating/limit-block.js')
+        read('floating/limit-block.js'),
+        read('floating/nuclear-block.js')
     ]);
     for (const source of sources) {
         assert.match(source, /TimeShieldPauseChallenge\?\.startPreparation/);
         assert.match(source, /requestChallenge:/);
         assert.match(source, /action: 'pauseBlocking'/);
     }
+});
+
+
+test('Nuclear Mode is wired as an isolated opt-in protection feature', async () => {
+    const manifest = JSON.parse(await read('manifest.json'));
+    const resources = manifest.web_accessible_resources.flatMap((entry) => entry.resources || []);
+    const worker = await read('background/service-worker.js');
+    const popup = await read('popup/popup.html');
+    const popupJs = await read('popup/popup.js');
+    const blockPage = await read('floating/nuclear-block.html');
+    const blockController = await read('floating/nuclear-block.js');
+
+    assert.ok(resources.includes('floating/nuclear-block.html'));
+    assert.ok(resources.includes('floating/nuclear-block.js'));
+    assert.match(blockPage, /Nuclear Mode Active/);
+    assert.match(blockPage, /pause-challenge\.js/);
+    assert.match(blockController, /pauseContext: 'general'/);
+    assert.match(worker, /startNuclearMode/);
+    assert.match(worker, /stopNuclearMode/);
+    assert.match(worker, /getNuclearModeState/);
+    assert.match(worker, /addNuclearWhitelistSite/);
+    assert.match(worker, /removeNuclearWhitelistSite/);
+    assert.match(worker, /enableSiteBlocking\(\['\*'\], 501, 'nuclear'/);
+    assert.match(worker, /nuclearMode/);
+    assert.match(worker, /disableSiteBlockingRange\(501, 600\)/);
+    assert.match(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
+    assert.match(popup, /id="nuclearCard"/);
+    assert.match(popup, /id="nuclearHours"/);
+    assert.match(popup, /id="nuclearMinutes"/);
+    assert.match(popup, /id="nuclearWhitelist"/);
+    assert.match(popupJs, /handleNuclearMode/);
+    assert.match(popupJs, /showNuclearStartWarning/);
 });
 
 
@@ -504,6 +538,7 @@ test('Pause block pages use callback-backed runtime responses', async () => {
         read('floating/schedule-block.js'),
         read('floating/sleep-block.js'),
         read('floating/limit-block.js'),
+        read('floating/nuclear-block.js'),
         read('floating/pause-overlay.js')
     ]);
     for (const source of sources) {
@@ -580,6 +615,8 @@ test('Reset All Data restores a clean disabled state without automatic sites', a
     assert.match(worker, /scheduledBlocking: \{\s*enabled: false/);
     assert.match(worker, /sleepBlocking: \{\s*enabled: false/);
     assert.match(worker, /timeLimitsEnabled: false/);
+    assert.match(worker, /nuclearMode:\s*\{\s*isActive: false/);
+    assert.match(worker, /await this\.disableSiteBlockingRange\(501, 600\)/);
     assert.match(worker, /clockVisible: false/);
 });
 
