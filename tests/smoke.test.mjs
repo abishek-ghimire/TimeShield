@@ -463,6 +463,24 @@ test('All pause block pages use the shared preparation flow', async () => {
     }
 });
 
+test('Pause Protection accordion exposes useful settings and supported durations', async () => {
+    const options = await read('options/options.html');
+    const optionsJs = await read('options/options.js');
+    const popup = await read('popup/popup.js');
+
+    assert.match(options, /id="acc-foc-pause"/);
+    assert.match(options, /pause-protection-grid/);
+    assert.match(options, /2 × 1 minute each day/);
+    assert.match(options, /id="challengeDelayEnabled"/);
+    assert.match(options, /id="challengeDelaySeconds"/);
+    for (const duration of ['1 min', '5 min', '10 min', '1 hr', '3 hr']) {
+        assert.match(options, new RegExp(duration.replace(' ', '\\s+')));
+    }
+    assert.match(optionsJs, /challengeDelayEnabled/);
+    assert.match(optionsJs, /challengeDelaySeconds/);
+    assert.match(popup, /s\.challengeDelayEnabled/);
+});
+
 
 test('Nuclear Mode is wired as an isolated opt-in protection feature', async () => {
     const manifest = JSON.parse(await read('manifest.json'));

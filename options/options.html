@@ -1746,6 +1746,116 @@
             font-size: 0.95rem;
         }
 
+        .pause-protection-intro {
+            margin-bottom: 16px;
+            max-width: 860px;
+        }
+
+        .pause-protection-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin: 14px 0;
+        }
+
+        .pause-protection-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface-muted);
+        }
+
+        .pause-protection-stat-label,
+        .pause-duration-label {
+            color: var(--text-soft);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .pause-protection-stat strong {
+            color: var(--text-main);
+            font-size: 0.92rem;
+        }
+
+        .pause-protection-stat span:last-child,
+        .challenge-summary-list span,
+        .pause-protection-note {
+            color: var(--text-soft);
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .pause-duration-list {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 0 4px;
+        }
+
+        .pause-duration-pill {
+            padding: 5px 10px;
+            border: 1px solid rgba(99, 102, 241, 0.32);
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.12);
+            color: #a5b4fc;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .pause-setting-row {
+            margin-top: 18px;
+        }
+
+        .pause-delay-field {
+            max-width: 300px;
+            margin-top: 12px;
+        }
+
+        .pause-protection-note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-left: 3px solid #6366f1;
+            border-radius: 0 8px 8px 0;
+            background: var(--surface-muted);
+        }
+
+        .challenge-summary-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .challenge-summary-list > div {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-muted);
+        }
+
+        .challenge-summary-list strong {
+            color: var(--text-main);
+            font-size: 0.88rem;
+        }
+
+        .light-theme .pause-duration-pill {
+            color: #4338ca;
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        @media (max-width: 640px) {
+            .pause-protection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         </style>
 </head>
 
@@ -2091,13 +2201,11 @@
                         <div class="accordion-body">
                             <div class="accordion-inner">
                                 <div class="accordion-divider"></div>
-                                <p class="hint" style="margin-bottom:14px;">Set up challenges to make it harder to
-                                    disable protection when willpower is low.</p>
-                                <div class="checkbox-group"><input type="checkbox" id="challengeDelayEnabled"><label
-                                        for="challengeDelayEnabled">Enable forced delay challenge</label></div>
-                                <div class="form-group"><label for="challengeDelaySeconds">Delay seconds
-                                        (3-60)</label><input type="number" id="challengeDelaySeconds" min="3" max="60"
-                                        value="8"></div>
+                                <p class="hint" style="margin-bottom:14px;">Protection Challenges are handled when a pause or protection change needs deliberate confirmation. Pause-specific options are available in the Pause Protection panel below.</p>
+                                <div class="challenge-summary-list">
+                                    <div><strong>Motivational verification</strong><span>Required for repeated one-minute pauses and longer pauses.</span></div>
+                                    <div><strong>Timed confirmation</strong><span>Optional countdown settings can be configured under Pause Protection.</span></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2116,15 +2224,46 @@
                         </button>
                         <div class="accordion-body">
                             <div class="accordion-inner">
-                                <div class="accordion-divider"></div>
+                                                                <div class="accordion-divider"></div>
+                                <p class="hint pause-protection-intro">Pause Protection keeps a deliberate step between a protection session and a temporary pause. Short pauses stay quick, while repeated or longer pauses require motivational verification.</p>
+
+                                <div class="pause-protection-grid" aria-label="Pause Protection overview">
+                                    <div class="pause-protection-stat">
+                                        <span class="pause-protection-stat-label">Free short pauses</span>
+                                        <strong>2 × 1 minute each day</strong>
+                                        <span>After that, verification is required.</span>
+                                    </div>
+                                    <div class="pause-protection-stat">
+                                        <span class="pause-protection-stat-label">Available durations</span>
+                                        <strong>1, 5, 10 minutes</strong>
+                                        <span>Plus 1 hour and 3 hours for general protection.</span>
+                                    </div>
+                                </div>
+
+                                <div class="pause-duration-list" aria-label="Allowed pause durations">
+                                    <span class="pause-duration-label">General pause options</span>
+                                    <span class="pause-duration-pill">1 min</span>
+                                    <span class="pause-duration-pill">5 min</span>
+                                    <span class="pause-duration-pill">10 min</span>
+                                    <span class="pause-duration-pill">1 hr</span>
+                                    <span class="pause-duration-pill">3 hr</span>
+                                </div>
+
+                                <div class="checkbox-group pause-setting-row">
+                                    <input type="checkbox" id="challengeDelayEnabled">
+                                    <label for="challengeDelayEnabled">Add a countdown before protection changes</label>
+                                </div>
+                                <div class="form-group pause-delay-field">
+                                    <label for="challengeDelaySeconds">Countdown seconds (3–60)</label>
+                                    <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
+                                </div>
+                                <p class="pause-protection-note">When verification appears, type the two lowercase motivational sentences exactly as shown. The pause begins only after the challenge is completed successfully.</p>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
-
         <!-- Ad Blocker Tab -->
         <div id="adblock" class="tab-content">
             <div class="section">
