@@ -22,8 +22,7 @@ class PopupController {
             timeFormat: '12h',
             timeLimitInterval: null,
             nuclearInterval: null,
-            nuclearState: null,
-            nuclearExpanded: false
+            nuclearState: null
         };
 
         this.init();
@@ -88,7 +87,6 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
-        bind('nuclearExpand', () => this.toggleNuclearSetup());
         bind('nuclearToggle', () => this.handleNuclearMode());
         bind('nuclearStop', () => this.stopNuclearMode());
 
@@ -484,28 +482,13 @@ class PopupController {
 
         const endTime = Number(state.endTime);
         const active = state.isActive === true && Number.isFinite(endTime) && endTime > Date.now();
-        const status = document.getElementById('nuclearModeStatus');
-        const expand = document.getElementById('nuclearExpand');
-        const setup = document.getElementById('nuclearSetup');
+        const toggle = document.getElementById('nuclearToggle');
         const activeView = document.getElementById('nuclearActiveView');
-        if (status) {
-            status.textContent = active ? 'active' : 'inactive';
-            status.classList.toggle('is-active', active);
+        if (toggle) {
+            toggle.hidden = active;
+            toggle.disabled = active;
         }
-        if (active) {
-            this.state.nuclearExpanded = false;
-            if (expand) expand.hidden = true;
-            if (setup) setup.hidden = true;
-            if (activeView) activeView.hidden = false;
-        } else {
-            if (expand) {
-                expand.hidden = false;
-                expand.textContent = this.state.nuclearExpanded ? 'Hide Nuclear Mode' : 'Open Nuclear Mode';
-                expand.setAttribute('aria-expanded', String(this.state.nuclearExpanded));
-            }
-            if (setup) setup.hidden = !this.state.nuclearExpanded;
-            if (activeView) activeView.hidden = true;
-        }
+        if (activeView) activeView.hidden = !active;
 
         if (active) this.startNuclearInterval(state);
         else if (this.state.nuclearInterval) {
@@ -513,16 +496,6 @@ class PopupController {
             this.state.nuclearInterval = null;
         }
         return state;
-    }
-
-    toggleNuclearSetup() {
-        const setup = document.getElementById('nuclearSetup');
-        const expand = document.getElementById('nuclearExpand');
-        if (!setup || !expand) return;
-        this.state.nuclearExpanded = setup.hidden;
-        setup.hidden = !this.state.nuclearExpanded;
-        expand.textContent = this.state.nuclearExpanded ? 'Hide Nuclear Mode' : 'Open Nuclear Mode';
-        expand.setAttribute('aria-expanded', String(this.state.nuclearExpanded));
     }
 
     formatNuclearRemaining(seconds) {
@@ -556,9 +529,10 @@ class PopupController {
             return;
         }
 
-        const hours = Math.max(0, Math.floor(Number(document.getElementById('nuclearHours')?.value) || 0));
-        const minutes = Math.max(0, Math.min(59, Math.floor(Number(document.getElementById('nuclearMinutes')?.value) || 0)));
-        const durationSeconds = (hours * 3600) + (minutes * 60);
+        const savedDurationSeconds = Math.floor(Number(state?.duration) || 0);
+        const durationSeconds = savedDurationSeconds > 0 ? savedDurationSeconds : 25 * 60;
+        const hours = Math.floor(durationSeconds / 3600);
+        const minutes = Math.floor((durationSeconds % 3600) / 60);
         if (durationSeconds <= 0) {
             this.showToast('Choose at least one minute for Nuclear Mode.');
             return;
@@ -579,7 +553,6 @@ class PopupController {
             });
             if (response?.success === false) throw new Error(response.error || 'Unable to start Nuclear Mode');
             await this.loadNuclearModeState();
-            window.close();
         } catch (error) {
             console.error('Failed to start Nuclear Mode:', error);
             this.showToast(error.message || 'Unable to start Nuclear Mode.');

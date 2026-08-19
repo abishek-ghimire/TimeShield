@@ -1698,3 +1698,63 @@ body.theme-light .nuclear-card .btn-nuclear {
         min-height: 32px;
     }
 }
+
+
+/* Direct Nuclear Mode quick action */
+.quick-actions-modern #nuclearToggle {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid rgba(245, 158, 11, 0.48);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+    color: #fff;
+    font-size: 0.78rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quick-actions-modern #nuclearToggle:hover,
+.quick-actions-modern #nuclearToggle:focus-visible {
+    background: linear-gradient(135deg, #c26108 0%, #e6860b 100%);
+    border-color: rgba(251, 191, 36, 0.85);
+    transform: translateY(-2px);
+}
+
+.nuclear-active-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -2px 0 7px;
+    padding: 6px 8px;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    border-radius: 9px;
+    background: rgba(180, 83, 9, 0.12);
+}
+
+.nuclear-active-row[hidden] {
+    display: none !important;
+}
+
+.nuclear-active-row .nuclear-countdown {
+    flex: 1;
+    margin: 0;
+    font-size: 0.72rem;
+}
+
+.nuclear-active-row #nuclearStop {
+    min-height: 26px;
+    padding: 5px 9px;
+    border-radius: 7px;
+    font-size: 0.68rem;
+}
+
+@media (max-width: 360px) {
+    .quick-actions-modern #nuclearToggle {
+        min-height: 38px;
+        padding-inline: 7px;
+        font-size: 0.72rem;
+    }
+}
