@@ -14,6 +14,7 @@ const DEFAULT_NUCLEAR_WHITELIST = [
     'grok.com',
     'web.whatsapp.com'
 ];
+const NUCLEAR_OPEN_TAB_SESSION_RULE_ID = 48001;
 
 class BackgroundService {
     constructor() {
@@ -287,6 +288,37 @@ class BackgroundService {
         return Array.isArray(tabIds)
             ? [...new Set(tabIds.map(tabId => Number(tabId)).filter(tabId => Number.isInteger(tabId) && tabId >= 0))]
             : [];
+    }
+
+    async clearNuclearOpenTabSessionRule() {
+        try {
+            const existing = await chrome.declarativeNetRequest.getSessionRules();
+            const ruleIds = existing
+                .filter(rule => rule.id === NUCLEAR_OPEN_TAB_SESSION_RULE_ID)
+                .map(rule => rule.id);
+            if (ruleIds.length > 0) {
+                await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: ruleIds });
+            }
+        } catch (error) {
+            console.warn('TimeShield: unable to clear Nuclear open-tab session rule', error);
+        }
+    }
+
+    async applyNuclearOpenTabSessionRule(tabIds = []) {
+        await this.clearNuclearOpenTabSessionRule();
+        const normalizedTabIds = this.normalizeNuclearExcludedTabIds(tabIds);
+        if (!normalizedTabIds.length) return;
+        await chrome.declarativeNetRequest.updateSessionRules({
+            addRules: [{
+                id: NUCLEAR_OPEN_TAB_SESSION_RULE_ID,
+                priority: 6,
+                action: { type: 'allow' },
+                condition: {
+                    tabIds: normalizedTabIds,
+                    resourceTypes: ['main_frame']
+                }
+            }]
+        });
     }
 
     isNuclearAutomaticException(url) {
@@ -2263,19 +2295,6 @@ class BackgroundService {
                 rules.push(rule);
             });
 
-            if (isNuclear && normalizedExcludedTabIds.length > 0) {
-                const excludedTabsRuleId = startId + 1 + normalizedWhitelist.length + 5;
-                rules.push({
-                    id: excludedTabsRuleId,
-                    priority: 6,
-                    action: { type: 'allow' },
-                    condition: {
-                        tabIds: normalizedExcludedTabIds,
-                        resourceTypes: ['main_frame']
-                    }
-                });
-            }
-
             if (!isNuclear) {
                 // Sleep Mode keeps localhost and local-development access available.
                 const localhostRuleId = startId + normalizedWhitelist.length + 2;
@@ -2313,6 +2332,9 @@ class BackgroundService {
             }
 
             await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
+            if (isNuclear) {
+                await this.applyNuclearOpenTabSessionRule(normalizedExcludedTabIds);
+            }
             return;
         }
 
@@ -2344,6 +2366,9 @@ class BackgroundService {
     }
 
     async disableSiteBlockingRange(startId, endId) {
+        if (startId <= 501 && endId >= 600) {
+            await this.clearNuclearOpenTabSessionRule();
+        }
         const rules = await chrome.declarativeNetRequest.getDynamicRules();
         const ruleIds = rules.map(r => r.id).filter(id => id >= startId && id <= endId);
         if (ruleIds.length > 0) {

@@ -525,7 +525,10 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.ok(worker.includes("urlFilter: '||127.0.0.1^'"));
     assert.match(worker, /nuclearMode/);
     assert.match(worker, /disableSiteBlockingRange\(501, 600\)/);
-    assert.match(worker, /tabIds: normalizedExcludedTabIds/);
+    assert.match(worker, /updateSessionRules/);
+    assert.match(worker, /NUCLEAR_OPEN_TAB_SESSION_RULE_ID/);
+    assert.match(worker, /tabIds: normalizedTabIds/);
+    assert.doesNotMatch(worker, /tabIds: normalizedExcludedTabIds/);
     assert.match(worker, /resourceTypes: \['main_frame'\]/);
     assert.match(worker, /local development pages, all local files, and PDFs available/);
     assert.match(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
@@ -556,6 +559,7 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popupJs, /this\.state\.nuclearExcludeOpenTabs = false/);
     assert.match(popupJs, /captureNuclearOpenTabs/);
     assert.match(popupJs, /excludedTabIds: this\.state\.nuclearExcludeOpenTabs/);
+    assert.match(worker, /disableSiteBlockingRange[\s\S]*clearNuclearOpenTabSessionRule/);
     assert.match(popupJs, /renderNuclearSavedEntries/);
     assert.match(popupJs, /without an explicit user action/);
     assert.match(popupJs, /durationSeconds = \(hours \* 3600\) \+ \(minutes \* 60\)/);
