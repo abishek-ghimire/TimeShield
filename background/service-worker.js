@@ -283,6 +283,12 @@ class BackgroundService {
             : [];
     }
 
+    normalizeNuclearExcludedTabIds(tabIds) {
+        return Array.isArray(tabIds)
+            ? [...new Set(tabIds.map(tabId => Number(tabId)).filter(tabId => Number.isInteger(tabId) && tabId >= 0))]
+            : [];
+    }
+
     isNuclearAutomaticException(url) {
         const target = String(url || '').trim().toLowerCase();
         if (!target || target.startsWith('chrome://') || target.startsWith('chrome-extension://')) return false;
@@ -341,7 +347,8 @@ class BackgroundService {
     isNuclearSessionValid(nuclearState) {
         if (!nuclearState || nuclearState.isActive !== true) return false;
         const whitelist = this.normalizeNuclearWhitelist(nuclearState.whitelist);
-        if (whitelist.length === 0) return false;
+        const excludedTabIds = this.normalizeNuclearExcludedTabIds(nuclearState.excludedTabIds);
+        if (whitelist.length === 0 && excludedTabIds.length === 0) return false;
         const startTime = Number(nuclearState.startTime);
         const duration = Number(nuclearState.duration);
         const endTime = this.getNuclearSessionEndTime(nuclearState);
@@ -357,8 +364,10 @@ class BackgroundService {
             duration: 0,
             endTime: null,
             whitelist: [],
+            excludedTabIds: [],
             ...overrides,
-            whitelist: this.normalizeNuclearWhitelist(overrides.whitelist || [])
+            whitelist: this.normalizeNuclearWhitelist(overrides.whitelist || []),
+            excludedTabIds: this.normalizeNuclearExcludedTabIds(overrides.excludedTabIds || [])
         };
     }
 
@@ -723,7 +732,7 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             case 'startNuclearMode': {
-                const state = await this.startNuclearMode(message.duration, message.whitelist);
+                const state = await this.startNuclearMode(message.duration, message.whitelist, message.excludedTabIds);
                 sendResponse({ success: true, nuclearMode: state });
                 break;
             }
@@ -1261,7 +1270,7 @@ class BackgroundService {
         await this.restoreNuclearMode();
     }
 
-    async startNuclearMode(durationSeconds, whitelist = []) {
+    async startNuclearMode(durationSeconds, whitelist = [], excludedTabIds = []) {
         const duration = Math.floor(Number(durationSeconds));
         if (!Number.isFinite(duration) || duration <= 0) {
             throw new Error('Nuclear Mode duration must be greater than zero');
@@ -1271,8 +1280,9 @@ class BackgroundService {
             ? whitelist.map(site => this.normalizeNuclearSite(site)).filter(Boolean)
             : [];
         const cleanWhitelist = [...new Set(candidateSites)];
-        if (cleanWhitelist.length === 0) {
-            throw new Error('Add at least one allowed site before starting Nuclear Mode.');
+        const cleanExcludedTabIds = this.normalizeNuclearExcludedTabIds(excludedTabIds);
+        if (cleanWhitelist.length === 0 && cleanExcludedTabIds.length === 0) {
+            throw new Error('Add at least one allowed site or choose Exclude all open tabs before starting Nuclear Mode.');
         }
         if (cleanWhitelist.length > 8) {
             throw new Error('Nuclear Mode allows up to 8 sites.');
@@ -1284,15 +1294,16 @@ class BackgroundService {
             startTime: now,
             duration,
             endTime: now + (duration * 1000),
-            whitelist: cleanWhitelist
+            whitelist: cleanWhitelist,
+            excludedTabIds: cleanExcludedTabIds
         });
         await chrome.alarms.clear('nuclearMode');
         await chrome.storage.local.set({ nuclearMode: nuclearState, sessionOverlayDismissed: false });
         chrome.alarms.create('nuclearMode', { when: nuclearState.endTime });
 
         if (!await this.isPaused()) {
-            await this.enableSiteBlocking(['*'], 501, 'nuclear', cleanWhitelist);
-            await this.redirectAllTabs('floating/nuclear-block.html', cleanWhitelist);
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', cleanWhitelist, cleanExcludedTabIds);
+            await this.redirectAllTabs('floating/nuclear-block.html', cleanWhitelist, cleanExcludedTabIds);
             chrome.action.setBadgeText({ text: '☢' });
             chrome.action.setBadgeBackgroundColor({ color: '#b45309' });
         }
@@ -1337,8 +1348,8 @@ class BackgroundService {
             return true;
         }
 
-        await this.enableSiteBlocking(['*'], 501, 'nuclear', nuclearState.whitelist);
-        await this.redirectAllTabs('floating/nuclear-block.html', nuclearState.whitelist);
+        await this.enableSiteBlocking(['*'], 501, 'nuclear', nuclearState.whitelist, nuclearState.excludedTabIds);
+        await this.redirectAllTabs('floating/nuclear-block.html', nuclearState.whitelist, nuclearState.excludedTabIds);
         chrome.action.setBadgeText({ text: '☢' });
         chrome.action.setBadgeBackgroundColor({ color: '#b45309' });
         return remaining > 0;
@@ -1356,8 +1367,8 @@ class BackgroundService {
         const next = this.getCleanNuclearModeState({ ...current, whitelist });
         await chrome.storage.local.set({ nuclearMode: next });
         if (this.isNuclearSessionValid(next) && !await this.isPaused()) {
-            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist);
-            await this.redirectAllTabs('floating/nuclear-block.html', whitelist);
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist, next.excludedTabIds);
+            await this.redirectAllTabs('floating/nuclear-block.html', whitelist, next.excludedTabIds);
         }
         return whitelist;
     }
@@ -1370,8 +1381,8 @@ class BackgroundService {
         const next = this.getCleanNuclearModeState({ ...current, whitelist });
         await chrome.storage.local.set({ nuclearMode: next });
         if (this.isNuclearSessionValid(next) && !await this.isPaused()) {
-            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist);
-            await this.redirectAllTabs('floating/nuclear-block.html', whitelist);
+            await this.enableSiteBlocking(['*'], 501, 'nuclear', whitelist, next.excludedTabIds);
+            await this.redirectAllTabs('floating/nuclear-block.html', whitelist, next.excludedTabIds);
         }
         return whitelist;
     }
@@ -1670,17 +1681,21 @@ class BackgroundService {
         chrome.action.setBadgeText({ text: '' });
     }
 
-        async redirectAllTabs(blockPage, whitelist = []) {
+        async redirectAllTabs(blockPage, whitelist = [], excludedTabIds = []) {
         const extensionUrl = chrome.runtime.getURL(blockPage);
         const isNuclear = blockPage.includes('nuclear-block.html');
         const normalizedWhitelist = isNuclear
             ? this.normalizeNuclearWhitelist(whitelist)
             : whitelist.map(site => String(site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim()).filter(Boolean);
+        const normalizedExcludedTabIds = isNuclear
+            ? this.normalizeNuclearExcludedTabIds(excludedTabIds)
+            : [];
         const tabs = await chrome.tabs.query({});
         for (const tab of tabs) {
             if (!tab.url) continue;
             if (tab.url.includes(blockPage)) continue;
             if (tab.url.startsWith('chrome-extension://')) continue;
+            if (isNuclear && normalizedExcludedTabIds.includes(Number(tab.id))) continue;
             if (tab.url.startsWith('chrome://')) continue;
 
             if (!isNuclear) {
@@ -1694,7 +1709,7 @@ class BackgroundService {
             }
 
             const isWhitelisted = isNuclear
-                ? this.matchesNuclearWhitelist(tab.url, normalizedWhitelist)
+                ? normalizedExcludedTabIds.includes(Number(tab.id)) || this.matchesNuclearWhitelist(tab.url, normalizedWhitelist)
                 : (() => {
                     try {
                         const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
@@ -2130,7 +2145,7 @@ class BackgroundService {
         }
     }
 
-    async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = []) {
+    async enableSiteBlocking(blockedSites, startId = 1, type = 'focus', whitelist = [], excludedTabIds = []) {
         const blockPage = type === 'schedule' ? 'floating/schedule-block.html' :
             type === 'sleep' ? 'floating/sleep-block.html' :
                 type === 'nuclear' ? 'floating/nuclear-block.html' : 'floating/focus-block.html';
@@ -2145,8 +2160,11 @@ class BackgroundService {
             const normalizedWhitelist = isNuclear
                 ? this.normalizeNuclearWhitelist(whitelist)
                 : whitelist.map(site => String(site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim()).filter(Boolean);
+            const normalizedExcludedTabIds = isNuclear
+                ? this.normalizeNuclearExcludedTabIds(excludedTabIds)
+                : [];
 
-            console.log(`🔍 ${type} blocking rules:`, { originalWhitelist: whitelist, normalizedWhitelist });
+            console.log(`🔍 ${type} blocking rules:`, { originalWhitelist: whitelist, normalizedWhitelist, excludedTabIds: normalizedExcludedTabIds });
 
             // Create individual rules for each whitelist domain
             const rules = [];
@@ -2244,6 +2262,19 @@ class BackgroundService {
                 }
                 rules.push(rule);
             });
+
+            if (isNuclear && normalizedExcludedTabIds.length > 0) {
+                const excludedTabsRuleId = startId + 1 + normalizedWhitelist.length + 5;
+                rules.push({
+                    id: excludedTabsRuleId,
+                    priority: 6,
+                    action: { type: 'allow' },
+                    condition: {
+                        tabIds: normalizedExcludedTabIds,
+                        resourceTypes: ['main_frame']
+                    }
+                });
+            }
 
             if (!isNuclear) {
                 // Sleep Mode keeps localhost and local-development access available.
@@ -2673,7 +2704,8 @@ class BackgroundService {
                 startTime: null,
                 duration: 0,
                 endTime: null,
-                whitelist: [...DEFAULT_NUCLEAR_WHITELIST]
+                whitelist: [...DEFAULT_NUCLEAR_WHITELIST],
+                excludedTabIds: []
             },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,

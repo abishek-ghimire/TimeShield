@@ -24,7 +24,9 @@ class PopupController {
             nuclearInterval: null,
             nuclearState: null,
             nuclearDraft: [],
-            nuclearSaved: []
+            nuclearSaved: [],
+            nuclearExcludeOpenTabs: false,
+            nuclearExcludedTabIds: []
         };
 
         this.init();
@@ -96,6 +98,16 @@ class PopupController {
         document.getElementById('nuclearAddEntry')?.addEventListener('click', () => this.addNuclearDraftEntry());
         document.getElementById('nuclearUseCurrentTab')?.addEventListener('click', () => this.addCurrentTabToNuclearDraft());
         document.getElementById('nuclearSetupStart')?.addEventListener('click', () => this.startNuclearFromSetup());
+        document.getElementById('nuclearExcludeOpenTabs')?.addEventListener('change', (event) => {
+            this.setNuclearOpenTabsExclusion(event.target.checked).catch((error) => {
+                console.error('Failed to capture open tabs:', error);
+                event.target.checked = false;
+                this.state.nuclearExcludeOpenTabs = false;
+                this.state.nuclearExcludedTabIds = [];
+                this.updateNuclearOpenTabsSummary();
+                this.setNuclearSetupError('The currently open tabs could not be captured. Try again or add sites manually.');
+            });
+        });
         document.getElementById('nuclearEntry')?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -627,6 +639,11 @@ class PopupController {
             ? [...new Set(state.whitelist.map(entry => this.normalizeNuclearDraftEntry(entry)).filter(Boolean))].slice(0, 8)
             : [];
         this.state.nuclearDraft = [];
+        this.state.nuclearExcludeOpenTabs = false;
+        this.state.nuclearExcludedTabIds = [];
+        const excludeOpenTabs = document.getElementById('nuclearExcludeOpenTabs');
+        if (excludeOpenTabs) excludeOpenTabs.checked = false;
+        this.updateNuclearOpenTabsSummary();
         document.getElementById('nuclearHours').value = '';
         document.getElementById('nuclearMinutes').value = '';
         this.setNuclearSetupError('');
@@ -635,6 +652,41 @@ class PopupController {
         const modal = document.getElementById('nuclearSetupModal');
         if (modal) modal.hidden = false;
         document.getElementById('nuclearHours')?.focus();
+    }
+
+    async setNuclearOpenTabsExclusion(enabled) {
+        this.state.nuclearExcludeOpenTabs = Boolean(enabled);
+        if (!this.state.nuclearExcludeOpenTabs) {
+            this.state.nuclearExcludedTabIds = [];
+            this.updateNuclearOpenTabsSummary();
+            this.setNuclearSetupError('');
+            return;
+        }
+
+        await this.captureNuclearOpenTabs();
+        this.setNuclearSetupError('');
+    }
+
+    async captureNuclearOpenTabs() {
+        const tabs = await chrome.tabs.query({});
+        this.state.nuclearExcludedTabIds = [...new Set(tabs
+            .map(tab => Number(tab.id))
+            .filter(tabId => Number.isInteger(tabId) && tabId >= 0))];
+        this.updateNuclearOpenTabsSummary();
+        return this.state.nuclearExcludedTabIds;
+    }
+
+    updateNuclearOpenTabsSummary() {
+        const summary = document.getElementById('nuclearOpenTabsSummary');
+        if (!summary) return;
+        if (!this.state.nuclearExcludeOpenTabs) {
+            summary.textContent = 'New tabs will still be blocked unless they are allowlisted.';
+            return;
+        }
+        const count = this.state.nuclearExcludedTabIds.length;
+        summary.textContent = count > 0
+            ? `${count} open tab${count === 1 ? '' : 's'} will stay available for this session.`
+            : 'No open tabs were found yet. Try again before starting.';
     }
 
     closeNuclearSetup() {
@@ -691,20 +743,24 @@ class PopupController {
             this.setNuclearSetupError('Choose how long Nuclear Mode should run.');
             return;
         }
-        if (!this.state.nuclearDraft.length) {
-            this.setNuclearSetupError('Add at least one allowed site, link, or file before continuing.');
+        if (!this.state.nuclearDraft.length && !this.state.nuclearExcludeOpenTabs) {
+            this.setNuclearSetupError('Add at least one allowed site or link, or choose Exclude all open tabs.');
             return;
         }
 
         const ready = await this.showNuclearStartWarning(hours, minutes);
         if (!ready) return;
+        if (this.state.nuclearExcludeOpenTabs) {
+            await this.captureNuclearOpenTabs();
+        }
         const startButton = document.getElementById('nuclearSetupStart');
         if (startButton) startButton.disabled = true;
         try {
             const response = await chrome.runtime.sendMessage({
                 action: 'startNuclearMode',
                 duration: durationSeconds,
-                whitelist: [...this.state.nuclearDraft]
+                whitelist: [...this.state.nuclearDraft],
+                excludedTabIds: this.state.nuclearExcludeOpenTabs ? [...this.state.nuclearExcludedTabIds] : []
             });
             if (response?.success === false) throw new Error(response.error || 'Unable to start Nuclear Mode');
             this.closeNuclearSetup();

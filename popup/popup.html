@@ -156,10 +156,21 @@
                 </div>
                 <button id="nuclearSetupClose" class="nuclear-dialog-close" type="button" aria-label="Close Nuclear Mode setup">×</button>
             </div>
-            <p class="nuclear-setup-copy">Choose how long protection should run and add the work websites or exact links that must remain available. Localhost pages, local files, and PDFs are available automatically and do not need to be listed.</p>
+            <p class="nuclear-setup-copy">Choose how long protection should run, then decide whether to keep every currently open tab available before adding individual work websites or links.</p>
             <div class="nuclear-form-row">
                 <label>Hours<input id="nuclearHours" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
                 <label>Minutes<input id="nuclearMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="0"></label>
+            </div>
+            <div class="nuclear-open-tabs-option">
+                <label class="nuclear-open-tabs-toggle" for="nuclearExcludeOpenTabs">
+                    <input id="nuclearExcludeOpenTabs" type="checkbox">
+                    <span class="nuclear-open-tabs-control" aria-hidden="true"></span>
+                    <span class="nuclear-open-tabs-label">
+                        <strong>Exclude all open tabs</strong>
+                        <small>Keep every tab open now available, including websites, links, localhost pages, files, PDFs, and other browser-open content.</small>
+                    </span>
+                </label>
+                <p id="nuclearOpenTabsSummary" class="nuclear-open-tabs-summary">New tabs will still be blocked unless they are allowlisted.</p>
             </div>
             <div class="nuclear-entry-row">
                 <label for="nuclearEntry">Work website, exact link, or optional file URL</label>
