@@ -23,7 +23,8 @@ class PopupController {
             timeLimitInterval: null,
             nuclearInterval: null,
             nuclearState: null,
-            nuclearDraft: []
+            nuclearDraft: [],
+            nuclearSaved: []
         };
 
         this.init();
@@ -572,9 +573,38 @@ class PopupController {
             remove.addEventListener('click', () => {
                 this.state.nuclearDraft = this.state.nuclearDraft.filter(item => item !== entry);
                 this.renderNuclearDraft();
+                this.renderNuclearSavedEntries();
             });
             chip.append(label, remove);
             list.appendChild(chip);
+        });
+    }
+
+    renderNuclearSavedEntries() {
+        const list = document.getElementById('nuclearSavedEntryList');
+        if (!list) return;
+        list.replaceChildren();
+
+        const savedEntries = Array.isArray(this.state.nuclearSaved) ? this.state.nuclearSaved : [];
+        if (!savedEntries.length) {
+            const empty = document.createElement('span');
+            empty.className = 'nuclear-saved-empty';
+            empty.textContent = 'No saved entries yet.';
+            list.appendChild(empty);
+            return;
+        }
+
+        savedEntries.forEach((entry) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'nuclear-saved-entry';
+            button.textContent = `＋ ${entry}`;
+            button.title = `Add ${entry} to this session`;
+            button.disabled = this.state.nuclearDraft.includes(entry) || this.state.nuclearDraft.length >= 8;
+            button.addEventListener('click', () => {
+                if (this.addNuclearDraftEntry(entry)) this.renderNuclearSavedEntries();
+            });
+            list.appendChild(button);
         });
     }
 
@@ -591,13 +621,17 @@ class PopupController {
             this.showToast('Nuclear Mode is active. Use the Nuclear block page to exit it.');
             return;
         }
-        this.state.nuclearDraft = Array.isArray(state?.whitelist)
+        // A saved whitelist is only a library of optional entries. It must never
+        // become the active session allowlist without an explicit user action.
+        this.state.nuclearSaved = Array.isArray(state?.whitelist)
             ? [...new Set(state.whitelist.map(entry => this.normalizeNuclearDraftEntry(entry)).filter(Boolean))].slice(0, 8)
             : [];
+        this.state.nuclearDraft = [];
         document.getElementById('nuclearHours').value = '';
         document.getElementById('nuclearMinutes').value = '';
         this.setNuclearSetupError('');
         this.renderNuclearDraft();
+        this.renderNuclearSavedEntries();
         const modal = document.getElementById('nuclearSetupModal');
         if (modal) modal.hidden = false;
         document.getElementById('nuclearHours')?.focus();
@@ -628,6 +662,7 @@ class PopupController {
         if (input) input.value = '';
         this.setNuclearSetupError('');
         this.renderNuclearDraft();
+        this.renderNuclearSavedEntries();
         return true;
     }
 

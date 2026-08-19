@@ -1758,3 +1758,183 @@ body.theme-light .nuclear-card .btn-nuclear {
         font-size: 0.72rem;
     }
 }
+
+/* Nuclear Mode deliberate per-session setup modal */
+.nuclear-setup-modal[hidden] { display: none !important; }
+.nuclear-setup-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(7px);
+}
+.nuclear-setup-dialog {
+    width: min(420px, calc(100vw - 28px));
+    max-height: calc(100vh - 28px);
+    overflow-y: auto;
+    padding: 20px;
+    border: 1px solid rgba(245, 158, 11, 0.42);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #17120b 0%, #111827 100%);
+    color: #f8fafc;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.56);
+}
+.nuclear-setup-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+.nuclear-kicker {
+    margin: 0 0 5px;
+    color: #fbbf24;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.nuclear-setup-dialog h2 { margin: 0; color: #fff7ed; font-size: 1.25rem; line-height: 1.25; }
+.nuclear-dialog-close {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(251, 191, 36, 0.32);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fed7aa;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.nuclear-dialog-close:hover, .nuclear-dialog-close:focus-visible { background: rgba(245, 158, 11, 0.18); color: #fff; }
+.nuclear-setup-copy { margin: 0 0 16px; color: #cbd5e1; font-size: 0.84rem; line-height: 1.5; }
+.nuclear-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.nuclear-form-row label, .nuclear-entry-row > label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #fed7aa;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+.nuclear-form-row input, .nuclear-entry-controls input {
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 9px;
+    outline: none;
+    background: rgba(15, 23, 42, 0.76);
+    color: #f8fafc;
+    font: inherit;
+}
+.nuclear-form-row input { width: 100%; padding: 9px 10px; }
+.nuclear-form-row input:focus, .nuclear-entry-controls input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14); }
+.nuclear-entry-row { margin-bottom: 14px; }
+.nuclear-entry-controls { display: flex; gap: 8px; }
+.nuclear-entry-controls input { flex: 1; padding: 9px 10px; font-size: 0.8rem; }
+.nuclear-entry-controls .btn, .nuclear-dialog-actions .btn { min-height: 36px; padding: 8px 12px; border-radius: 9px; font-size: 0.78rem; }
+.nuclear-current-tab {
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fbbf24;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.nuclear-current-tab:hover, .nuclear-current-tab:focus-visible { color: #fde68a; text-decoration: underline; }
+.nuclear-saved-entry-section {
+    padding: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 11px;
+    background: rgba(15, 23, 42, 0.4);
+}
+.nuclear-saved-entry-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #e2e8f0;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+.nuclear-saved-entry-heading small { color: #94a3b8; font-size: 0.66rem; font-weight: 500; text-align: right; }
+.nuclear-saved-entry-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 76px; overflow-y: auto; }
+.nuclear-saved-entry {
+    max-width: 100%;
+    overflow: hidden;
+    padding: 5px 8px;
+    border: 1px solid rgba(245, 158, 11, 0.34);
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fde68a;
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.nuclear-saved-entry:hover:not(:disabled), .nuclear-saved-entry:focus-visible:not(:disabled) { border-color: rgba(251, 191, 36, 0.85); background: rgba(245, 158, 11, 0.2); }
+.nuclear-saved-entry:disabled { cursor: default; opacity: 0.42; }
+.nuclear-saved-empty { color: #94a3b8; font-size: 0.7rem; }
+.nuclear-session-heading { margin: 14px 0 7px; color: #fed7aa; font-size: 0.74rem; font-weight: 800; }
+.nuclear-entry-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 34px;
+    max-height: 92px;
+    overflow-y: auto;
+    padding: 7px;
+    border: 1px dashed rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.32);
+}
+.nuclear-entry-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 5px 7px 5px 9px;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.1);
+    color: #bbf7d0;
+    font-size: 0.68rem;
+}
+.nuclear-entry-chip > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nuclear-entry-remove {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #bbf7d0;
+    line-height: 1;
+    cursor: pointer;
+}
+.nuclear-entry-remove:hover, .nuclear-entry-remove:focus-visible { background: rgba(239, 68, 68, 0.35); color: #fff; }
+.nuclear-setup-error { margin: 10px 0 0; color: #fca5a5; font-size: 0.74rem; line-height: 1.35; }
+.nuclear-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.nuclear-dialog-actions .btn-nuclear { border: 1px solid rgba(245, 158, 11, 0.5); background: linear-gradient(135deg, #b45309, #d97706); color: #fff; }
+body.theme-light .nuclear-setup-dialog { border-color: #e0a43b; background: linear-gradient(180deg, #fffaf0 0%, #ffffff 100%); color: #1f2937; }
+body.theme-light .nuclear-setup-dialog h2 { color: #422006; }
+body.theme-light .nuclear-setup-copy, body.theme-light .nuclear-saved-entry-heading small, body.theme-light .nuclear-saved-empty { color: #657084; }
+body.theme-light .nuclear-form-row label, body.theme-light .nuclear-entry-row > label, body.theme-light .nuclear-session-heading { color: #7c2d12; }
+body.theme-light .nuclear-form-row input, body.theme-light .nuclear-entry-controls input { border-color: #d6dbe5; background: #fff; color: #1f2937; }
+body.theme-light .nuclear-saved-entry-section, body.theme-light .nuclear-entry-list { border-color: #e5c98c; background: #fffdf7; }
+body.theme-light .nuclear-saved-entry-heading { color: #374151; }
+@media (max-width: 380px) {
+    .nuclear-setup-modal { padding: 8px; }
+    .nuclear-setup-dialog { width: min(420px, calc(100vw - 16px)); padding: 16px; }
+    .nuclear-saved-entry-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+    .nuclear-saved-entry-heading small { text-align: left; }
+}

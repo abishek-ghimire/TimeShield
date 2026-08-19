@@ -211,13 +211,14 @@ Nuclear Mode requires deliberate setup before every session:
 | **Explicit duration** | Choose a positive session length using separate hour and minute fields. There is no hidden 25-minute fallback. |
 | **Eight-entry allowlist** | Add up to eight approved entries before activation. The control accepts bare domains, exact HTTP/HTTPS links, and exact `file://` URLs for local documents when browser file access is enabled. |
 | **Current-tab capture** | Add the currently open website or local file directly from the activation dialog. |
+| **Saved entries are optional** | The Settings whitelist, including the default AI and WhatsApp entries, is shown as a library of suggestions. Entries are added to a session only when selected deliberately. |
 | **Save-work warning** | Review a warning to save files, finish downloads, and complete urgent work before activation. |
 | **Strict enforcement** | Only the entries listed for that session bypass Nuclear Mode; unlisted sites, links, and files remain blocked. |
 | **Dedicated block page** | See a Nuclear Mode-specific restriction screen on every non-whitelisted destination. |
 | **Verified pause flow** | Request a short pause from the block page, or choose the protected end-session path from inside Pause Blocks. Manual exit requires the lowercase motivational challenge. |
 | **Automatic expiry** | Let the selected session end automatically, with Nuclear Mode rules and redirected tabs cleaned up afterward. |
 
-Nuclear Mode does not activate automatically. Clicking the control-panel button opens the setup dialog and requires both a positive duration and at least one explicit allowlist entry before the save-work warning can be confirmed. There is no direct Stop button in the control panel; ending an active session manually must begin from the Nuclear block page and pass verification.
+Nuclear Mode does not activate automatically. Clicking the control-panel button opens a fresh setup dialog with an empty active allowlist. Work websites, exact links, and local files must be entered or deliberately selected from the saved-entry suggestions for that particular session. A positive duration and at least one explicit entry are required before the save-work warning can be confirmed. There is no direct Stop button in the control panel; ending an active session manually must begin from the Nuclear block page and pass verification.
 
 ---
 
