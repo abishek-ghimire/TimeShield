@@ -14,8 +14,6 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 [Visit the TimeShield repository](https://github.com/abishekgh-6/TimeShield) · [Download the latest release](https://github.com/abishekgh-6/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)
 
 
-![TimeShield Control Panel](assets/screenshots/control-panel.png)
-
 ---
 
 ## Features
