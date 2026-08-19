@@ -92,6 +92,7 @@ class PopupController {
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
         bind('nuclearToggle', () => this.openNuclearSetup());
+        bind('nuclearExitButton', () => this.openNuclearBlockPage());
 
         document.getElementById('nuclearSetupClose')?.addEventListener('click', () => this.closeNuclearSetup());
         document.getElementById('nuclearSetupCancel')?.addEventListener('click', () => this.closeNuclearSetup());
@@ -778,8 +779,19 @@ class PopupController {
         return this.openNuclearSetup();
     }
 
+    async openNuclearBlockPage() {
+        try {
+            await chrome.tabs.create({
+                url: chrome.runtime.getURL('floating/nuclear-block.html')
+            });
+        } catch (error) {
+            console.error('Failed to open Nuclear block page:', error);
+            this.showToast('Open the Nuclear block page to continue the exit process.');
+        }
+    }
+
     async stopNuclearMode() {
-        this.showToast('Use the Nuclear block page and complete verification to exit.');
+        await this.openNuclearBlockPage();
     }
 
     showNuclearStartWarning(hours, minutes) {

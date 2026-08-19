@@ -1995,3 +1995,134 @@ body.theme-light .nuclear-open-tabs-summary { color: #9a5b05; }
     .nuclear-open-tabs-option { padding: 10px; }
     .nuclear-open-tabs-summary { margin-left: 0; }
 }
+
+
+/* Active Nuclear session and final control-panel spacing polish */
+.popup-container {
+    padding: 12px 14px 16px;
+}
+
+.popup-header {
+    margin-bottom: 9px;
+    padding-bottom: 7px;
+}
+
+.quick-actions-modern {
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.quick-actions-modern .btn,
+.quick-actions-modern .btn-tiny-restore,
+.compact-action {
+    min-height: 38px;
+    border-radius: 11px;
+}
+
+.popup-utility-row {
+    gap: 7px;
+    margin-bottom: 9px;
+}
+
+.card-grid,
+.popup-card-grid {
+    gap: 9px;
+}
+
+.card.compact-card,
+.timer-card,
+.site-limits-card {
+    margin-bottom: 9px;
+    padding: 11px;
+    border-radius: 14px;
+}
+
+.card-title {
+    margin-bottom: 7px;
+}
+
+.nuclear-active-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    margin: -2px 0 10px;
+    padding: 9px 10px;
+    border: 1px solid rgba(245, 158, 11, 0.42);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(180, 83, 9, 0.2), rgba(120, 53, 15, 0.1));
+    box-shadow: 0 8px 18px rgba(120, 53, 15, 0.16);
+}
+
+.nuclear-active-row .nuclear-countdown {
+    min-width: 0;
+    margin: 0;
+    color: #fcd34d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+}
+
+.nuclear-exit-button {
+    min-height: 32px;
+    max-width: 176px;
+    padding: 7px 11px;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    border-radius: 9px;
+    background: linear-gradient(135deg, #b45309, #d97706);
+    color: #fff7ed;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 5px 12px rgba(120, 53, 15, 0.24);
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.nuclear-exit-button:hover,
+.nuclear-exit-button:focus-visible {
+    background: linear-gradient(135deg, #c26108, #ea8a0c);
+    box-shadow: 0 7px 16px rgba(120, 53, 15, 0.34);
+    transform: translateY(-1px);
+}
+
+.nuclear-exit-button:active {
+    transform: translateY(0);
+}
+
+body.theme-light .nuclear-active-row {
+    background: linear-gradient(135deg, #fff7ed, #fffbeb);
+    border-color: #f0b44d;
+    box-shadow: 0 6px 16px rgba(146, 64, 14, 0.1);
+}
+
+body.theme-light .nuclear-active-row .nuclear-countdown {
+    color: #92400e;
+}
+
+@media (max-width: 430px) {
+    .nuclear-active-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 7px;
+        padding-inline: 8px;
+    }
+
+    .nuclear-exit-button {
+        max-width: 150px;
+        padding-inline: 8px;
+        font-size: 0.66rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .nuclear-active-row {
+        grid-template-columns: 1fr;
+    }
+
+    .nuclear-exit-button {
+        width: 100%;
+        max-width: none;
+    }
+}

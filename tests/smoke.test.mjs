@@ -547,6 +547,7 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /Add at least one allowed site or choose Exclude all open tabs before starting Nuclear Mode/);
     assert.match(popup, /id="nuclearToggle" class="btn btn-nuclear nuclear-action"/);
     assert.match(popup, /id="nuclearActiveView"[^>]*hidden/);
+    assert.match(popup, /id="nuclearExitButton"[^>]*>Exit from Nuclear Mode<\/button>/);
     assert.match(popup, /id="nuclearSetupModal"[^>]*hidden/);
     assert.match(popup, /id="nuclearHours"/);
     assert.match(popup, /id="nuclearMinutes"/);
@@ -565,6 +566,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.doesNotMatch(popup, /id="nuclearWhitelist"/);
     assert.doesNotMatch(popup, /id="nuclearSiteInput"/);
     assert.match(popupJs, /bind\('nuclearToggle', \(\) => this\.openNuclearSetup\(\)\)/);
+    assert.match(popupJs, /bind\('nuclearExitButton', \(\) => this\.openNuclearBlockPage\(\)\)/);
+    assert.match(popupJs, /chrome\.tabs\.create\(\{[\s\S]*floating\/nuclear-block\.html/);
     assert.match(popupJs, /this\.state\.nuclearSaved =/);
     assert.match(popupJs, /this\.state\.nuclearDraft = \[\];/);
     assert.match(popupJs, /this\.state\.nuclearExcludeOpenTabs = false/);
@@ -582,7 +585,10 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popupJs, /Add at least one allowed site or link, or choose Exclude all open tabs/);
     assert.match(popupJs, /showNuclearStartWarning/);
     assert.match(await read('popup/popup.css'), /\.nuclear-setup-modal\[hidden\]/);
-    assert.match(await read('popup/popup.css'), /\.nuclear-saved-entry-list/);
+    const popupCss = await read('popup/popup.css');
+    assert.match(popupCss, /\.nuclear-saved-entry-list/);
+    assert.match(popupCss, /\.nuclear-exit-button/);
+    assert.match(popupCss, /\.popup-container \{[\s\S]*padding: 12px 14px 16px/);
     assert.match(options, /id="acc-foc-nuclear"/);
     assert.match(options, /id="nuclearWhitelistList"/);
     assert.match(options, /id="newNuclearWhitelistSite"/);
