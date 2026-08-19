@@ -24,7 +24,7 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 | 🔢 Flip Clock | Opens a dedicated split-flap clock in a separate browser tab |
 | ⏱️ Timers | Run timers directly from the extension |
 | 🎯 Focus Mode | Restricts selected websites during focused work sessions |
-| ☢️ Nuclear Mode | Allows only a small whitelist of sites during a timed protection session |
+| ☢️ Nuclear Mode | Timed allowlist protection with up to 8 approved sites, hour-and-minute duration, save-work warning, dedicated block page, pause verification, and automatic expiry |
 | 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
 | 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
 | ⏳ Usage Limits | Set daily limits for individual websites |
@@ -202,9 +202,20 @@ Pause requests are deliberate. The first two eligible one-minute general pauses 
 
 ## Nuclear Mode
 
-Nuclear Mode is an opt-in, all-sites protection session for times when ordinary blocking is not strict enough. A session allows only the explicitly configured whitelist, with a maximum of eight domains, and blocks every other website until the selected hour-and-minute duration ends.
+Nuclear Mode is an opt-in, all-sites protection session for times when ordinary blocking is not strict enough. It creates a temporary allowlist: only explicitly approved websites can be opened, while every other website is redirected to a dedicated Nuclear Mode block page until the session ends.
 
-The control panel shows a save-work warning before activation. Non-whitelisted pages use a dedicated Nuclear Mode block screen with the same deliberate pause flow used by the other protection modes.
+The Nuclear Mode controls are available directly in the control panel and include the following capabilities:
+
+| Capability | Description |
+| --- | --- |
+| **Timed protection** | Select the session length using separate hour and minute fields. |
+| **Small allowlist** | Add up to eight approved domains and remove them before or during a session. |
+| **Save-work warning** | Review a warning to save files and finish urgent work before activation. |
+| **Dedicated block page** | See a Nuclear Mode-specific restriction screen on every non-whitelisted site. |
+| **Deliberate pause flow** | Request a short pause from the block page and complete the existing verification challenge when required. |
+| **Automatic expiry** | Let the session end automatically or stop it from the control panel, with protection rules cleaned up afterward. |
+
+Nuclear Mode does not activate automatically. It starts only after an explicit control-panel action and a valid duration and allowlist are provided.
 
 ---
 
