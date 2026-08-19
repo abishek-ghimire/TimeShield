@@ -283,9 +283,26 @@ class BackgroundService {
             : [];
     }
 
+    isNuclearAutomaticException(url) {
+        const target = String(url || '').trim().toLowerCase();
+        if (!target || target.startsWith('chrome://') || target.startsWith('chrome-extension://')) return false;
+        if (target.startsWith('file://')) return true;
+
+        try {
+            const parsed = new URL(/^https?:\/\//i.test(target) ? target : `https://${target}`);
+            const hostname = parsed.hostname.replace(/^www\./, '').toLowerCase();
+            const localHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
+            if (localHosts.has(hostname)) return true;
+            return /\.pdf(?:$|[?#])/i.test(parsed.pathname + parsed.search + parsed.hash);
+        } catch {
+            return false;
+        }
+    }
+
     matchesNuclearWhitelist(url, whitelist = []) {
         const target = String(url || '').trim().toLowerCase();
         if (!target || target.startsWith('chrome://') || target.startsWith('chrome-extension://')) return false;
+        if (this.isNuclearAutomaticException(target)) return true;
         const normalizedTarget = this.normalizeNuclearSite(target);
         if (!normalizedTarget) return false;
 
@@ -1787,13 +1804,15 @@ class BackgroundService {
             }
         }
         
-        // Nuclear Mode is the strictest all-sites protection and allows only its stored whitelist.
-        const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
-        if (this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
-            const nuclearWhitelist = this.normalizeNuclearWhitelist(nuclearResult.nuclearMode.whitelist);
-            const isWhitelisted = nuclearWhitelist.some(allowed => hostname === allowed || hostname.endsWith(`.${allowed}`));
-            if (!isWhitelisted && hostname !== 'localhost' && hostname !== '127.0.0.1') return true;
-        }
+            // Nuclear Mode is the strictest all-sites protection. Its automatic
+            // localhost, local-file, and PDF exceptions are enforced by the
+            // navigation rules and tab redirect helper, which receive full URLs.
+            const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
+            if (this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
+                const nuclearWhitelist = this.normalizeNuclearWhitelist(nuclearResult.nuclearMode.whitelist);
+                const isWhitelisted = nuclearWhitelist.some(allowed => hostname === allowed || hostname.endsWith(`.${allowed}`));
+                if (!isWhitelisted && hostname !== 'localhost' && hostname !== '127.0.0.1') return true;
+            }
 
         // Sleep blocking stays independent from the scheduled blocklist and blocks all sites except its whitelist.
         if (await this.isSleepBlockingActive()) {
@@ -2147,8 +2166,8 @@ class BackgroundService {
                 }
             });
 
-            // Sleep Mode keeps its historical PDF exception. Nuclear Mode
-            // requires every PDF or local file to be listed explicitly.
+            // Sleep Mode keeps its historical PDF exception. Nuclear Mode also
+            // keeps local development pages, all local files, and PDFs available.
             if (!isNuclear) {
                 rules.push({
                     id: startId + 1,
@@ -2156,6 +2175,53 @@ class BackgroundService {
                     action: { type: 'allow' },
                     condition: {
                         regexFilter: '^(https?|file)://.*\\.pdf($|[?#])',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+            } else {
+                const exceptionStartId = startId + 1 + normalizedWhitelist.length;
+                rules.push({
+                    id: exceptionStartId,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        regexFilter: '^file://',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+                rules.push({
+                    id: exceptionStartId + 1,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        regexFilter: '^https?://.*\\.pdf(?:$|[?#])',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+                rules.push({
+                    id: exceptionStartId + 2,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        urlFilter: '||localhost^',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+                rules.push({
+                    id: exceptionStartId + 3,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        urlFilter: '||127.0.0.1^',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+                rules.push({
+                    id: exceptionStartId + 4,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        regexFilter: '^https?://(?:localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\])(?::\\d+)?(?:/|$)',
                         resourceTypes: ['main_frame']
                     }
                 });

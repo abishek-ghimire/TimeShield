@@ -513,8 +513,17 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /pauseContext: 'nuclearExit'/);
     assert.match(pauseHelper, /pauseContext === 'nuclearExit'/);
     assert.match(worker, /enableSiteBlocking\(\['\*'\], 501, 'nuclear'/);
+    assert.match(worker, /isNuclearAutomaticException/);
+    assert.ok(worker.includes("target.startsWith('file://')"));
+    assert.match(worker, /localHosts = new Set/);
+    assert.match(worker, /\\.pdf/);
+    assert.ok(worker.includes("regexFilter: '^file://'"));
+    assert.ok(worker.includes("regexFilter: '^https?://.*\\\\.pdf"));
+    assert.ok(worker.includes("urlFilter: '||localhost^'"));
+    assert.ok(worker.includes("urlFilter: '||127.0.0.1^'"));
     assert.match(worker, /nuclearMode/);
     assert.match(worker, /disableSiteBlockingRange\(501, 600\)/);
+    assert.match(worker, /local development pages, all local files, and PDFs available/);
     assert.match(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
     assert.match(worker, /Nuclear Mode duration must be greater than zero/);
     assert.match(worker, /Add at least one allowed site before starting Nuclear Mode/);
@@ -524,6 +533,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popup, /id="nuclearHours"/);
     assert.match(popup, /id="nuclearMinutes"/);
     assert.match(popup, /id="nuclearEntry"/);
+    assert.match(popup, /Localhost pages, local files, and PDFs are available automatically/);
+    assert.match(popup, /optional file URL/);
     assert.match(popup, /id="nuclearUseCurrentTab"/);
     assert.match(popup, /id="nuclearSavedEntryList"/);
     assert.match(popup, /Saved entries/);
