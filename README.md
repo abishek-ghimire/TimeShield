@@ -18,6 +18,27 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 
 ---
 
+## Features
+
+| Feature | What it does |
+| --- | --- |
+| 🕐 Floating Clock | Displays a draggable, resizable clock over supported webpages |
+| 🔢 Flip Clock | Opens a dedicated split-flap clock in a separate browser tab |
+| ⏱️ Timers | Run timers directly from the extension |
+| 🎯 Focus Mode | Restricts selected websites during focused work sessions |
+| 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
+| 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
+| ⏳ Usage Limits | Set daily limits for individual websites |
+| 📊 Screen Time | Track active browsing time by website |
+| 📝 Tasks | Maintain a small local task list |
+| 🛡️ Ad Protection | Optional local rule-based ad protection |
+| 🎨 Themes | Choose between Light, Dark, and Solar Ember themes |
+| ⚙️ Customization | Configure clocks, animations, blocking behavior, and other settings |
+| 💾 Local Storage | Store settings and activity data locally in the browser |
+| 🔒 No Account Required | Core functionality does not require registration or cloud accounts |
+
+---
+
 ## Why TimeShield?
 
 Modern browsers make it easy to lose focus.
@@ -40,26 +61,6 @@ TimeShield only acts on the websites and protection modes that we configure.
 
 ---
 
-## Features
-
-| Feature | What it does |
-| --- | --- |
-| 🕐 Floating Clock | Displays a draggable, resizable clock over supported webpages |
-| ⏱️ Timers | Run timers directly from the extension |
-| 🎯 Focus Mode | Restricts selected websites during focused work sessions |
-| 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
-| 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
-| ⏳ Usage Limits | Set daily limits for individual websites |
-| 📊 Screen Time | Track active browsing time by website |
-| 📝 Tasks | Maintain a small local task list |
-| 🛡️ Ad Protection | Optional local rule-based ad protection |
-| 🎨 Themes | Choose between Light, Dark, and Solar Ember themes |
-| ⚙️ Customization | Configure clocks, animations, blocking behavior, and other settings |
-| 💾 Local Storage | Store settings and activity data locally in the browser |
-| 🔒 No Account Required | Core functionality does not require registration or cloud accounts |
-
----
-
 ## Screenshots
 
 <details>
@@ -73,9 +74,17 @@ TimeShield only acts on the websites and protection modes that we configure.
 
 ![General Settings](assets/screenshots/general.png)
 
-### Clock
+### Clock Settings
 
 ![Clock Settings](assets/screenshots/clock.png)
+
+### Clock View
+
+![Clock View](assets/screenshots/clock-view.webp)
+
+### Flip Clock
+
+![Flip Clock](assets/screenshots/flip-clock.webp)
 
 ### Focus Mode
 
