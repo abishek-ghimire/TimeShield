@@ -292,6 +292,22 @@ test('Clock view opens flip mode in a separate tab', async () => {
     assert.match(popup, /chrome\.runtime\.getURL\('floating\/flip-clock\.html'\)/);
 });
 
+test('Clock controls reflect the current view and support reverse navigation', async () => {
+    const popup = await read('popup/popup.html');
+    const popupJs = await read('popup/popup.js');
+    const flipHtml = await read('floating/flip-clock.html');
+    const flipJs = await read('floating/flip-clock.js');
+    const flipCss = await read('floating/flip-clock.css');
+    assert.match(popup, /id="clockViewLabel">Open Clock View/);
+    assert.match(popupJs, /label\.textContent = isOpen \? 'Close Clock View' : 'Open Clock View'/);
+    assert.match(popupJs, /changes\.clockVisible/);
+    assert.match(flipHtml, /id="clock-view-toggle"[\s\S]*?title="Open Clock View"/);
+    assert.match(flipJs, /action: 'toggleClock', visible: true/);
+    assert.match(flipJs, /clockViewToggle\.addEventListener\('click', openClockView\)/);
+    assert.match(flipCss, /\.view-toggle\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?right:\s*24px;[\s\S]*?bottom:\s*24px;/);
+});
+
+
 test('Clock geometry is broadcast and applied across open sites', async () => {
     const blocker = await read('content/blocker.js');
     const worker = await read('background/service-worker.js');

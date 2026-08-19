@@ -29,6 +29,7 @@ class PopupController {
     async init() {
         this.setupEventListeners();
         await this.loadAllData();
+        await this.updateClockViewButton();
         this.startClock();
         this.state.timeLimitInterval = setInterval(() => this.loadTimeLimitStatus(), 30_000);
     }
@@ -127,6 +128,9 @@ class PopupController {
             if (areaName !== 'local') return;
             if (changes.timeLimits || changes.timeLimitsEnabled || changes.siteUsageData) {
                 this.loadTimeLimitStatus().catch((error) => console.error('Failed to refresh site limits:', error));
+            }
+            if (changes.clockVisible) {
+                this.updateClockViewButton(changes.clockVisible.newValue).catch((error) => console.error('Failed to refresh Clock View label:', error));
             }
         });
 
@@ -545,10 +549,27 @@ class PopupController {
         });
     }
 
+    async updateClockViewButton(clockVisible) {
+        const button = document.getElementById('toggleClock');
+        const label = document.getElementById('clockViewLabel');
+        if (!button || !label) return;
+
+        let visible = clockVisible;
+        if (visible === undefined) {
+            const result = await chrome.storage.local.get(['clockVisible']);
+            visible = result.clockVisible === true;
+        }
+        const isOpen = visible === true;
+        label.textContent = isOpen ? 'Close Clock View' : 'Open Clock View';
+        button.title = isOpen ? 'Close Clock View' : 'Open Clock View';
+        button.setAttribute('aria-pressed', String(isOpen));
+    }
+
     async toggleFloatingClock() {
         const result = await chrome.storage.local.get(['clockVisible']);
-        const newState = !result.clockVisible;
+        const newState = result.clockVisible !== true;
         await chrome.runtime.sendMessage({ action: 'toggleClock', visible: newState });
+        await this.updateClockViewButton(newState);
         window.close(); // Close popup so user can see the clock
     }
 

@@ -198,11 +198,33 @@
         }
     }
 
-    // Handle focus timer close button
+    async function openClockView() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'toggleClock', visible: true });
+            if (response?.success === false) {
+                throw new Error(response.error || 'Unable to open Clock View');
+            }
+        } catch (error) {
+            console.warn('Unable to open Clock View:', error);
+        }
+    }
+
+    // Handle page controls
     document.addEventListener('DOMContentLoaded', () => {
         const closeBtn = document.getElementById('focusTimerClose');
         if (closeBtn) {
             closeBtn.addEventListener('click', hideFocusTimer);
+        }
+
+        const clockViewToggle = document.getElementById('clock-view-toggle');
+        if (clockViewToggle) {
+            clockViewToggle.addEventListener('click', openClockView);
+            clockViewToggle.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openClockView();
+                }
+            });
         }
     });
 
