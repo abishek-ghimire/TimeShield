@@ -6,6 +6,7 @@ class ContentBlocker {
     constructor() {
         this.isFullscreenFlip = false;
         this.refs = {
+            wrapper: null,
             widget: null,
             header: null,
             iframe: null,
@@ -99,17 +100,18 @@ class ContentBlocker {
 
     setupFullscreenListener() {
         document.addEventListener('fullscreenchange', () => {
-            const widget = this.refs.widget;
-            if (!widget) return;
+            const { wrapper, widget } = this.refs;
+            if (!wrapper || !widget) return;
 
             const fullscreenElement = document.fullscreenElement;
-            const nextParent = fullscreenElement || document.body;
-            if (nextParent && widget.parentElement !== nextParent) {
-                nextParent.appendChild(widget);
+            const nextParent = fullscreenElement || document.body || document.documentElement;
+            if (nextParent && wrapper.parentElement !== nextParent) {
+                nextParent.appendChild(wrapper);
             }
 
             // Fullscreen stacking contexts can hide ordinary fixed elements. Keep the
-            // widget above the player while it is inside the fullscreen tree.
+            // isolated overlay host and widget above the player while inside fullscreen.
+            wrapper.style.zIndex = '2147483646';
             widget.style.zIndex = '2147483647';
             if (fullscreenElement) {
                 widget.style.position = 'fixed';
@@ -121,16 +123,31 @@ class ContentBlocker {
     }
 
     async injectFloatingClock() {
-        if (document.getElementById('ts-clock-widget')) return;
+        if (document.getElementById('timeshield-wrapper')) return;
 
-        // Create an isolated wrapper to prevent CSS leakage
+        // Use a full-viewport host plus a shadow root so PDF viewers and webpages
+        // cannot hide or restyle the clock header controls.
         const wrapper = document.createElement('div');
         wrapper.id = 'timeshield-wrapper';
         wrapper.style.cssText = `
             all: initial;
-            display: contents;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2147483646;
+            pointer-events: none;
+            isolation: isolate;
             font-family: inherit;
         `;
+        const shadowRoot = wrapper.attachShadow({ mode: 'open' });
+        const shadowStyle = document.createElement('style');
+        shadowStyle.textContent = `
+            :host { all: initial; }
+            #ts-clock-widget, #ts-clock-widget * { box-sizing: border-box; }
+            #ts-clock-widget button { font: inherit; }
+        `;
+        shadowRoot.appendChild(shadowStyle);
 
         const widget = document.createElement('div');
         widget.id = 'ts-clock-widget';
@@ -152,6 +169,7 @@ class ContentBlocker {
             will-change: transform;
             transition: width 0.22s ease, height 0.22s ease, border-radius 0.22s ease;
             contain: layout style paint;
+            pointer-events: auto;
         `;
 
         const header = document.createElement('div');
@@ -211,10 +229,10 @@ class ContentBlocker {
         widget.appendChild(header);
         widget.appendChild(iframe);
         widget.appendChild(grip);
-        wrapper.appendChild(widget);
-        document.body.appendChild(wrapper);
+        shadowRoot.appendChild(widget);
+        (document.body || document.documentElement).appendChild(wrapper);
 
-        this.refs = { widget, header, iframe, grip };
+        this.refs = { wrapper, widget, header, iframe, grip };
 
         this._makeDraggable(widget, header, iframe);
         this._makeResizable(widget, grip, iframe);
@@ -331,7 +349,9 @@ class ContentBlocker {
     }
 
     _setupControls(widget, iframe, grip) {
-        document.getElementById('ts-minimize-btn').addEventListener('click', async () => {
+        const minimizeButton = this.refs.header?.querySelector('#ts-minimize-btn');
+        const closeButton = this.refs.header?.querySelector('#ts-close-btn');
+        minimizeButton?.addEventListener('click', async () => {
             if (this.isFullscreenFlip) return;
             try {
                 const result = await chrome.storage.local.get(['clockMinimized']);
@@ -344,7 +364,7 @@ class ContentBlocker {
             }
         });
 
-        document.getElementById('ts-close-btn').addEventListener('click', async () => {
+        closeButton?.addEventListener('click', async () => {
             widget.style.display = 'none';
             try {
                 // If focus/timer is active, close it for ALL sites
@@ -362,7 +382,8 @@ class ContentBlocker {
     _applyMinimizeState(widget, iframe, grip, minimized) {
         if (this.isFullscreenFlip) return;
 
-        const btn = document.getElementById('ts-minimize-btn');
+        const btn = this.refs.header?.querySelector('#ts-minimize-btn');
+        if (!btn) return;
         if (minimized) {
             widget.dataset.prevH = widget.style.height || (widget.dataset.isStatusOnly === 'true' ? '120px' : '160px');
             iframe.style.opacity = '0';
@@ -463,7 +484,7 @@ class ContentBlocker {
     }
 
     toggleFloatingClock(visible) {
-        const widget = this.refs.widget || document.getElementById('ts-clock-widget');
+        const widget = this.refs.widget || document.getElementById('timeshield-wrapper')?.shadowRoot?.getElementById('ts-clock-widget');
         if (!widget) return;
 
         if (visible === undefined) {

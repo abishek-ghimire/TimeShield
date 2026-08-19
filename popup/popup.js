@@ -129,38 +129,76 @@ class PopupController {
                 this.loadTimeLimitStatus().catch((error) => console.error('Failed to refresh site limits:', error));
             }
         });
+
+        chrome.tabs.onActivated?.addListener(() => {
+            this.loadTimeLimitStatus().catch((error) => console.error('Failed to refresh active-site limit:', error));
+        });
+        chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+            if (tab?.active && (changeInfo.url || changeInfo.status === 'complete')) {
+                this.loadTimeLimitStatus().catch((error) => console.error('Failed to refresh active-site limit:', error));
+            }
+        });
+    }
+
+    async getActiveSiteHostname() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const url = new URL(tab?.url || '');
+            if (!['http:', 'https:'].includes(url.protocol)) return '';
+            return url.hostname.toLowerCase().replace(/^www\./, '');
+        } catch {
+            return '';
+        }
+    }
+
+    normalizeLimitSite(site) {
+        const value = String(site || '').trim().toLowerCase();
+        if (!value) return '';
+        try {
+            const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+            return url.hostname.replace(/^www\./, '');
+        } catch {
+            return value.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
+        }
     }
 
     async loadTimeLimitStatus() {
         const container = this.elements.siteLimitStatus;
         if (!container) return [];
 
-        const result = await chrome.storage.local.get(['timeLimits', 'timeLimitsEnabled', 'siteUsageData']);
+        const [result, activeSite] = await Promise.all([
+            chrome.storage.local.get(['timeLimits', 'timeLimitsEnabled', 'siteUsageData']),
+            this.getActiveSiteHostname()
+        ]);
         const limits = Array.isArray(result.timeLimits) ? result.timeLimits : [];
         const today = new Date().toDateString();
         const usageToday = result.siteUsageData?.[today] || {};
         const enabled = result.timeLimitsEnabled === true || result.timeLimitsEnabled === 'enabled' || result.timeLimitsEnabled === 'true' || result.timeLimitsEnabled === 1;
-        const statuses = limits
-            .filter((limit) => limit && typeof limit.site === 'string' && Number(limit.minutes) > 0)
-            .map((limit) => {
-                const limitMinutes = Number(limit.minutes);
-                const usedSeconds = Math.max(0, Number(usageToday[limit.site]) || 0);
-                const remainingSeconds = Math.max(0, Math.floor(limitMinutes * 60 - usedSeconds));
-                return { site: limit.site, limitMinutes, usedSeconds, remainingSeconds };
-            });
+        const activeLimit = activeSite
+            ? limits.find((limit) => this.normalizeLimitSite(limit?.site) === activeSite && Number(limit.minutes) > 0)
+            : null;
+        const statuses = activeLimit ? (() => {
+            const limitMinutes = Number(activeLimit.minutes);
+            const usageKey = Object.prototype.hasOwnProperty.call(usageToday, activeLimit.site)
+                ? activeLimit.site
+                : activeSite;
+            const usedSeconds = Math.max(0, Number(usageToday[usageKey]) || 0);
+            const remainingSeconds = Math.max(0, Math.floor(limitMinutes * 60 - usedSeconds));
+            return [{ site: activeLimit.site, limitMinutes, usedSeconds, remainingSeconds }];
+        })() : [];
 
         container.replaceChildren();
         if (!statuses.length) {
             const empty = document.createElement('div');
             empty.className = 'site-limit-empty';
-            empty.textContent = 'No site limits configured.';
+            empty.textContent = activeSite ? 'Site limit is not set for this site.' : 'Site limit is not available for this tab.';
             container.appendChild(empty);
             return statuses;
         }
 
         const summary = document.createElement('div');
         summary.className = 'site-limit-summary';
-        summary.textContent = enabled ? 'remaining today' : 'limits currently disabled';
+        summary.textContent = enabled ? 'remaining today' : 'site limit currently disabled';
         container.appendChild(summary);
 
         statuses.forEach((status) => {

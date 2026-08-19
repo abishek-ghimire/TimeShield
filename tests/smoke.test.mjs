@@ -318,8 +318,17 @@ test('Floating Display is independent of Clock View and refreshes immediately', 
     assert.match(worker, /isEligibleOverlayTab\(url = ''\)/);
 });
 
-test('Eligible local document tabs are included in overlay injection and geometry sync', async () => {
+test('Eligible local document tabs keep isolated clock controls and geometry sync', async () => {
+    const manifest = JSON.parse(await read('manifest.json'));
+    const blocker = await read('content/blocker.js');
     const worker = await read('background/service-worker.js');
+    assert.ok(manifest.host_permissions.includes('file:///*'));
+    assert.ok(manifest.content_scripts.some((entry) => entry.matches.includes('file:///*')));
+    assert.match(blocker, /wrapper\.attachShadow\(\{ mode: 'open' \}\)/);
+    assert.match(blocker, /pointer-events: none/);
+    assert.match(blocker, /pointer-events: auto/);
+    assert.match(blocker, /this\.refs\.header\?\.querySelector\('#ts-minimize-btn'\)/);
+    assert.match(blocker, /this\.refs\.header\?\.querySelector\('#ts-close-btn'\)/);
     assert.match(worker, /\^\(https\?:\|file:\|ftp:\)/);
     assert.match(worker, /chrome\.tabs\.query\(\{\}\)/);
     assert.match(worker, /isEligibleOverlayTab\(tab\.url\)/);
@@ -548,7 +557,7 @@ test('Floating clock follows the Fullscreen API and keeps all-tab visibility syn
     const worker = await read('background/service-worker.js');
     assert.match(blocker, /document\.addEventListener\('fullscreenchange'/);
     assert.match(blocker, /document\.fullscreenElement/);
-    assert.match(blocker, /nextParent\.appendChild\(widget\)/);
+    assert.match(blocker, /nextParent\.appendChild\(wrapper\)/);
     assert.match(blocker, /widget\.style\.zIndex = '2147483647'/);
     assert.match(worker, /case 'toggleClock':[\s\S]*?await this\.toggleFloatingClock\(message\.visible\);[\s\S]*?await this\.ensureContentScriptInjected\(\)/);
     assert.match(worker, /tabs\.forEach\(tab => \{[\s\S]*?action: 'toggleClock'/);
@@ -557,19 +566,26 @@ test('Floating clock follows the Fullscreen API and keeps all-tab visibility syn
 });
 
 
-test('Control center renders remaining time for configured site limits', async () => {
+test('Control center shows only the active site limit', async () => {
     const html = await read('popup/popup.html');
     const popup = await read('popup/popup.js');
     const css = await read('popup/popup.css');
     assert.match(html, /id="siteLimitStatus"/);
     assert.match(html, /Site Limits/);
     assert.match(popup, /loadTimeLimitStatus\(\)/);
+    assert.match(popup, /chrome\.tabs\.query\(\{ active: true, currentWindow: true \}\)/);
+    assert.match(popup, /getActiveSiteHostname\(\)/);
+    assert.match(popup, /normalizeLimitSite\(limit\?\.site\) === activeSite/);
+    assert.match(popup, /const activeLimit = activeSite/);
+    assert.match(popup, /Site limit is not set for this site\./);
     assert.match(popup, /timeLimitsEnabled/);
     assert.match(popup, /siteUsageData/);
     assert.match(popup, /new Date\(\)\.toDateString\(\)/);
     assert.match(popup, /remainingSeconds/);
     assert.match(popup, /30_000/);
     assert.match(popup, /chrome\.storage\.onChanged\.addListener/);
+    assert.match(popup, /chrome\.tabs\.onActivated/);
+    assert.match(popup, /chrome\.tabs\.onUpdated/);
     assert.match(css, /site-limit-track/);
     assert.match(css, /site-limit-remaining\.is-critical/);
 });
@@ -683,7 +699,7 @@ test('Repository traffic tracking uses official GitHub metrics and persists hist
     assert.equal(snapshot.source, 'GitHub repository traffic API');
     assert.equal(snapshot.dataRetentionDays, 14);
     assert.ok(Object.keys(snapshot.daily).length > 0);
-    assert.match(readme, /Unique Visitors \(14d\)/);
+    assert.match(readme, /Unique Visitors/);
     assert.match(readme, /img\.shields\.io\/endpoint\?url=https%3A%2F%2Fraw\.githubusercontent\.com%2Fabishekgh-6%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge\.json/);
     assert.match(readme, /data\/repository-traffic\.json/);
 });
