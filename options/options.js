@@ -228,7 +228,6 @@ class OptionsManager {
             if (button) button.disabled = true;
             try {
                 await this.saveSettings();
-                this.showNotification('Settings saved successfully!', 'success');
             } catch (error) {
                 console.error('Failed to save settings:', error);
                 this.showNotification('Error saving settings', 'error');

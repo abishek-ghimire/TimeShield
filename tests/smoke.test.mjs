@@ -338,6 +338,13 @@ test('Clock geometry is broadcast and applied across open sites', async () => {
     assert.match(popupCss, /min-height:\s*38px/);
 });
 
+test('Save Settings shows one success notification per save', async () => {
+    const options = await read('options/options.js');
+    const clickHandler = options.match(/document\.getElementById\('saveSettings'\)[\s\S]*?document\.getElementById\('resetToDefaults'\)/)?.[0] || '';
+    assert.match(options, /async saveSettings\(\)[\s\S]*?this\.showNotification\('Settings saved successfully!', 'success'\)/);
+    assert.doesNotMatch(clickHandler, /Settings saved successfully!/);
+});
+
 test('Options typography and accordion defaults stay accessible and collapsed-first', async () => {
     const html = await read('options/options.html');
     assert.match(html, /Accessible typography scale/);
