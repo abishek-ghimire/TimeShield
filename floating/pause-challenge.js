@@ -1,8 +1,9 @@
 (() => {
-    const showSuccess = (pauseSection) => {
+    const showSuccess = (pauseSection, message = 'Protection has been temporarily paused.') => {
+        const ended = message === 'Nuclear Mode has ended.';
         pauseSection.innerHTML = `
-            <h3>✅ Blocking Paused</h3>
-            <p class="pause-message">Protection has been temporarily paused.</p>
+            <h3>${ended ? '✅ Nuclear Mode Ended' : '✅ Blocking Paused'}</h3>
+            <p class="pause-message">${message}</p>
         `;
         window.setTimeout(() => window.close(), 2000);
     };
@@ -142,6 +143,7 @@
             wordDisplay.textContent = challenge;
 
             const isUsageLimit = response?.pauseContext === 'usageLimit';
+            const isNuclearExit = response?.pauseContext === 'nuclearExit';
             let submittedValue = '';
             let finalConfirmationReady = false;
             let countdownTimer = null;
@@ -157,9 +159,9 @@
             };
             let sendPauseRequest = (password, confirmUsagePause = false) => {
                 chrome.runtime.sendMessage({
-                    action: 'pauseBlockingWithPassword',
+                    action: isNuclearExit ? 'completeNuclearExitWithPassword' : 'pauseBlockingWithPassword',
                     durationMs,
-                    pauseContext: isUsageLimit ? 'usageLimit' : 'general',
+                    pauseContext: isNuclearExit ? 'nuclearExit' : (isUsageLimit ? 'usageLimit' : 'general'),
                     password,
                     confirmUsagePause
                 }, (result) => {
@@ -175,7 +177,7 @@
                         return;
                     }
                     stopCountdown();
-                    showSuccess(pauseSection);
+                    showSuccess(pauseSection, isNuclearExit ? 'Nuclear Mode has ended.' : undefined);
                 });
             };
 

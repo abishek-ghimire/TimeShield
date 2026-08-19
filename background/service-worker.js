@@ -252,12 +252,26 @@ class BackgroundService {
     }
 
     normalizeNuclearSite(site) {
-        const value = String(site || '').trim().toLowerCase();
+        const value = String(site || '').trim();
         if (!value || value === '*') return '';
         try {
-            const url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+            if (/^file:\/\//i.test(value)) {
+                const fileUrl = new URL(value);
+                return fileUrl.protocol === 'file:' && fileUrl.pathname
+                    ? fileUrl.href.toLowerCase()
+                    : '';
+            }
+
+            const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(value);
+            const url = new URL(hasScheme ? value : `https://${value}`);
             if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
-            return url.hostname.replace(/^www\./, '').trim();
+
+            const hostname = url.hostname.replace(/^www\./, '').toLowerCase();
+            const hasSpecificPath = url.pathname !== '/' || url.search || url.hash;
+            if (!hasSpecificPath) return hostname;
+
+            const port = url.port ? `:${url.port}` : '';
+            return `${url.protocol}//${hostname}${port}${url.pathname}${url.search}${url.hash}`.toLowerCase();
         } catch {
             return '';
         }
@@ -267,6 +281,29 @@ class BackgroundService {
         return Array.isArray(sites)
             ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))].slice(0, 8)
             : [];
+    }
+
+    matchesNuclearWhitelist(url, whitelist = []) {
+        const target = String(url || '').trim().toLowerCase();
+        if (!target || target.startsWith('chrome://') || target.startsWith('chrome-extension://')) return false;
+        const normalizedTarget = this.normalizeNuclearSite(target);
+        if (!normalizedTarget) return false;
+
+        return this.normalizeNuclearWhitelist(whitelist).some((entry) => {
+            if (entry.startsWith('file://')) {
+                return normalizedTarget === entry;
+            }
+            if (entry.startsWith('http://') || entry.startsWith('https://')) {
+                return normalizedTarget.replace(/\/$/, '') === entry.replace(/\/$/, '');
+            }
+            try {
+                const targetUrl = new URL(/^https?:\/\//i.test(target) ? target : `https://${target}`);
+                return targetUrl.hostname.replace(/^www\./, '').toLowerCase() === entry
+                    || targetUrl.hostname.replace(/^www\./, '').toLowerCase().endsWith(`.${entry}`);
+            } catch {
+                return false;
+            }
+        });
     }
 
     getDefaultNuclearWhitelist() {
@@ -673,16 +710,12 @@ class BackgroundService {
                 sendResponse({ success: true, nuclearMode: state });
                 break;
             }
-            case 'stopNuclearMode': {
-                const allowed = await this.canRunProtectedDisable();
-                if (!allowed) {
-                    sendResponse({ success: false, error: 'PROTECTION_LOCKED' });
-                    break;
-                }
-                const state = await this.stopNuclearMode();
-                sendResponse({ success: true, nuclearMode: state });
+            case 'stopNuclearMode':
+                sendResponse({
+                    success: false,
+                    error: 'Nuclear Mode can only be ended through the verified block-page challenge.'
+                });
                 break;
-            }
             case 'getNuclearModeState': {
                 const result = await chrome.storage.local.get(['nuclearMode']);
                 const state = this.getCleanNuclearModeState(result.nuclearMode || {});
@@ -976,6 +1009,47 @@ class BackgroundService {
                 await this.updateFilters();
                 sendResponse({ success: true });
                 break;
+            case 'requestNuclearExitChallenge': {
+                const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
+                if (!this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
+                    sendResponse({ success: false, error: 'Nuclear Mode is not active.' });
+                    break;
+                }
+                const challenge = this.generatePauseChallenge();
+                await chrome.storage.local.set({
+                    pauseChallenge: {
+                        value: challenge,
+                        durationMs: 0,
+                        pauseContext: 'nuclearExit',
+                        expiresAt: Date.now() + (10 * 60 * 1000)
+                    }
+                });
+                sendResponse({
+                    success: false,
+                    requiresPassword: true,
+                    challenge,
+                    pauseContext: 'nuclearExit'
+                });
+                break;
+            }
+            case 'completeNuclearExitWithPassword': {
+                const challengeResult = await chrome.storage.local.get(['pauseChallenge']);
+                const challenge = challengeResult.pauseChallenge;
+                const submitted = String(message.password || '').replace(/\r\n?/g, '\n').trim();
+                const isValid = challenge
+                    && challenge.pauseContext === 'nuclearExit'
+                    && Date.now() < challenge.expiresAt
+                    && this.isValidPauseChallenge(submitted)
+                    && submitted === challenge.value;
+                if (!isValid) {
+                    sendResponse({ success: false, error: 'Incorrect motivational sentences or expired challenge' });
+                    break;
+                }
+                const state = await this.stopNuclearMode();
+                await chrome.storage.local.remove('pauseChallenge');
+                sendResponse({ success: true, nuclearMode: state });
+                break;
+            }
             case 'pauseBlocking': {
                 const pauseContext = message.pauseContext === 'usageLimit' ? 'usageLimit' : 'general';
                 const durationMs = Number(message.durationMs);
@@ -1579,36 +1653,39 @@ class BackgroundService {
         chrome.action.setBadgeText({ text: '' });
     }
 
-    async redirectAllTabs(blockPage, whitelist = []) {
+        async redirectAllTabs(blockPage, whitelist = []) {
         const extensionUrl = chrome.runtime.getURL(blockPage);
-        const normalizedWhitelist = whitelist.map(site => {
-            return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
-        }).filter(domain => domain);
-
+        const isNuclear = blockPage.includes('nuclear-block.html');
+        const normalizedWhitelist = isNuclear
+            ? this.normalizeNuclearWhitelist(whitelist)
+            : whitelist.map(site => String(site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim()).filter(Boolean);
         const tabs = await chrome.tabs.query({});
         for (const tab of tabs) {
             if (!tab.url) continue;
-            // Always skip extension pages, block pages already shown, local files, and PDFs
             if (tab.url.includes(blockPage)) continue;
             if (tab.url.startsWith('chrome-extension://')) continue;
             if (tab.url.startsWith('chrome://')) continue;
-            if (tab.url.startsWith('file://')) continue;
-            if (/\.pdf($|[?#])/i.test(tab.url)) continue;
 
-            let tabDomain;
-            try {
-                tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
-            } catch { continue; }
+            if (!isNuclear) {
+                if (tab.url.startsWith('file://')) continue;
+                if (/\.pdf($|[?#])/i.test(tab.url)) continue;
+                let tabDomain;
+                try {
+                    tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+                } catch { continue; }
+                if (tabDomain === 'localhost' || tabDomain === '127.0.0.1') continue;
+            }
 
-            // Always allow localhost and 127.0.0.1 regardless of whitelist
-            if (tabDomain === 'localhost' || tabDomain === '127.0.0.1') continue;
-
-            // Check if current tab is whitelisted
-            const isWhitelisted = normalizedWhitelist.some(whitelistedDomain =>
-                tabDomain === whitelistedDomain || tabDomain.endsWith('.' + whitelistedDomain)
-            );
-
-            // Only redirect non-whitelisted tabs
+            const isWhitelisted = isNuclear
+                ? this.matchesNuclearWhitelist(tab.url, normalizedWhitelist)
+                : (() => {
+                    try {
+                        const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+                        return normalizedWhitelist.some(domain => tabDomain === domain || tabDomain.endsWith(`.${domain}`));
+                    } catch {
+                        return false;
+                    }
+                })();
             if (!isWhitelisted) {
                 chrome.tabs.update(tab.id, {
                     url: `${extensionUrl}?orig=${encodeURIComponent(tab.url)}`
@@ -2043,12 +2120,12 @@ class BackgroundService {
         // Clear previous rules in this specific range first (IMPORTANT: prevents conflicts by using exactly 100 slots)
         await this.disableSiteBlockingRange(startId, startId + 99);
 
-        // Sleep and Nuclear Mode block all sites except their whitelist, localhost, and PDFs.
+        // Sleep and Nuclear Mode block all sites except their explicit allowlist.
         if ((type === 'sleep' || type === 'nuclear') && blockedSites.includes('*')) {
-            // Normalize whitelist domains
-            const normalizedWhitelist = whitelist.map(site => {
-                return site.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim();
-            }).filter(domain => domain);
+            const isNuclear = type === 'nuclear';
+            const normalizedWhitelist = isNuclear
+                ? this.normalizeNuclearWhitelist(whitelist)
+                : whitelist.map(site => String(site || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].trim()).filter(Boolean);
 
             console.log(`🔍 ${type} blocking rules:`, { originalWhitelist: whitelist, normalizedWhitelist });
 
@@ -2070,77 +2147,73 @@ class BackgroundService {
                 }
             });
 
-            // Allow PDF documents to open normally
-            rules.push({
-                id: startId + 1,
-                priority: 5,
-                action: {
-                    type: 'allow'
-                },
-                condition: {
-                    regexFilter: '^(https?|file)://.*\\.pdf($|[?#])',
-                    resourceTypes: ['main_frame']
+            // Sleep Mode keeps its historical PDF exception. Nuclear Mode
+            // requires every PDF or local file to be listed explicitly.
+            if (!isNuclear) {
+                rules.push({
+                    id: startId + 1,
+                    priority: 5,
+                    action: { type: 'allow' },
+                    condition: {
+                        regexFilter: '^(https?|file)://.*\\.pdf($|[?#])',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+            }
+
+            // Create precise allow rules for Nuclear domains, links, and files.
+            normalizedWhitelist.forEach((entry, index) => {
+                const rule = {
+                    id: startId + 1 + index,
+                    priority: 4,
+                    action: { type: 'allow' },
+                    condition: { resourceTypes: ['main_frame'] }
+                };
+                if (isNuclear && (entry.startsWith('file://') || entry.startsWith('http://') || entry.startsWith('https://'))) {
+                    const escapedEntry = entry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    rule.condition.regexFilter = `^${escapedEntry}/?(?:[?#].*)?$`;
+                } else {
+                    rule.condition.urlFilter = `||${entry}^`;
+                    rule.condition.isUrlFilterCaseSensitive = false;
                 }
+                rules.push(rule);
             });
 
-            // Create separate rules to allow whitelisted domains
-            normalizedWhitelist.forEach((domain, index) => {
-                if (domain) {
-                    rules.push({
-                        id: startId + 2 + index,
-                        priority: 4, // Higher priority to override blocking
-                        action: {
-                            type: 'allow'
-                        },
-                        condition: {
-                            urlFilter: `||${domain}^`,
-                            resourceTypes: ['main_frame']
-                        }
-                    });
-                }
-            });
+            if (!isNuclear) {
+                // Sleep Mode keeps localhost and local-development access available.
+                const localhostRuleId = startId + normalizedWhitelist.length + 2;
+                rules.push({
+                    id: localhostRuleId,
+                    priority: 4,
+                    action: { type: 'allow' },
+                    condition: {
+                        urlFilter: '||localhost^',
+                        resourceTypes: ['main_frame']
+                    }
+                });
 
-            // Add rule for localhost (127.0.0.1 and localhost variants)
-            const localhostRuleId = startId + normalizedWhitelist.length + 2;
-            rules.push({
-                id: localhostRuleId,
-                priority: 4, // Higher priority to override blocking
-                action: {
-                    type: 'allow'
-                },
-                condition: {
-                    urlFilter: '||localhost^',
-                    resourceTypes: ['main_frame']
-                }
-            });
+                const ipRuleId = startId + normalizedWhitelist.length + 3;
+                rules.push({
+                    id: ipRuleId,
+                    priority: 4,
+                    action: { type: 'allow' },
+                    condition: {
+                        urlFilter: '||127.0.0.1^',
+                        resourceTypes: ['main_frame']
+                    }
+                });
 
-            // Add rule for 127.0.0.1
-            const ipRuleId = startId + normalizedWhitelist.length + 3;
-            rules.push({
-                id: ipRuleId,
-                priority: 4, // Higher priority to override blocking
-                action: {
-                    type: 'allow'
-                },
-                condition: {
-                    urlFilter: '||127.0.0.1^',
-                    resourceTypes: ['main_frame']
-                }
-            });
-
-            // Add rule for local development ports (localhost:3000, localhost:8080, etc.)
-            const localDevRuleId = startId + normalizedWhitelist.length + 4;
-            rules.push({
-                id: localDevRuleId,
-                priority: 4, // Higher priority to override blocking
-                action: {
-                    type: 'allow'
-                },
-                condition: {
-                    regexFilter: '^https?://(localhost|127\\.0\\.0\\.1):\\d+',
-                    resourceTypes: ['main_frame']
-                }
-            });
+                const localDevRuleId = startId + normalizedWhitelist.length + 4;
+                rules.push({
+                    id: localDevRuleId,
+                    priority: 4,
+                    action: { type: 'allow' },
+                    condition: {
+                        regexFilter: '^https?://(localhost|127\\.0\\.0\\.1):\\d+',
+                        resourceTypes: ['main_frame']
+                    }
+                });
+            }
 
             await chrome.declarativeNetRequest.updateDynamicRules({ addRules: rules });
             return;

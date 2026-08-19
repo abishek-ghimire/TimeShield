@@ -41,7 +41,7 @@
 
             <div id="nuclearActiveView" class="nuclear-active-row" hidden>
                 <span id="nuclearCountdown" class="nuclear-countdown" aria-live="polite"></span>
-                <button id="nuclearStop" class="btn btn-secondary" type="button">Stop</button>
+                <span class="nuclear-exit-hint">Exit from the Nuclear block page</span>
             </div>
 
             <div class="popup-utility-row">
@@ -145,6 +145,37 @@
 
 
         </main>
+    </div>
+
+    <div id="nuclearSetupModal" class="nuclear-setup-modal" hidden role="dialog" aria-modal="true" aria-labelledby="nuclearSetupTitle">
+        <div class="nuclear-setup-dialog">
+            <div class="nuclear-setup-header">
+                <div>
+                    <p class="nuclear-kicker">☢ Nuclear Mode</p>
+                    <h2 id="nuclearSetupTitle">Set up a protected session</h2>
+                </div>
+                <button id="nuclearSetupClose" class="nuclear-dialog-close" type="button" aria-label="Close Nuclear Mode setup">×</button>
+            </div>
+            <p class="nuclear-setup-copy">Choose how long protection should run and add every website, link, or local file that must remain available. Nothing is allowed until it is listed here.</p>
+            <div class="nuclear-form-row">
+                <label>Hours<input id="nuclearHours" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+                <label>Minutes<input id="nuclearMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="0"></label>
+            </div>
+            <div class="nuclear-entry-row">
+                <label for="nuclearEntry">Allowed site, link, or file URL</label>
+                <div class="nuclear-entry-controls">
+                    <input id="nuclearEntry" type="text" autocomplete="off" spellcheck="false" placeholder="example.com or file:///path/to/file.pdf">
+                    <button id="nuclearAddEntry" class="btn btn-secondary" type="button">Add</button>
+                </div>
+                <button id="nuclearUseCurrentTab" class="nuclear-current-tab" type="button">＋ Use current tab</button>
+            </div>
+            <div id="nuclearEntryList" class="nuclear-entry-list" aria-live="polite"></div>
+            <p id="nuclearSetupError" class="nuclear-setup-error" role="alert" hidden></p>
+            <div class="nuclear-dialog-actions">
+                <button id="nuclearSetupCancel" class="btn btn-secondary" type="button">Not yet</button>
+                <button id="nuclearSetupStart" class="btn btn-nuclear" type="button">Continue to warning</button>
+            </div>
+        </div>
     </div>
 
     <script src="popup.js"></script>

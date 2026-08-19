@@ -214,6 +214,16 @@
                 <button class="duration-btn" data-minutes="180">3 hours</button>
             </div>
             <button class="cancel-pause-btn" id="cancelPauseBtn">Cancel</button>
+            <button class="duration-btn nuclear-exit-link" id="showNuclearExitBtn" type="button">End Nuclear Mode with verification</button>
+        </div>
+
+        <div id="nuclearExitSection" class="pause-duration-section" style="display: none;">
+            <h3>☢️ End Nuclear Mode</h3>
+            <p class="pause-message">Ending this session requires a verification challenge. Continue only if the work that matters is complete or the interruption is genuinely necessary.</p>
+            <div class="pause-challenge-actions" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                <button class="duration-btn" id="startNuclearExitVerification" type="button">Continue to verification</button>
+                <button class="cancel-pause-btn" id="cancelNuclearExit" type="button">Stay focused</button>
+            </div>
         </div>
     </div>
 

@@ -20,6 +20,10 @@ class NuclearBlockPage {
         const pauseBtn = document.getElementById('pauseBlockBtn');
         const pauseSection = document.getElementById('pauseDurationSection');
         const cancelBtn = document.getElementById('cancelPauseBtn');
+        const exitLink = document.getElementById('showNuclearExitBtn');
+        const exitSection = document.getElementById('nuclearExitSection');
+        const startExitBtn = document.getElementById('startNuclearExitVerification');
+        const cancelExitBtn = document.getElementById('cancelNuclearExit');
         if (!pauseBtn || !pauseSection) return;
 
         pauseBtn.addEventListener('click', () => {
@@ -32,7 +36,38 @@ class NuclearBlockPage {
             pauseBtn.style.display = 'flex';
         });
 
-        document.querySelectorAll('.duration-btn').forEach((btn) => {
+        exitLink?.addEventListener('click', () => {
+            pauseSection.style.display = 'none';
+            if (exitSection) exitSection.style.display = 'block';
+        });
+
+        cancelExitBtn?.addEventListener('click', () => {
+            if (exitSection) exitSection.style.display = 'none';
+            pauseSection.style.display = 'block';
+        });
+
+        startExitBtn?.addEventListener('click', () => {
+            startExitBtn.disabled = true;
+            chrome.runtime.sendMessage({ action: 'requestNuclearExitChallenge' }, (response) => {
+                startExitBtn.disabled = false;
+                if (chrome.runtime.lastError) {
+                    if (exitSection) exitSection.innerHTML = `<h3>Unable to open verification</h3><p class="pause-message">${chrome.runtime.lastError.message}</p>`;
+                    return;
+                }
+                if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge?.render === 'function') {
+                    window.TimeShieldPauseChallenge.render({
+                        pauseSection: exitSection,
+                        pauseButton: pauseBtn,
+                        response,
+                        durationMs: 0
+                    });
+                    return;
+                }
+                if (exitSection) exitSection.innerHTML = `<h3>Unable to open verification</h3><p class="pause-message">${response?.error || 'Please try again.'}</p>`;
+            });
+        });
+
+        document.querySelectorAll('.duration-btn[data-minutes]').forEach((btn) => {
             btn.addEventListener('click', async () => {
                 const durationMs = Number(btn.dataset.minutes) * 60000;
                 const messageEl = pauseSection.querySelector('.pause-message');

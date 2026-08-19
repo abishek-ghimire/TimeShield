@@ -22,7 +22,8 @@ class PopupController {
             timeFormat: '12h',
             timeLimitInterval: null,
             nuclearInterval: null,
-            nuclearState: null
+            nuclearState: null,
+            nuclearDraft: []
         };
 
         this.init();
@@ -87,8 +88,19 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
-        bind('nuclearToggle', () => this.handleNuclearMode());
-        bind('nuclearStop', () => this.stopNuclearMode());
+        bind('nuclearToggle', () => this.openNuclearSetup());
+
+        document.getElementById('nuclearSetupClose')?.addEventListener('click', () => this.closeNuclearSetup());
+        document.getElementById('nuclearSetupCancel')?.addEventListener('click', () => this.closeNuclearSetup());
+        document.getElementById('nuclearAddEntry')?.addEventListener('click', () => this.addNuclearDraftEntry());
+        document.getElementById('nuclearUseCurrentTab')?.addEventListener('click', () => this.addCurrentTabToNuclearDraft());
+        document.getElementById('nuclearSetupStart')?.addEventListener('click', () => this.startNuclearFromSetup());
+        document.getElementById('nuclearEntry')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                this.addNuclearDraftEntry();
+            }
+        });
 
         this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
@@ -522,59 +534,171 @@ class PopupController {
         this.state.nuclearInterval = setInterval(update, 1000);
     }
 
-    async handleNuclearMode() {
+    normalizeNuclearDraftEntry(value) {
+        const raw = String(value || '').trim();
+        if (!raw || raw === '*') return '';
+        try {
+            if (/^file:\/\//i.test(raw)) {
+                const fileUrl = new URL(raw);
+                return fileUrl.protocol === 'file:' && fileUrl.pathname ? fileUrl.href.toLowerCase() : '';
+            }
+            const hasScheme = /^[a-z][a-z\\d+.-]*:\/\//i.test(raw);
+            const url = new URL(hasScheme ? raw : `https://${raw}`);
+            if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
+            const hostname = url.hostname.replace(/^www\\./, '').toLowerCase();
+            const hasSpecificPath = url.pathname !== '/' || url.search || url.hash;
+            if (!hasSpecificPath && !url.port) return hostname;
+            const port = url.port ? `:${url.port}` : '';
+            return `${url.protocol}//${hostname}${port}${url.pathname}${url.search}${url.hash}`.toLowerCase();
+        } catch {
+            return '';
+        }
+    }
+
+    renderNuclearDraft() {
+        const list = document.getElementById('nuclearEntryList');
+        if (!list) return;
+        list.replaceChildren();
+        this.state.nuclearDraft.forEach((entry) => {
+            const chip = document.createElement('span');
+            chip.className = 'nuclear-entry-chip';
+            const label = document.createElement('span');
+            label.textContent = entry;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'nuclear-entry-remove';
+            remove.setAttribute('aria-label', `Remove ${entry}`);
+            remove.textContent = '×';
+            remove.addEventListener('click', () => {
+                this.state.nuclearDraft = this.state.nuclearDraft.filter(item => item !== entry);
+                this.renderNuclearDraft();
+            });
+            chip.append(label, remove);
+            list.appendChild(chip);
+        });
+    }
+
+    setNuclearSetupError(message = '') {
+        const error = document.getElementById('nuclearSetupError');
+        if (!error) return;
+        error.textContent = message;
+        error.hidden = !message;
+    }
+
+    async openNuclearSetup() {
         const state = this.state.nuclearState || await this.loadNuclearModeState();
         if (state?.isActive === true && Number(state.endTime) > Date.now()) {
-            await this.stopNuclearMode();
+            this.showToast('Nuclear Mode is active. Use the Nuclear block page to exit it.');
             return;
         }
+        this.state.nuclearDraft = Array.isArray(state?.whitelist)
+            ? [...new Set(state.whitelist.map(entry => this.normalizeNuclearDraftEntry(entry)).filter(Boolean))].slice(0, 8)
+            : [];
+        document.getElementById('nuclearHours').value = '';
+        document.getElementById('nuclearMinutes').value = '';
+        this.setNuclearSetupError('');
+        this.renderNuclearDraft();
+        const modal = document.getElementById('nuclearSetupModal');
+        if (modal) modal.hidden = false;
+        document.getElementById('nuclearHours')?.focus();
+    }
 
-        const savedDurationSeconds = Math.floor(Number(state?.duration) || 0);
-        const durationSeconds = savedDurationSeconds > 0 ? savedDurationSeconds : 25 * 60;
-        const hours = Math.floor(durationSeconds / 3600);
-        const minutes = Math.floor((durationSeconds % 3600) / 60);
-        if (durationSeconds <= 0) {
-            this.showToast('Choose at least one minute for Nuclear Mode.');
+    closeNuclearSetup() {
+        const modal = document.getElementById('nuclearSetupModal');
+        if (modal) modal.hidden = true;
+        this.setNuclearSetupError('');
+    }
+
+    addNuclearDraftEntry(value = document.getElementById('nuclearEntry')?.value) {
+        const normalized = this.normalizeNuclearDraftEntry(value);
+        if (!normalized) {
+            this.setNuclearSetupError('Enter a valid domain, http or https link, or file URL.');
+            return false;
+        }
+        if (this.state.nuclearDraft.includes(normalized)) {
+            this.setNuclearSetupError('That entry is already in the allowed list.');
+            return false;
+        }
+        if (this.state.nuclearDraft.length >= 8) {
+            this.setNuclearSetupError('The allowed list is full. Remove an entry before adding another.');
+            return false;
+        }
+        this.state.nuclearDraft.push(normalized);
+        const input = document.getElementById('nuclearEntry');
+        if (input) input.value = '';
+        this.setNuclearSetupError('');
+        this.renderNuclearDraft();
+        return true;
+    }
+
+    async addCurrentTabToNuclearDraft() {
+        try {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            const currentUrl = tabs?.[0]?.url || '';
+            if (!this.addNuclearDraftEntry(currentUrl)) return;
+            this.showToast('Current tab added to the Nuclear allowlist.');
+        } catch (error) {
+            this.setNuclearSetupError('The current tab could not be added. Enter its URL manually.');
+        }
+    }
+
+    async startNuclearFromSetup() {
+        const hoursInput = document.getElementById('nuclearHours');
+        const minutesInput = document.getElementById('nuclearMinutes');
+        const hours = Number(hoursInput?.value || 0);
+        const minutes = Number(minutesInput?.value || 0);
+        if (!Number.isInteger(hours) || hours < 0 || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) {
+            this.setNuclearSetupError('Enter whole hours and 0–59 minutes.');
             return;
         }
-        const whitelist = Array.isArray(state?.whitelist) ? state.whitelist : [];
-        if (!whitelist.length) {
-            this.showToast('Add at least one allowed site before activating Nuclear Mode.');
+        const durationSeconds = (hours * 3600) + (minutes * 60);
+        if (durationSeconds <= 0) {
+            this.setNuclearSetupError('Choose how long Nuclear Mode should run.');
+            return;
+        }
+        if (!this.state.nuclearDraft.length) {
+            this.setNuclearSetupError('Add at least one allowed site, link, or file before continuing.');
             return;
         }
 
         const ready = await this.showNuclearStartWarning(hours, minutes);
         if (!ready) return;
+        const startButton = document.getElementById('nuclearSetupStart');
+        if (startButton) startButton.disabled = true;
         try {
             const response = await chrome.runtime.sendMessage({
                 action: 'startNuclearMode',
                 duration: durationSeconds,
-                whitelist
+                whitelist: [...this.state.nuclearDraft]
             });
             if (response?.success === false) throw new Error(response.error || 'Unable to start Nuclear Mode');
+            this.closeNuclearSetup();
             await this.loadNuclearModeState();
+            this.showToast('Nuclear Mode is active.');
         } catch (error) {
             console.error('Failed to start Nuclear Mode:', error);
-            this.showToast(error.message || 'Unable to start Nuclear Mode.');
+            this.setNuclearSetupError(error.message || 'Unable to start Nuclear Mode.');
+        } finally {
+            if (startButton) startButton.disabled = false;
         }
+    }
+
+    async handleNuclearMode() {
+        return this.openNuclearSetup();
     }
 
     async stopNuclearMode() {
-        const canStop = await this.runProtectionSequence('Stop Nuclear Mode');
-        if (!canStop) return;
-        await chrome.runtime.sendMessage({ action: 'authorizeDisableActions', ttlMs: 45000 });
-        const response = await chrome.runtime.sendMessage({ action: 'stopNuclearMode' });
-        if (response?.success === false) {
-            this.showToast(response.error || 'Nuclear Mode is still active.');
-            return;
-        }
-        await this.loadNuclearModeState();
-        this.showToast('Nuclear Mode stopped.');
+        this.showToast('Use the Nuclear block page and complete verification to exit.');
     }
 
     showNuclearStartWarning(hours, minutes) {
-        const totalMinutes = (Math.max(0, Number(hours) || 0) * 60) + Math.max(0, Number(minutes) || 0);
-        return this.showFocusStartWarning(totalMinutes, 'Nuclear Mode');
+        const safeHours = Math.max(0, Number(hours) || 0);
+        const safeMinutes = Math.max(0, Number(minutes) || 0);
+        const totalMinutes = (safeHours * 60) + safeMinutes;
+        const parts = [];
+        if (safeHours) parts.push(`${safeHours} hour${safeHours === 1 ? '' : 's'}`);
+        if (safeMinutes) parts.push(`${safeMinutes} minute${safeMinutes === 1 ? '' : 's'}`);
+        return this.showFocusStartWarning(totalMinutes, 'Nuclear Mode', parts.join(' '));
     }
 
     async handleFocusMode() {
@@ -626,7 +750,7 @@ class PopupController {
         }
     }
 
-    showFocusStartWarning(durationMinutes, modeName = 'Focus Mode') {
+    showFocusStartWarning(durationMinutes, modeName = 'Focus Mode', durationLabel = '') {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.style.cssText = `
@@ -643,7 +767,7 @@ class PopupController {
                     box-shadow: 0 20px 60px rgba(0,0,0,.45);">
                     <h2 style="margin:0 0 10px; font-size:1.15rem;">${warningHeading}</h2>
                     <p style="margin:0 0 12px; color:#cbd5e1; line-height:1.5; font-size:.9rem;">
-                        ${modeName} will begin immediately and enforce your protection settings for ${durationMinutes} minutes.
+                        ${modeName} will begin immediately and enforce your protection settings for ${durationLabel || `${durationMinutes} minutes`}.
                     </p>
                     <ul style="margin:0 0 18px; padding-left:20px; color:#cbd5e1; line-height:1.6; font-size:.85rem;">
                         <li>Save documents and submit any pending work.</li>

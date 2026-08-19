@@ -24,7 +24,7 @@ TimeShield brings a floating clock, focus sessions, website blocking, scheduled 
 | 🔢 Flip Clock | Opens a dedicated split-flap clock in a separate browser tab |
 | ⏱️ Timers | Run timers directly from the extension |
 | 🎯 Focus Mode | Restricts selected websites during focused work sessions |
-| ☢️ Nuclear Mode | Timed allowlist protection with up to 8 approved sites, hour-and-minute duration, save-work warning, dedicated block page, pause verification, and automatic expiry |
+| ☢️ Nuclear Mode | Strict timed allowlist protection with explicit website, link, or local-file entries, hour-and-minute duration, save-work warning, dedicated block page, verified pause-based exit, and automatic expiry |
 | 📅 Scheduled Blocking | Blocks configured websites during selected days and times |
 | 🌙 Sleep Protection | Applies a separate protection list, including schedules crossing midnight |
 | ⏳ Usage Limits | Set daily limits for individual websites |
@@ -202,20 +202,22 @@ Pause requests are deliberate. The first two eligible one-minute general pauses 
 
 ## Nuclear Mode
 
-Nuclear Mode is an opt-in, all-sites protection session for times when ordinary blocking is not strict enough. It creates a temporary allowlist: only explicitly approved websites can be opened, while every other website is redirected to a dedicated Nuclear Mode block page until the session ends.
+Nuclear Mode is an opt-in, all-sites protection session for times when ordinary blocking is not strict enough. It creates a temporary allowlist: only explicitly approved entries can be opened, while every other website and local file is redirected to a dedicated Nuclear Mode block page until the session ends.
 
-The Nuclear Mode controls are available directly in the control panel and include the following capabilities:
+Nuclear Mode requires deliberate setup before every session:
 
 | Capability | Description |
 | --- | --- |
-| **Timed protection** | Select the session length using separate hour and minute fields. |
-| **Small allowlist** | Add up to eight approved domains and remove them before or during a session. |
-| **Save-work warning** | Review a warning to save files and finish urgent work before activation. |
-| **Dedicated block page** | See a Nuclear Mode-specific restriction screen on every non-whitelisted site. |
-| **Deliberate pause flow** | Request a short pause from the block page and complete the existing verification challenge when required. |
-| **Automatic expiry** | Let the session end automatically or stop it from the control panel, with protection rules cleaned up afterward. |
+| **Explicit duration** | Choose a positive session length using separate hour and minute fields. There is no hidden 25-minute fallback. |
+| **Eight-entry allowlist** | Add up to eight approved entries before activation. The control accepts bare domains, exact HTTP/HTTPS links, and exact `file://` URLs for local documents when browser file access is enabled. |
+| **Current-tab capture** | Add the currently open website or local file directly from the activation dialog. |
+| **Save-work warning** | Review a warning to save files, finish downloads, and complete urgent work before activation. |
+| **Strict enforcement** | Only the entries listed for that session bypass Nuclear Mode; unlisted sites, links, and files remain blocked. |
+| **Dedicated block page** | See a Nuclear Mode-specific restriction screen on every non-whitelisted destination. |
+| **Verified pause flow** | Request a short pause from the block page, or choose the protected end-session path from inside Pause Blocks. Manual exit requires the lowercase motivational challenge. |
+| **Automatic expiry** | Let the selected session end automatically, with Nuclear Mode rules and redirected tabs cleaned up afterward. |
 
-Nuclear Mode does not activate automatically. It starts only after an explicit control-panel action and a valid duration and allowlist are provided.
+Nuclear Mode does not activate automatically. Clicking the control-panel button opens the setup dialog and requires both a positive duration and at least one explicit allowlist entry before the save-work warning can be confirmed. There is no direct Stop button in the control panel; ending an active session manually must begin from the Nuclear block page and pass verification.
 
 ---
 
