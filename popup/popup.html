@@ -109,25 +109,19 @@
                     <span class="icon">☢️</span> Nuclear Mode
                     <span id="nuclearModeStatus" class="nuclear-mode-status">inactive</span>
                 </div>
-                <div id="nuclearSetup">
+                <button id="nuclearExpand" class="btn btn-nuclear nuclear-expand" type="button"
+                    aria-controls="nuclearSetup" aria-expanded="false">Open Nuclear Mode</button>
+                <div id="nuclearSetup" hidden>
                     <div class="nuclear-duration-row">
                         <label>Hours <input type="number" id="nuclearHours" min="0" max="99" value="0"></label>
                         <label>Minutes <input type="number" id="nuclearMinutes" min="0" max="59" value="25"></label>
                     </div>
-                    <div class="nuclear-whitelist-heading">
-                        <span>Allowed sites <small>(up to 8)</small></span>
-                        <span id="nuclearWhitelistCount">0/8</span>
-                    </div>
-                    <div id="nuclearWhitelist" class="nuclear-whitelist" aria-live="polite"></div>
-                    <div class="nuclear-add-row">
-                        <input type="text" id="nuclearSiteInput" placeholder="example.com" autocomplete="off">
-                        <button id="nuclearAddSite" class="btn btn-secondary">Add</button>
-                    </div>
-                    <button id="nuclearToggle" class="btn btn-nuclear">Activate Nuclear Mode</button>
+                    <p class="nuclear-settings-note">Allowed sites are managed in Settings.</p>
+                    <button id="nuclearToggle" class="btn btn-nuclear" type="button">Activate Nuclear Mode</button>
                 </div>
-                <div id="nuclearActiveView" style="display:none;">
+                <div id="nuclearActiveView" hidden>
                     <div id="nuclearCountdown" class="nuclear-countdown" aria-live="polite"></div>
-                    <button id="nuclearStop" class="btn btn-secondary">Stop Nuclear Mode</button>
+                    <button id="nuclearStop" class="btn btn-secondary" type="button">Stop Nuclear Mode</button>
                 </div>
             </section>
 

@@ -22,7 +22,8 @@ class PopupController {
             timeFormat: '12h',
             timeLimitInterval: null,
             nuclearInterval: null,
-            nuclearState: null
+            nuclearState: null,
+            nuclearExpanded: false
         };
 
         this.init();
@@ -87,16 +88,9 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
-        bind('nuclearAddSite', () => this.addNuclearWhitelistSite());
+        bind('nuclearExpand', () => this.toggleNuclearSetup());
         bind('nuclearToggle', () => this.handleNuclearMode());
         bind('nuclearStop', () => this.stopNuclearMode());
-
-        document.getElementById('nuclearSiteInput')?.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                document.getElementById('nuclearAddSite')?.click();
-            }
-        });
 
         this.elements.timerMinutes?.addEventListener('input', () => this.syncTimerInputs());
         this.elements.timerSeconds?.addEventListener('input', () => this.syncTimerInputs());
@@ -487,19 +481,31 @@ class PopupController {
             whitelist: []
         };
         this.state.nuclearState = state;
-        this.renderNuclearWhitelist(state.whitelist);
 
         const endTime = Number(state.endTime);
         const active = state.isActive === true && Number.isFinite(endTime) && endTime > Date.now();
         const status = document.getElementById('nuclearModeStatus');
+        const expand = document.getElementById('nuclearExpand');
         const setup = document.getElementById('nuclearSetup');
         const activeView = document.getElementById('nuclearActiveView');
         if (status) {
             status.textContent = active ? 'active' : 'inactive';
             status.classList.toggle('is-active', active);
         }
-        if (setup) setup.style.display = active ? 'none' : 'block';
-        if (activeView) activeView.style.display = active ? 'block' : 'none';
+        if (active) {
+            this.state.nuclearExpanded = false;
+            if (expand) expand.hidden = true;
+            if (setup) setup.hidden = true;
+            if (activeView) activeView.hidden = false;
+        } else {
+            if (expand) {
+                expand.hidden = false;
+                expand.textContent = this.state.nuclearExpanded ? 'Hide Nuclear Mode' : 'Open Nuclear Mode';
+                expand.setAttribute('aria-expanded', String(this.state.nuclearExpanded));
+            }
+            if (setup) setup.hidden = !this.state.nuclearExpanded;
+            if (activeView) activeView.hidden = true;
+        }
 
         if (active) this.startNuclearInterval(state);
         else if (this.state.nuclearInterval) {
@@ -509,35 +515,14 @@ class PopupController {
         return state;
     }
 
-    renderNuclearWhitelist(whitelist = []) {
-        const container = document.getElementById('nuclearWhitelist');
-        const count = document.getElementById('nuclearWhitelistCount');
-        const sites = [...new Set((Array.isArray(whitelist) ? whitelist : [])
-            .map(site => String(site || '').trim().toLowerCase().replace(/^www\./, ''))
-            .filter(Boolean))].slice(0, 8);
-        if (count) count.textContent = `${sites.length}/8`;
-        if (!container) return;
-        container.replaceChildren();
-        if (!sites.length) {
-            const empty = document.createElement('span');
-            empty.className = 'site-limit-empty';
-            empty.textContent = 'Add at least one site.';
-            container.appendChild(empty);
-            return;
-        }
-        sites.forEach((site) => {
-            const chip = document.createElement('span');
-            chip.className = 'nuclear-site-chip';
-            const label = document.createElement('span');
-            label.textContent = site;
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.textContent = '×';
-            remove.setAttribute('aria-label', `Remove ${site}`);
-            remove.addEventListener('click', () => this.removeNuclearWhitelistSite(site));
-            chip.append(label, remove);
-            container.appendChild(chip);
-        });
+    toggleNuclearSetup() {
+        const setup = document.getElementById('nuclearSetup');
+        const expand = document.getElementById('nuclearExpand');
+        if (!setup || !expand) return;
+        this.state.nuclearExpanded = setup.hidden;
+        setup.hidden = !this.state.nuclearExpanded;
+        expand.textContent = this.state.nuclearExpanded ? 'Hide Nuclear Mode' : 'Open Nuclear Mode';
+        expand.setAttribute('aria-expanded', String(this.state.nuclearExpanded));
     }
 
     formatNuclearRemaining(seconds) {
@@ -562,39 +547,6 @@ class PopupController {
         };
         update();
         this.state.nuclearInterval = setInterval(update, 1000);
-    }
-
-    async addNuclearWhitelistSite() {
-        const input = document.getElementById('nuclearSiteInput');
-        const site = input?.value.trim();
-        if (!site) {
-            this.showToast('Enter a website domain first.');
-            return;
-        }
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'addNuclearWhitelistSite', site });
-            if (response?.success === false) throw new Error(response.error || 'Unable to add site');
-            if (input) input.value = '';
-            await this.loadNuclearModeState();
-            this.showToast('Allowed site added.');
-        } catch (error) {
-            console.error('Failed to add Nuclear Mode site:', error);
-            this.showToast(error.message || 'Unable to add that site.');
-        }
-    }
-
-    async removeNuclearWhitelistSite(site) {
-        const current = this.state.nuclearState;
-        if (current?.isActive) return;
-        try {
-            const response = await chrome.runtime.sendMessage({ action: 'removeNuclearWhitelistSite', site });
-            if (response?.success === false) throw new Error(response.error || 'Unable to remove site');
-            await this.loadNuclearModeState();
-            this.showToast('Allowed site removed.');
-        } catch (error) {
-            console.error('Failed to remove Nuclear Mode site:', error);
-            this.showToast('Unable to remove that site.');
-        }
     }
 
     async handleNuclearMode() {

@@ -1613,3 +1613,88 @@ body.theme-light .popup-header #toggleFormat:focus-visible {
 }
 
 .nuclear-card:has(#nuclearActiveView:not([style*="display: none"])) #nuclearSetup { display: none; }
+
+
+/* Simplified Nuclear Mode control-panel view */
+.nuclear-card {
+    padding: 8px 10px !important;
+    min-height: 0;
+}
+
+.nuclear-card [hidden] {
+    display: none !important;
+}
+
+.nuclear-card .card-title {
+    margin-bottom: 6px;
+}
+
+.nuclear-expand,
+.nuclear-card .btn-nuclear {
+    width: 100%;
+    min-height: 30px;
+    margin-top: 0;
+    padding: 6px 9px;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-radius: 7px;
+    background: linear-gradient(135deg, #9a4d05, #c56608);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.nuclear-expand:hover,
+.nuclear-expand:focus-visible,
+.nuclear-card .btn-nuclear:hover,
+.nuclear-card .btn-nuclear:focus-visible {
+    background: linear-gradient(135deg, #b45b08, #e07b0c);
+    border-color: rgba(251, 191, 36, 0.82);
+}
+
+.nuclear-card #nuclearSetup {
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(245, 158, 11, 0.18);
+}
+
+.nuclear-settings-note {
+    margin: 5px 0 7px;
+    color: var(--text-muted);
+    font-size: 0.64rem;
+    line-height: 1.3;
+    text-align: center;
+}
+
+.nuclear-card #nuclearToggle {
+    margin-top: 0;
+}
+
+.nuclear-card #nuclearActiveView {
+    margin-top: 3px;
+}
+
+.nuclear-card #nuclearStop {
+    width: 100%;
+}
+
+body.theme-light .nuclear-card {
+    border-color: #e0a43b;
+    background: #fffdf7;
+}
+
+body.theme-light .nuclear-settings-note {
+    color: #657084;
+}
+
+body.theme-light .nuclear-expand,
+body.theme-light .nuclear-card .btn-nuclear {
+    color: #fff;
+}
+
+@media (max-width: 360px) {
+    .nuclear-expand,
+    .nuclear-card .btn-nuclear {
+        min-height: 32px;
+    }
+}

@@ -490,9 +490,14 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /disableSiteBlockingRange\(501, 600\)/);
     assert.match(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
     assert.match(popup, /id="nuclearCard"/);
+    assert.match(popup, /id="nuclearExpand"/);
+    assert.match(popup, /aria-controls="nuclearSetup"/);
+    assert.match(popup, /id="nuclearSetup" hidden/);
     assert.match(popup, /id="nuclearHours"/);
     assert.match(popup, /id="nuclearMinutes"/);
-    assert.match(popup, /id="nuclearWhitelist"/);
+    assert.doesNotMatch(popup, /id="nuclearWhitelist"/);
+    assert.doesNotMatch(popup, /id="nuclearSiteInput"/);
+    assert.match(popupJs, /toggleNuclearSetup/);
     assert.match(popupJs, /handleNuclearMode/);
     assert.match(popupJs, /showNuclearStartWarning/);
     assert.match(options, /id="acc-foc-nuclear"/);
