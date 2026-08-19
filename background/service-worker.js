@@ -68,6 +68,7 @@ class BackgroundService {
         await this.migrateNuclearWhitelistDefaults();
         await this.migrateOldSettings();
         await this.clearLegacyAutomaticProtection();
+        await this.clearLegacyDynamicTabScopedRules();
         await this.restoreState();
         await this.initializeAdBlocking();
         await this.checkScheduledBlocking(); // Ensure scheduled blocking is enforced on startup
@@ -2639,6 +2640,25 @@ class BackgroundService {
             this._onCommittedHandler = null;
         }
         console.log('Deep Work Strict Mode disabled - chrome://extensions access restored');
+    }
+
+    async clearLegacyDynamicTabScopedRules() {
+        try {
+            const dynamicRules = await chrome.declarativeNetRequest.getDynamicRules();
+            const legacyRuleIds = dynamicRules
+                .filter(rule => rule?.condition && (
+                    Array.isArray(rule.condition.tabIds)
+                    || Array.isArray(rule.condition.excludedTabIds)
+                ))
+                .map(rule => rule.id)
+                .filter(id => Number.isInteger(id));
+            if (legacyRuleIds.length > 0) {
+                await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: legacyRuleIds });
+                console.info('TimeShield: removed legacy dynamic tab-scoped DNR rules', legacyRuleIds);
+            }
+        } catch (error) {
+            console.warn('TimeShield: unable to remove legacy dynamic tab-scoped DNR rules', error);
+        }
     }
 
     async clearLegacyAutomaticProtection() {
