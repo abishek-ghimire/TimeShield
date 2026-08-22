@@ -55,7 +55,7 @@ The control panel brings the main actions together in one compact view. It shows
 
 ### Control Center
 
-![TimeShield Control Panel](assets/screenshots/control-panel.png)
+![TimeShield Control Center with Nuclear Mode](assets/screenshots/control-panel.png)
 
 ### General Settings
 
