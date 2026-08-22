@@ -873,7 +873,7 @@ test('README links to the real release without a Visit Repository badge', async 
     assert.doesNotMatch(readme, /\[!\[Visit Repository\]/);
     assert.doesNotMatch(readme, /smoke%20tests|smoke tests-49/);
     assert.match(readme, /https:\/\/github\.com\/abishek-ghimire\/TimeShield\)/);
-    assert.match(readme, /releases\/download\/v2\.3\.3\/TimeShield-v2\.3\.3\.zip/);
+    assert.match(readme, /releases\/download\/v2\.3\.4\/TimeShield-v2\.3\.4\.zip/);
 });
 
 

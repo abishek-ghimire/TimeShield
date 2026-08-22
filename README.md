@@ -14,7 +14,7 @@ TimeShield does not require an account or cloud synchronization for its core fea
 | Source repository | [github.com/abishek-ghimire/TimeShield](https://github.com/abishek-ghimire/TimeShield) |
 | Issues and feature requests | [Open an issue](https://github.com/abishek-ghimire/TimeShield/issues) |
 | Releases | [View GitHub Releases](https://github.com/abishek-ghimire/TimeShield/releases) |
-| Current manifest version | `2.3.3` |
+| Current manifest version | `2.3.4` |
 
 > **Distribution note:** The latest development changes are maintained on the `main` branch and can be loaded directly as an unpacked extension. No new ZIP or release is created automatically for every change.
 
@@ -133,7 +133,7 @@ Typical extension-management URLs are:
 
 ### Release packages
 
-Older or published packages, when available, are listed on the [GitHub Releases page](https://github.com/abishek-ghimire/TimeShield/releases). The published **[TimeShield-v2.3.3.zip](https://github.com/abishek-ghimire/TimeShield/releases/download/v2.3.3/TimeShield-v2.3.3.zip)** package is available for the v2.3.3 release. A release archive may not contain commits added to `main` afterward. For the newest implementation, clone the repository and load it as an unpacked extension.
+Published packages are listed on the [GitHub Releases page](https://github.com/abishek-ghimire/TimeShield/releases). The current **[TimeShield-v2.3.4.zip](https://github.com/abishek-ghimire/TimeShield/releases/download/v2.3.4/TimeShield-v2.3.4.zip)** package contains the verified post-audit build, including the improved control-panel height and Floating Display visibility. For development changes that are newer than the release, clone the repository and load it as an unpacked extension.
 
 ---
 
