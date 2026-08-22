@@ -26,12 +26,12 @@ TimeShield does not require an account or cloud synchronization for its core fea
 | --- | --- |
 | **Floating Clock** | Displays a draggable and resizable clock on supported webpages, synchronizes its geometry across open tabs, and remains visible in supported fullscreen contexts. |
 | **Flip Clock** | Opens a dedicated split-flap clock in a separate browser tab and provides a route back to the normal clock view. |
-| **Timers** | Runs configurable timers from the control panel and can display timer information independently of Clock View. |
+| **Timers** | Runs configurable timers from the control panel, can display timer information independently of Clock View, and plays a completion tone when a timer finishes if sounds are enabled. |
 | **Focus Mode** | Restricts a user-defined website list during an explicitly started focus session. The current site can be added directly from the popup. |
 | **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, dedicated block page, pause flow, and verified exit. |
 | **Scheduled Blocking** | Restricts configured websites during selected days and time ranges. It remains inactive until explicitly enabled and configured. |
 | **Sleep Protection** | Applies a separate protection list during sleep hours, including schedules that cross midnight. |
-| **Usage Limits** | Tracks configured website usage and blocks a site after its daily limit is reached, with warnings before the limit. |
+| **Usage Limits** | Tracks configured website usage and blocks a site after its daily limit is reached, with warnings and optional sounds before the limit. |
 | **Screen Time** | Records active browsing time by website and presents daily, weekly, and monthly views. |
 | **Tasks** | Provides a small local task list for everyday work. |
 | **Ad Protection** | Offers optional local rule-based filtering, element selection, and custom filters. |
@@ -163,13 +163,13 @@ Scheduled Blocking supports a configurable website list, selected days, and star
 
 ### Sleep Protection
 
-Sleep Protection is separate from Scheduled Blocking. It has its own website list and schedule, including overnight ranges that start on one day and end on the next.
+Sleep Protection is separate from Scheduled Blocking. It has its own website list and schedule, including overnight ranges that start on one day and end on the next. Scheduled Blocking and Sleep Protection pre-activation warnings also use the master sound setting and play at most one tone per configured threshold for each upcoming session.
 
 ### Usage Limits
 
 Usage Limits track configured domains and show warnings as the remaining time approaches. The control panel shows the remaining limit only for the currently open site when that site has a configured limit. It does not display unrelated website limits while browsing another site.
 
-After a limit is reached, the site-specific pause choices are limited to **1 minute**, **5 minutes**, and **10 minutes**. Usage-limit extensions include additional confirmation so that extending access is deliberate.
+When sounds are enabled in General settings, TimeShield plays one brief warning tone at each configured warning threshold, normally **2 minutes** and **1 minute** before the site or global usage limit is reached. The existing warning cache prevents the same threshold from sounding repeatedly during the same local day and configured limit. After a limit is reached, the site-specific pause choices are limited to **1 minute**, **5 minutes**, and **10 minutes**. Usage-limit extensions include additional confirmation so that extending access is deliberate.
 
 ### Screen Time
 
@@ -406,7 +406,7 @@ The repository contains Node-based smoke and regression tests that cover the ext
 node --test tests/smoke.test.mjs
 ```
 
-The current suite contains **55 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, popup behavior, settings persistence, and repository documentation checks.
+The current suite contains **56 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, and repository documentation checks.
 
 ---
 

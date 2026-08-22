@@ -904,3 +904,35 @@ test('Repository traffic tracking uses official GitHub metrics and persists hist
     assert.match(readme, /img\.shields\.io\/endpoint\?url=https%3A%2F%2Fraw\.githubusercontent\.com%2Fabishek-ghimire%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge\.json/);
     assert.match(readme, /data\/repository-traffic\.json/);
 });
+
+
+test('Notification sounds respect settings and fire once per timer or limit threshold', async () => {
+    const worker = await read('background/service-worker.js');
+    const tracker = await read('background/usage-tracker.js');
+    const blocker = await read('content/blocker.js');
+    const manifest = JSON.parse(await read('manifest.json'));
+
+    assert.match(worker, /soundEnabled: true/);
+    assert.match(worker, /if \(!this\.timerState\.isRunning\) return;/);
+    assert.match(worker, /this\.playSound\('timer-complete'\)/);
+    assert.match(worker, /async playSound\(soundName, preferredTabId = null\)/);
+    assert.match(worker, /const target = preferredTab \|\| activeTab/);
+    assert.match(worker, /settings\.soundEnabled === false/);
+    assert.doesNotMatch(worker, /tabs\.forEach\(tab => \{[\s\S]*action: 'playSound'/);
+
+    assert.match(tracker, /siteFirstWarning = Math\.max\(1, Number\(settings\.siteWarningFirstMinutes \|\| 2\)\)/);
+    assert.match(tracker, /siteFinalWarning = Math\.max\(1, Math\.min\(siteFirstWarning, Number\(settings\.siteWarningFinalMinutes \|\| 1\)\)\)/);
+    assert.match(tracker, /domainWarningCache\[warningMinutes\] !== warningToken/);
+    assert.match(tracker, /globalCacheEntry\[warningMinutes\] !== globalWarningToken/);
+    assert.equal((tracker.match(/sound: 'limit-warning'/g) || []).length, 2);
+    assert.equal((tracker.match(/settings\.soundEnabled !== false/g) || []).length, 2);
+
+    assert.match(blocker, /soundLastPlayedAt = new Map/);
+    assert.match(blocker, /now - lastPlayedAt < 750/);
+    assert.match(blocker, /audio\.volume = 0\.7/);
+    assert.ok(manifest.web_accessible_resources.some((entry) => entry.resources.includes('assets/sounds/*')));
+
+    for (const asset of ['assets/sounds/timer-complete.mp3', 'assets/sounds/limit-warning.mp3']) {
+        assert.ok((await read(asset)).length > 0, `${asset} must contain playable audio data`);
+    }
+});

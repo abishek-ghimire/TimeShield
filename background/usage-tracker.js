@@ -173,9 +173,9 @@ class UsageTracker {
     }
 
     async sendToActiveTab(message) {
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
         const tab = tabs?.[0];
-        if (!tab?.id || !/^https?:/i.test(tab.url || '')) return false;
+        if (!tab?.id || !/^(https?:|file:)/i.test(tab.url || '')) return false;
 
         try {
             const response = await chrome.tabs.sendMessage(tab.id, message);
@@ -321,6 +321,9 @@ class UsageTracker {
                         site: domain,
                         remaining: warningMinutes
                     });
+                    if (settings.soundEnabled !== false) {
+                        await this.sendToActiveTab({ action: 'playSound', sound: 'limit-warning' });
+                    }
                     if (!delivered && settings.notificationFallbackEnabled !== false) {
                         await this.sendFallbackNotification(title, message, warningMinutes <= siteFinalWarning);
                     }
@@ -371,6 +374,9 @@ class UsageTracker {
                         site: 'all distraction sites',
                         remaining: warningMinutes
                     });
+                    if (settings.soundEnabled !== false) {
+                        await this.sendToActiveTab({ action: 'playSound', sound: 'limit-warning' });
+                    }
                     if (!delivered && settings.notificationFallbackEnabled !== false) {
                         await this.sendFallbackNotification(title, message, warningMinutes <= globalFinalWarning);
                     }

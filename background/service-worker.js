@@ -1007,7 +1007,7 @@ class BackgroundService {
                 sendResponse({ success: true });
                 break;
             case 'playSound':
-                this.playSound(message.sound);
+                await this.playSound(message.sound, sender?.tab?.id);
                 sendResponse({ success: true });
                 break;
             case 'getTimerState':
@@ -1601,6 +1601,9 @@ class BackgroundService {
                 );
                 notificationSent = true;
             }
+            if (settings.soundEnabled !== false) {
+                await this.playSound('limit-warning');
+            }
             const delivered = await this.sendActiveTabMessage({
                 action: 'showBlockingWarning',
                 label,
@@ -2004,6 +2007,10 @@ class BackgroundService {
     }
 
     async timerComplete() {
+        // A cleared alarm can still race with stopTimer. Complete a running
+        // timer only once so the notification and sound cannot repeat.
+        if (!this.timerState.isRunning) return;
+
         const type = this.timerState.type || 'timer';
         const startTime = this.timerState.startTime || Date.now();
         const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -2026,6 +2033,10 @@ class BackgroundService {
         // Update stats
         await this.updateStats({ focusTime: type === 'focus' ? durationSeconds : 0, sessionsCompleted: 1 });
 
+        // Play before opening the completion window, which otherwise takes
+        // focus away from the browser tab that should receive the sound.
+        await this.playSound('timer-complete');
+
         // Create completion window that auto-closes
         chrome.windows.create({
             url: chrome.runtime.getURL(`floating/timer-complete.html?type=${type}&mins=${minsRemaining}`),
@@ -2034,8 +2045,6 @@ class BackgroundService {
             height: 260,
             focused: true
         }).catch(() => { });
-
-        this.playSound('timer-complete');
 
         chrome.action.setBadgeText({ text: '' });
     }
@@ -2586,6 +2595,7 @@ class BackgroundService {
     getDefaultSettings() {
         return {
             notificationsEnabled: true,
+            soundEnabled: true,
             notificationFallbackEnabled: true,
             showBlockingCountdown: true,
             siteWarningFirstMinutes: 2,
@@ -2602,17 +2612,39 @@ class BackgroundService {
         return { ...this.getDefaultSettings(), ...(result.settings || {}) };
     }
 
-    async playSound(soundName) {
+    async playSound(soundName, preferredTabId = null) {
         const settings = await this.getSettings();
-        if (!settings.soundEnabled) return;
+        if (settings.soundEnabled === false) return false;
 
-        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-        tabs.forEach(tab => {
-            chrome.tabs.sendMessage(tab.id, {
-                action: 'playSound',
-                sound: soundName
-            }).catch(() => { });
-        });
+        const normalizedSound = String(soundName || '').trim();
+        if (!/^[a-z0-9-]+$/i.test(normalizedSound)) return false;
+
+        const tabs = await chrome.tabs.query({});
+        const preferredTab = Number.isInteger(preferredTabId)
+            ? tabs.find(tab => tab.id === preferredTabId && this.isEligibleOverlayTab(tab.url))
+            : null;
+        const activeTab = tabs.find(tab => tab.active && this.isEligibleOverlayTab(tab.url));
+        const target = preferredTab || activeTab;
+        if (!target?.id) return false;
+
+        const message = { action: 'playSound', sound: normalizedSound };
+        try {
+            const response = await chrome.tabs.sendMessage(target.id, message);
+            return response?.success === true;
+        } catch {
+            // The manifest content script normally handles this. Retry once
+            // after injection for tabs that were opened before the worker woke.
+            await chrome.scripting.executeScript({
+                target: { tabId: target.id },
+                files: ['content/blocker.js', 'content/anti-antiblock.js']
+            }).catch(() => undefined);
+            try {
+                const response = await chrome.tabs.sendMessage(target.id, message);
+                return response?.success === true;
+            } catch {
+                return false;
+            }
+        }
     }
 
     async toggleFloatingClock(forcedState) {

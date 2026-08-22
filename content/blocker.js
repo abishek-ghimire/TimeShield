@@ -14,6 +14,7 @@ class ContentBlocker {
         };
         this.blockingCountdownTimer = null;
         this.blockingCountdownEndAt = 0;
+        this.soundLastPlayedAt = new Map();
         this.init();
     }
 
@@ -616,8 +617,21 @@ class ContentBlocker {
     }
 
     playSound(sound) {
-        const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${sound}.mp3`));
-        audio.play().catch(() => { });
+        const normalizedSound = String(sound || '').trim();
+        if (!/^[a-z0-9-]+$/i.test(normalizedSound)) return;
+
+        const now = Date.now();
+        const lastPlayedAt = this.soundLastPlayedAt.get(normalizedSound) || 0;
+        if (now - lastPlayedAt < 750) return;
+        this.soundLastPlayedAt.set(normalizedSound, now);
+
+        const audio = new Audio(chrome.runtime.getURL(`assets/sounds/${normalizedSound}.mp3`));
+        audio.preload = 'auto';
+        audio.volume = 0.7;
+        audio.play().catch(() => {
+            // Autoplay policy or a missing asset should not affect page behavior.
+            this.soundLastPlayedAt.delete(normalizedSound);
+        });
     }
 }
 
