@@ -29,8 +29,9 @@
                 <button id="startFocus" class="btn btn-focus">
                     <span class="icon">🎯</span> Focus Mode
                 </button>
-                <button id="nuclearToggle" class="btn btn-nuclear nuclear-action" type="button">
-                    <span class="icon">☢️</span> Nuclear Mode
+                <button id="nuclearToggle" class="btn btn-nuclear nuclear-action" type="button" aria-pressed="false">
+                    <span class="icon" id="nuclearToggleIcon">☢️</span>
+                    <span id="nuclearToggleLabel">Nuclear Mode</span>
                 </button>
                 <button id="openSettings" class="btn btn-secondary">
                     <span class="icon">⚙️</span> Settings
@@ -39,10 +40,6 @@
                     style="display:none;">✨</button>
             </div>
 
-            <div id="nuclearActiveView" class="nuclear-active-row" hidden>
-                <span id="nuclearCountdown" class="nuclear-countdown" aria-live="polite"></span>
-                <button id="nuclearExitButton" class="nuclear-exit-button" type="button">Exit from Nuclear Mode</button>
-            </div>
 
             <div class="popup-utility-row">
                 <label class="compact-toggle">
@@ -183,11 +180,11 @@
             <div class="nuclear-saved-entry-section">
                 <div class="nuclear-saved-entry-heading">
                     <span>Saved entries</span>
-                    <small>optional · add only what this session needs</small>
+                    <small>always included in every Nuclear session</small>
                 </div>
                 <div id="nuclearSavedEntryList" class="nuclear-saved-entry-list" aria-live="polite"></div>
             </div>
-            <div class="nuclear-session-heading">Allowed in this session</div>
+            <div class="nuclear-session-heading">Additional entries for this session</div>
             <div id="nuclearEntryList" class="nuclear-entry-list" aria-live="polite"></div>
             <p id="nuclearSetupError" class="nuclear-setup-error" role="alert" hidden></p>
             <div class="nuclear-dialog-actions">

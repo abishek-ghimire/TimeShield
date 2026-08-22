@@ -91,8 +91,7 @@ class PopupController {
         bind('blockElement', () => this.startElementPicker());
         bind('toggleFormat', () => this.toggleTimeFormat());
         bind('updateFilters', () => this.updateFilters());
-        bind('nuclearToggle', () => this.openNuclearSetup());
-        bind('nuclearExitButton', () => this.openNuclearBlockPage());
+        bind('nuclearToggle', () => this.handleNuclearMode());
 
         document.getElementById('nuclearSetupClose')?.addEventListener('click', () => this.closeNuclearSetup());
         document.getElementById('nuclearSetupCancel')?.addEventListener('click', () => this.closeNuclearSetup());
@@ -509,12 +508,20 @@ class PopupController {
         const endTime = Number(state.endTime);
         const active = state.isActive === true && Number.isFinite(endTime) && endTime > Date.now();
         const toggle = document.getElementById('nuclearToggle');
-        const activeView = document.getElementById('nuclearActiveView');
+        const toggleLabel = document.getElementById('nuclearToggleLabel');
+        const toggleIcon = document.getElementById('nuclearToggleIcon');
         if (toggle) {
-            toggle.hidden = active;
-            toggle.disabled = active;
+            toggle.hidden = false;
+            toggle.disabled = false;
+            toggle.classList.toggle('nuclear-active', active);
+            toggle.setAttribute('aria-pressed', String(active));
+            toggle.title = active ? 'Open Nuclear pause blocks' : 'Set up Nuclear Mode';
+            toggle.setAttribute('aria-label', active
+                ? 'Nuclear Mode active. Open Nuclear pause blocks.'
+                : 'Set up Nuclear Mode');
         }
-        if (activeView) activeView.hidden = !active;
+        if (toggleIcon) toggleIcon.textContent = active ? '☢' : '☢️';
+        if (toggleLabel) toggleLabel.textContent = active ? this.formatNuclearRemaining((endTime - Date.now()) / 1000) : 'Nuclear Mode';
 
         if (active) this.startNuclearInterval(state);
         else if (this.state.nuclearInterval) {
@@ -536,8 +543,16 @@ class PopupController {
         if (this.state.nuclearInterval) clearInterval(this.state.nuclearInterval);
         const update = () => {
             const remaining = Math.max(0, (Number(state.endTime) - Date.now()) / 1000);
-            const countdown = document.getElementById('nuclearCountdown');
-            if (countdown) countdown.textContent = `Protected time remaining: ${this.formatNuclearRemaining(remaining)}`;
+            const toggle = document.getElementById('nuclearToggle');
+            const toggleLabel = document.getElementById('nuclearToggleLabel');
+            const remainingLabel = this.formatNuclearRemaining(remaining);
+            if (toggleLabel) toggleLabel.textContent = remainingLabel;
+            if (toggle) {
+                toggle.classList.toggle('nuclear-active', remaining > 0);
+                toggle.setAttribute('aria-label', remaining > 0
+                    ? `Nuclear Mode active. ${remainingLabel} remaining. Open Nuclear pause blocks.`
+                    : 'Set up Nuclear Mode');
+            }
             if (remaining <= 0) {
                 clearInterval(this.state.nuclearInterval);
                 this.state.nuclearInterval = null;
@@ -608,16 +623,11 @@ class PopupController {
         }
 
         savedEntries.forEach((entry) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'nuclear-saved-entry';
-            button.textContent = `＋ ${entry}`;
-            button.title = `Add ${entry} to this session`;
-            button.disabled = this.state.nuclearDraft.includes(entry) || this.state.nuclearDraft.length >= 8;
-            button.addEventListener('click', () => {
-                if (this.addNuclearDraftEntry(entry)) this.renderNuclearSavedEntries();
-            });
-            list.appendChild(button);
+            const chip = document.createElement('span');
+            chip.className = 'nuclear-saved-entry nuclear-saved-entry-auto';
+            chip.textContent = `✓ ${entry}`;
+            chip.title = `${entry} is automatically included in every Nuclear session`;
+            list.appendChild(chip);
         });
     }
 
@@ -634,8 +644,8 @@ class PopupController {
             this.showToast('Nuclear Mode is active. Use the Nuclear block page to exit it.');
             return;
         }
-        // A saved whitelist is only a library of optional entries. It must never
-        // become the active session allowlist without an explicit user action.
+        // Settings whitelist entries are automatically included in every new session;
+        // the dialog is only for adding extra entries needed for this session.
         this.state.nuclearSaved = Array.isArray(state?.whitelist)
             ? [...new Set(state.whitelist.map(entry => this.normalizeNuclearDraftEntry(entry)).filter(Boolean))].slice(0, 8)
             : [];
@@ -702,12 +712,16 @@ class PopupController {
             this.setNuclearSetupError('Enter a valid domain, http or https link, or file URL.');
             return false;
         }
-        if (this.state.nuclearDraft.includes(normalized)) {
-            this.setNuclearSetupError('That entry is already in the allowed list.');
+        if (this.state.nuclearSaved.includes(normalized)) {
+            this.setNuclearSetupError('That entry is already included from the Settings whitelist.');
             return false;
         }
-        if (this.state.nuclearDraft.length >= 8) {
-            this.setNuclearSetupError('The allowed list is full. Remove an entry before adding another.');
+        if (this.state.nuclearDraft.includes(normalized)) {
+            this.setNuclearSetupError('That entry is already in the additional session list.');
+            return false;
+        }
+        if (this.state.nuclearSaved.length + this.state.nuclearDraft.length >= 8) {
+            this.setNuclearSetupError('The combined Nuclear whitelist is full. Remove a saved entry in Settings before adding another.');
             return false;
         }
         this.state.nuclearDraft.push(normalized);
@@ -744,8 +758,15 @@ class PopupController {
             this.setNuclearSetupError('Choose how long Nuclear Mode should run.');
             return;
         }
-        if (!this.state.nuclearDraft.length && !this.state.nuclearExcludeOpenTabs) {
-            this.setNuclearSetupError('Add at least one allowed site or link, or choose Exclude all open tabs.');
+        const savedWhitelist = this.state.nuclearSaved
+            .map(entry => this.normalizeNuclearDraftEntry(entry))
+            .filter(Boolean);
+        const sessionEntries = this.state.nuclearDraft
+            .map(entry => this.normalizeNuclearDraftEntry(entry))
+            .filter(Boolean);
+        const activationWhitelist = [...new Set([...savedWhitelist, ...sessionEntries])].slice(0, 8);
+        if (!activationWhitelist.length && !this.state.nuclearExcludeOpenTabs) {
+            this.setNuclearSetupError('Add at least one allowed site in Settings or add an additional entry, or choose Exclude all open tabs.');
             return;
         }
 
@@ -760,7 +781,7 @@ class PopupController {
             const response = await chrome.runtime.sendMessage({
                 action: 'startNuclearMode',
                 duration: durationSeconds,
-                whitelist: [...this.state.nuclearDraft],
+                whitelist: activationWhitelist,
                 excludedTabIds: this.state.nuclearExcludeOpenTabs ? [...this.state.nuclearExcludedTabIds] : []
             });
             if (response?.success === false) throw new Error(response.error || 'Unable to start Nuclear Mode');
@@ -776,6 +797,9 @@ class PopupController {
     }
 
     async handleNuclearMode() {
+        const state = this.state.nuclearState || await this.loadNuclearModeState();
+        const active = state?.isActive === true && Number(state.endTime) > Date.now();
+        if (active) return this.openNuclearBlockPage();
         return this.openNuclearSetup();
     }
 

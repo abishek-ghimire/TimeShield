@@ -1355,10 +1355,12 @@ class BackgroundService {
             throw new Error('Nuclear Mode duration must be greater than zero');
         }
 
+        const stored = await chrome.storage.local.get(['nuclearMode']);
+        const savedWhitelist = this.normalizeNuclearWhitelist(stored.nuclearMode?.whitelist);
         const candidateSites = Array.isArray(whitelist)
             ? whitelist.map(site => this.normalizeNuclearSite(site)).filter(Boolean)
             : [];
-        const cleanWhitelist = [...new Set(candidateSites)];
+        const cleanWhitelist = [...new Set([...savedWhitelist, ...candidateSites])].slice(0, 8);
         const cleanExcludedTabIds = this.normalizeNuclearExcludedTabIds(excludedTabIds);
         if (cleanWhitelist.length === 0 && cleanExcludedTabIds.length === 0) {
             throw new Error('Add at least one allowed site or choose Exclude all open tabs before starting Nuclear Mode.');

@@ -2126,3 +2126,85 @@ body.theme-light .nuclear-active-row .nuclear-countdown {
         max-width: none;
     }
 }
+
+
+/* Consolidated Nuclear status button and final control-panel spacing polish */
+.quick-actions-modern {
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.quick-actions-modern .btn {
+    min-height: 40px;
+    padding: 9px 12px;
+    line-height: 1.15;
+}
+
+.quick-actions-modern #nuclearToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 10px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+.quick-actions-modern #nuclearToggle .icon {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+}
+
+.quick-actions-modern #nuclearToggleLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quick-actions-modern #nuclearToggle.nuclear-active {
+    border-color: rgba(253, 186, 116, 0.9);
+    background: linear-gradient(135deg, #92400e 0%, #c2410c 52%, #b45309 100%);
+    box-shadow: 0 8px 18px rgba(180, 83, 9, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    color: #fff7ed;
+}
+
+.quick-actions-modern #nuclearToggle.nuclear-active:hover,
+.quick-actions-modern #nuclearToggle.nuclear-active:focus-visible {
+    background: linear-gradient(135deg, #a34a0d 0%, #d14e0a 52%, #c26108 100%);
+    border-color: #fbbf24;
+}
+
+/* The active timer is now part of the main Nuclear button. */
+.nuclear-active-row {
+    display: none !important;
+}
+
+.popup-utility-row {
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.card {
+    margin-bottom: 12px;
+    padding: 13px;
+}
+
+.card-title {
+    margin-bottom: 9px;
+}
+
+body.theme-light .quick-actions-modern #nuclearToggle.nuclear-active {
+    color: #fff7ed;
+    border-color: #d97706;
+    background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+}
+
+@media (max-width: 360px) {
+    .quick-actions-modern #nuclearToggle {
+        padding-inline: 8px;
+        font-size: 0.76rem;
+    }
+}

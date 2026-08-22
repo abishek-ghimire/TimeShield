@@ -206,13 +206,13 @@ Nuclear Mode is the strictest TimeShield protection feature. It is an opt-in tim
 
 ### Starting a session
 
-Nuclear Mode is started from the **Nuclear Mode** button in the control panel. Every activation opens a fresh setup dialog. The active session allowlist starts empty, even when the Settings page contains saved entries.
+Nuclear Mode is started from the **Nuclear Mode** button in the control panel. Every activation opens a fresh setup dialog. Entries saved in the Settings whitelist are included automatically; the setup dialog is used for adding any extra websites or links needed for that particular session.
 
 The setup sequence is:
 
 1. Choose a positive duration using separate **Hours** and **Minutes** fields.
 2. Optionally select **Exclude all open tabs** as the first setup choice.
-3. Add work websites or exact links manually, capture the current tab, or deliberately select saved entries.
+3. Use the Settings whitelist entries that are included automatically, then add extra work websites or exact links manually or capture the current tab if needed.
 4. Review the save-work warning.
 5. Confirm the Nuclear Mode activation.
 
@@ -224,7 +224,7 @@ The session allowlist supports bare domains, exact HTTP/HTTPS links, and exact `
 
 The optional **Exclude all open tabs** choice captures every tab currently open immediately before Nuclear Mode starts. Captured tabs remain available for the session, including websites, exact links, localhost pages, local files, PDFs, and other content already open in browser tabs. Newly opened tabs are still blocked unless they are otherwise permitted.
 
-The Settings page contains a Nuclear Mode Whitelist for saved entries. The default suggestions include `chatgpt.com`, `gemini.google.com`, `notebooklm.google.com`, `claude.ai`, `deepseek.com`, `grok.com`, and `web.whatsapp.com`. These are suggestions only. They are not copied into a new session automatically; each entry must be deliberately added to the active session.
+The Settings page contains a Nuclear Mode Whitelist for saved entries. The default entries include `chatgpt.com`, `gemini.google.com`, `notebooklm.google.com`, `claude.ai`, `deepseek.com`, `grok.com`, and `web.whatsapp.com`. Entries in this saved whitelist are automatically included in every new Nuclear session and count toward the eight-entry maximum. Additional session entries can be added from the setup dialog.
 
 ### Automatic exceptions
 
@@ -241,7 +241,7 @@ The following remain available during Nuclear Mode without being added manually:
 
 The dedicated Nuclear block page provides **Pause Blocks**. In each Nuclear Mode session, exactly one **1-minute pause** is available without a challenge. Later one-minute pause attempts require the lowercase motivational verification challenge. Longer pauses use the existing preparation and challenge flow.
 
-To end an active Nuclear session manually, use the control-panel button **Exit from Nuclear Mode**. It opens the Nuclear block page rather than stopping the session directly. The required sequence is:
+When Nuclear Mode is inactive, the control-panel button reads **Nuclear Mode**. During an active session, that same button shows the live remaining timer instead of the label. Clicking the active timer button opens the Nuclear block page rather than stopping the session directly. The required sequence is:
 
 1. Select **Pause Blocks**.
 2. Select **End Nuclear Mode with verification**.
