@@ -2208,3 +2208,38 @@ body.theme-light .quick-actions-modern #nuclearToggle.nuclear-active {
         font-size: 0.76rem;
     }
 }
+
+
+/* Give the control panel enough vertical room for the full Timer card. */
+html,
+body {
+    height: 640px;
+    min-height: 640px;
+    max-height: 640px;
+}
+
+.popup-container {
+    height: 640px;
+    min-height: 640px;
+    padding-bottom: 20px;
+}
+
+.timer-card {
+    margin-bottom: 12px;
+}
+
+.timer-ui > div[style*="Floating Display"] {
+    margin-top: 8px;
+    margin-bottom: 10px !important;
+    min-height: 32px;
+}
+
+@media (max-height: 620px) {
+    html,
+    body,
+    .popup-container {
+        height: 640px;
+        min-height: 640px;
+        max-height: 640px;
+    }
+}
