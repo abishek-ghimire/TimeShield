@@ -26,7 +26,8 @@ class PopupController {
             nuclearDraft: [],
             nuclearSaved: [],
             nuclearExcludeOpenTabs: false,
-            nuclearExcludedTabIds: []
+            nuclearExcludedTabIds: [],
+            nuclearSchedule: null
         };
 
         this.init();
@@ -98,6 +99,18 @@ class PopupController {
         document.getElementById('nuclearAddEntry')?.addEventListener('click', () => this.addNuclearDraftEntry());
         document.getElementById('nuclearUseCurrentTab')?.addEventListener('click', () => this.addCurrentTabToNuclearDraft());
         document.getElementById('nuclearSetupStart')?.addEventListener('click', () => this.startNuclearFromSetup());
+        document.getElementById('nuclearScheduleEnabled')?.addEventListener('change', () => this.updateNuclearScheduleUi());
+        document.getElementById('nuclearScheduleAllDays')?.addEventListener('change', (event) => {
+            for (let day = 0; day <= 6; day++) {
+                const checkbox = document.getElementById(`nuclearScheduleDay${day}`);
+                if (checkbox) checkbox.checked = event.target.checked;
+            }
+            this.updateNuclearScheduleUi();
+        });
+        for (let day = 0; day <= 6; day++) {
+            document.getElementById(`nuclearScheduleDay${day}`)?.addEventListener('change', () => this.updateNuclearScheduleUi());
+        }
+        document.getElementById('nuclearScheduleClear')?.addEventListener('click', () => this.clearNuclearSchedule());
         document.getElementById('nuclearExcludeOpenTabs')?.addEventListener('change', (event) => {
             this.setNuclearOpenTabsExclusion(event.target.checked).catch((error) => {
                 console.error('Failed to capture open tabs:', error);
@@ -638,6 +651,91 @@ class PopupController {
         error.hidden = !message;
     }
 
+    normalizeNuclearSchedule(schedule = {}) {
+        const rawStartTime = typeof schedule?.startTime === 'string' ? schedule.startTime : '09:00';
+        const startTime = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(rawStartTime) ? rawStartTime : '09:00';
+        const duration = Math.floor(Number(schedule?.duration));
+        const days = Array.isArray(schedule?.days)
+            ? [...new Set(schedule.days.map(day => Number(day)).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b)
+            : [];
+        return {
+            enabled: schedule?.enabled === true || schedule?.enabled === 'enabled',
+            startTime,
+            duration: Number.isFinite(duration) && duration > 0 ? duration : 0,
+            days,
+            excludeOpenTabs: schedule?.excludeOpenTabs === true,
+            lastStartedToken: typeof schedule?.lastStartedToken === 'string' ? schedule.lastStartedToken : null
+        };
+    }
+
+    getSelectedNuclearScheduleDays() {
+        return Array.from({ length: 7 }, (_, day) => document.getElementById(`nuclearScheduleDay${day}`))
+            .filter(Boolean)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => Number(checkbox.value));
+    }
+
+    formatNuclearSchedule(schedule = {}) {
+        const normalized = this.normalizeNuclearSchedule(schedule);
+        const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = normalized.days.length === 7
+            ? 'every day'
+            : normalized.days.map(day => dayLabels[day]).join(', ');
+        const hours = Math.floor(normalized.duration / 3600);
+        const minutes = Math.floor((normalized.duration % 3600) / 60);
+        const durationParts = [];
+        if (hours) durationParts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+        if (minutes) durationParts.push(`${minutes} min${minutes === 1 ? '' : 's'}`);
+        return `${days || 'no days selected'} at ${normalized.startTime} for ${durationParts.join(' ') || 'no duration'}`;
+    }
+
+    updateNuclearScheduleUi(schedule = null) {
+        const toggle = document.getElementById('nuclearScheduleEnabled');
+        const settings = document.getElementById('nuclearScheduleSettings');
+        const sessionOpenTabsOption = document.querySelector('.nuclear-open-tabs-option');
+        const startButton = document.getElementById('nuclearSetupStart');
+        const status = document.getElementById('nuclearScheduleStatus');
+        const clearButton = document.getElementById('nuclearScheduleClear');
+        const enabled = toggle?.checked === true;
+        const savedSchedule = this.normalizeNuclearSchedule(schedule || this.state.nuclearSchedule);
+        if (settings) settings.hidden = !enabled;
+        if (sessionOpenTabsOption) sessionOpenTabsOption.hidden = enabled;
+        if (enabled && sessionOpenTabsOption) {
+            this.state.nuclearExcludeOpenTabs = false;
+            this.state.nuclearExcludedTabIds = [];
+            const sessionToggle = document.getElementById('nuclearExcludeOpenTabs');
+            if (sessionToggle) sessionToggle.checked = false;
+            this.updateNuclearOpenTabsSummary();
+        }
+        if (startButton) startButton.textContent = enabled ? 'Save Nuclear Schedule' : 'Continue to Nuclear Mode';
+        if (clearButton) clearButton.hidden = !savedSchedule.enabled;
+        if (status) {
+            status.textContent = savedSchedule.enabled
+                ? `Saved schedule: ${this.formatNuclearSchedule(savedSchedule)}.`
+                : (enabled ? 'Choose a start time, duration, and at least one active day.' : '');
+        }
+    }
+
+    async clearNuclearSchedule() {
+        const button = document.getElementById('nuclearScheduleClear');
+        if (button) button.disabled = true;
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'clearNuclearModeSchedule' });
+            if (response?.success === false) throw new Error(response.error || 'Unable to turn off the Nuclear schedule');
+            this.state.nuclearSchedule = response.schedule || { enabled: false };
+            const toggle = document.getElementById('nuclearScheduleEnabled');
+            if (toggle) toggle.checked = false;
+            this.updateNuclearScheduleUi(this.state.nuclearSchedule);
+            await this.loadNuclearModeState();
+            this.showToast('Scheduled Nuclear Mode turned off.');
+        } catch (error) {
+            console.error('Failed to clear Nuclear schedule:', error);
+            this.setNuclearSetupError(error.message || 'Unable to turn off the Nuclear schedule.');
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
+
     async openNuclearSetup() {
         const state = this.state.nuclearState || await this.loadNuclearModeState();
         if (state?.isActive === true && Number(state.endTime) > Date.now()) {
@@ -652,11 +750,26 @@ class PopupController {
         this.state.nuclearDraft = [];
         this.state.nuclearExcludeOpenTabs = false;
         this.state.nuclearExcludedTabIds = [];
+        this.state.nuclearSchedule = state?.schedule || null;
         const excludeOpenTabs = document.getElementById('nuclearExcludeOpenTabs');
         if (excludeOpenTabs) excludeOpenTabs.checked = false;
         this.updateNuclearOpenTabsSummary();
-        document.getElementById('nuclearHours').value = '';
-        document.getElementById('nuclearMinutes').value = '';
+        const schedule = this.normalizeNuclearSchedule(state?.schedule);
+        const scheduleToggle = document.getElementById('nuclearScheduleEnabled');
+        if (scheduleToggle) scheduleToggle.checked = schedule.enabled === true;
+        document.getElementById('nuclearHours').value = schedule.duration > 0 ? Math.floor(schedule.duration / 3600) : '';
+        document.getElementById('nuclearMinutes').value = schedule.duration > 0 ? Math.floor((schedule.duration % 3600) / 60) : '';
+        const scheduleTime = document.getElementById('nuclearScheduleStartTime');
+        if (scheduleTime) scheduleTime.value = schedule.startTime;
+        const scheduleOpenTabs = document.getElementById('nuclearScheduleExcludeOpenTabs');
+        if (scheduleOpenTabs) scheduleOpenTabs.checked = schedule.excludeOpenTabs === true;
+        for (let day = 0; day <= 6; day++) {
+            const checkbox = document.getElementById(`nuclearScheduleDay${day}`);
+            if (checkbox) checkbox.checked = schedule.days.includes(day);
+        }
+        const scheduleAllDays = document.getElementById('nuclearScheduleAllDays');
+        if (scheduleAllDays) scheduleAllDays.checked = schedule.days.length === 7;
+        this.updateNuclearScheduleUi(schedule);
         this.setNuclearSetupError('');
         this.renderNuclearDraft();
         this.renderNuclearSavedEntries();
@@ -765,6 +878,10 @@ class PopupController {
             .map(entry => this.normalizeNuclearDraftEntry(entry))
             .filter(Boolean);
         const activationWhitelist = [...new Set([...savedWhitelist, ...sessionEntries])].slice(0, 8);
+        const scheduleEnabled = document.getElementById('nuclearScheduleEnabled')?.checked === true;
+        if (scheduleEnabled) {
+            return this.saveNuclearSchedule(durationSeconds, activationWhitelist);
+        }
         if (!activationWhitelist.length && !this.state.nuclearExcludeOpenTabs) {
             this.setNuclearSetupError('Add at least one allowed site in Settings or add an additional entry, or choose Exclude all open tabs.');
             return;
@@ -791,6 +908,45 @@ class PopupController {
         } catch (error) {
             console.error('Failed to start Nuclear Mode:', error);
             this.setNuclearSetupError(error.message || 'Unable to start Nuclear Mode.');
+        } finally {
+            if (startButton) startButton.disabled = false;
+        }
+    }
+
+    async saveNuclearSchedule(durationSeconds, whitelist) {
+        const startTime = document.getElementById('nuclearScheduleStartTime')?.value || '';
+        const days = this.getSelectedNuclearScheduleDays();
+        if (!/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(startTime)) {
+            this.setNuclearSetupError('Choose a valid start time for the Nuclear Mode schedule.');
+            return;
+        }
+        if (!days.length) {
+            this.setNuclearSetupError('Choose at least one active day for the Nuclear Mode schedule.');
+            return;
+        }
+        const schedule = {
+            enabled: true,
+            startTime,
+            duration: durationSeconds,
+            days,
+            excludeOpenTabs: document.getElementById('nuclearScheduleExcludeOpenTabs')?.checked === true
+        };
+        const startButton = document.getElementById('nuclearSetupStart');
+        if (startButton) startButton.disabled = true;
+        try {
+            const response = await chrome.runtime.sendMessage({
+                action: 'scheduleNuclearMode',
+                schedule,
+                whitelist
+            });
+            if (response?.success === false) throw new Error(response.error || 'Unable to save the Nuclear Mode schedule');
+            this.state.nuclearSchedule = response.schedule || schedule;
+            this.closeNuclearSetup();
+            await this.loadNuclearModeState();
+            this.showToast(`Nuclear Mode scheduled for ${this.formatNuclearSchedule(this.state.nuclearSchedule)}.`);
+        } catch (error) {
+            console.error('Failed to save Nuclear schedule:', error);
+            this.setNuclearSetupError(error.message || 'Unable to save the Nuclear Mode schedule.');
         } finally {
             if (startButton) startButton.disabled = false;
         }

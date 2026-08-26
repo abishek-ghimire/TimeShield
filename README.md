@@ -28,7 +28,7 @@ TimeShield does not require an account or cloud synchronization for its core fea
 | **Flip Clock** | Opens a dedicated split-flap clock in a separate browser tab and provides a route back to the normal clock view. |
 | **Timers** | Runs configurable timers from the control panel, can display timer information independently of Clock View, and plays a completion tone when a timer finishes if sounds are enabled. |
 | **Focus Mode** | Restricts a user-defined website list during an explicitly started focus session. The current site can be added directly from the popup. |
-| **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, dedicated block page, pause flow, and verified exit. |
+| **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, recurring schedule, dedicated block page, pause flow, and verified exit. |
 | **Scheduled Blocking** | Restricts configured websites during selected days and time ranges. It remains inactive until explicitly enabled and configured. |
 | **Sleep Protection** | Applies a separate protection list during sleep hours, including schedules that cross midnight. |
 | **Usage Limits** | Tracks configured website usage and blocks a site after its daily limit is reached, with warnings and optional sounds before the limit. |
@@ -218,6 +218,12 @@ The setup sequence is:
 
 The duration is explicit. There is no hidden 25-minute fallback or automatic session duration.
 
+### Scheduling Nuclear Mode
+
+The same setup dialog can save a recurring weekly Nuclear Mode schedule instead of starting a session immediately. Turn on **Schedule Nuclear Mode**, choose a start time, keep the duration above, select one or more active days, and optionally choose **Keep tabs open at start**. The schedule is disabled by default and can be turned off from the same dialog with **Turn off saved schedule**.
+
+Scheduled sessions reuse the saved Nuclear allowlist and the strict blocking rules. At the scheduled time, TimeShield captures the currently open tabs when that option is enabled, starts the configured duration, and restores the next weekly alarm after the session ends. A missed browser wake-up is recovered when the extension starts again, provided the scheduled occurrence is still within its configured duration. Manual Nuclear Mode remains available and is never replaced by a scheduled session that is already active.
+
 ### Allowlist and open-tab exclusion
 
 The session allowlist supports bare domains, exact HTTP/HTTPS links, and exact `file://` URLs. A maximum of eight manually allowlisted entries can be used in a session.
@@ -406,7 +412,7 @@ The repository contains Node-based smoke and regression tests that cover the ext
 node --test tests/smoke.test.mjs
 ```
 
-The current suite contains **56 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, and repository documentation checks.
+The current suite contains **57 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, scheduled Nuclear Mode, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, and repository documentation checks.
 
 ---
 

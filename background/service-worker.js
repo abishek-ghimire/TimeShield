@@ -391,6 +391,39 @@ class BackgroundService {
             && Number.isFinite(endTime) && endTime > Date.now();
     }
 
+    normalizeNuclearSchedule(schedule = {}) {
+        const rawTime = typeof schedule?.startTime === 'string' ? schedule.startTime : '09:00';
+        const startTime = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(rawTime) ? rawTime : '09:00';
+        const duration = Math.floor(Number(schedule?.duration));
+        const days = Array.isArray(schedule?.days)
+            ? [...new Set(schedule.days.map(day => Number(day)).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b)
+            : [];
+        const lastStartedToken = typeof schedule?.lastStartedToken === 'string' && schedule.lastStartedToken.length <= 40
+            ? schedule.lastStartedToken
+            : null;
+        return {
+            enabled: schedule?.enabled === true || schedule?.enabled === 'enabled',
+            startTime,
+            duration: Number.isFinite(duration) && duration > 0 ? duration : 0,
+            days,
+            excludeOpenTabs: schedule?.excludeOpenTabs === true,
+            lastStartedToken
+        };
+    }
+
+    validateNuclearSchedule(schedule = {}) {
+        const normalized = this.normalizeNuclearSchedule(schedule);
+        if (!normalized.enabled) throw new Error('Turn on Schedule Nuclear Mode before saving it.');
+        if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized.startTime)) {
+            throw new Error('Choose a valid start time for the Nuclear Mode schedule.');
+        }
+        if (!normalized.days.length) throw new Error('Choose at least one day for the Nuclear Mode schedule.');
+        if (!Number.isInteger(normalized.duration) || normalized.duration <= 0) {
+            throw new Error('Choose a Nuclear Mode duration greater than zero for the schedule.');
+        }
+        return normalized;
+    }
+
     getCleanNuclearModeState(overrides = {}) {
         return {
             isActive: false,
@@ -400,10 +433,12 @@ class BackgroundService {
             whitelist: [],
             excludedTabIds: [],
             freeOneMinutePauseUsed: overrides.freeOneMinutePauseUsed === true,
+            schedule: this.normalizeNuclearSchedule(overrides.schedule),
             ...overrides,
             whitelist: this.normalizeNuclearWhitelist(overrides.whitelist || []),
             excludedTabIds: this.normalizeNuclearExcludedTabIds(overrides.excludedTabIds || []),
-            freeOneMinutePauseUsed: overrides.freeOneMinutePauseUsed === true
+            freeOneMinutePauseUsed: overrides.freeOneMinutePauseUsed === true,
+            schedule: this.normalizeNuclearSchedule(overrides.schedule)
         };
     }
 
@@ -498,6 +533,7 @@ class BackgroundService {
 
         // Restore Nuclear Mode independently from Focus, Schedule, Sleep, and Usage Limits.
         await this.restoreNuclearMode();
+        await this.restoreNuclearSchedule();
 
         // Restore ad block state
         const adResult = await chrome.storage.local.get(['adBlockStats', 'adBlockEnabled']);
@@ -709,6 +745,10 @@ class BackgroundService {
                 await this.focusModeComplete();
                 break;
 
+            case 'nuclearSchedule':
+                await this.handleNuclearScheduleAlarm();
+                break;
+
             case 'nuclearMode':
                 await this.stopNuclearMode();
                 await this.sendNotification('Nuclear Mode complete', 'Your protected session has ended.', false, `nuclear-complete-${Date.now()}`);
@@ -798,6 +838,16 @@ class BackgroundService {
             case 'startNuclearMode': {
                 const state = await this.startNuclearMode(message.duration, message.whitelist, message.excludedTabIds);
                 sendResponse({ success: true, nuclearMode: state });
+                break;
+            }
+            case 'scheduleNuclearMode': {
+                const schedule = await this.scheduleNuclearMode(message.schedule, message.whitelist);
+                sendResponse({ success: true, schedule });
+                break;
+            }
+            case 'clearNuclearModeSchedule': {
+                const schedule = await this.clearNuclearModeSchedule();
+                sendResponse({ success: true, schedule });
                 break;
             }
             case 'stopNuclearMode':
@@ -1349,7 +1399,176 @@ class BackgroundService {
         await this.restoreNuclearMode();
     }
 
-    async startNuclearMode(durationSeconds, whitelist = [], excludedTabIds = []) {
+    getNuclearScheduleStartOnDate(schedule, date) {
+        const [hours, minutes] = String(schedule?.startTime || '').split(':').map(Number);
+        if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+        const candidate = new Date(date.getTime());
+        candidate.setHours(hours, minutes, 0, 0);
+        return candidate;
+    }
+
+    getLatestNuclearScheduleStart(schedule, now = new Date()) {
+        const normalized = this.normalizeNuclearSchedule(schedule);
+        if (!normalized.enabled || !normalized.days.length) return null;
+        let latest = null;
+        for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+            const date = new Date(now.getTime());
+            date.setHours(0, 0, 0, 0);
+            date.setDate(date.getDate() - dayOffset);
+            if (!normalized.days.includes(date.getDay())) continue;
+            const candidate = this.getNuclearScheduleStartOnDate(normalized, date);
+            if (candidate && candidate.getTime() <= now.getTime() && (!latest || candidate > latest)) {
+                latest = candidate;
+            }
+        }
+        return latest;
+    }
+
+    getNextNuclearScheduleStart(schedule, now = new Date()) {
+        const normalized = this.normalizeNuclearSchedule(schedule);
+        if (!normalized.enabled || !normalized.days.length) return null;
+        for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+            const date = new Date(now.getTime());
+            date.setHours(0, 0, 0, 0);
+            date.setDate(date.getDate() + dayOffset);
+            if (!normalized.days.includes(date.getDay())) continue;
+            const candidate = this.getNuclearScheduleStartOnDate(normalized, date);
+            if (candidate && candidate.getTime() > now.getTime()) return candidate;
+        }
+        return null;
+    }
+
+    getNuclearScheduleToken(startTime) {
+        return startTime instanceof Date && !Number.isNaN(startTime.getTime())
+            ? startTime.toISOString().slice(0, 16)
+            : '';
+    }
+
+    async ensureNuclearScheduleAlarm(schedule = null) {
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const storedState = result.nuclearMode || this.getCleanNuclearModeState();
+        const normalized = this.normalizeNuclearSchedule(schedule || storedState.schedule);
+        await chrome.alarms.clear('nuclearSchedule');
+        if (!normalized.enabled || !normalized.days.length || normalized.duration <= 0) return false;
+
+        const nextStart = this.getNextNuclearScheduleStart(normalized);
+        if (nextStart) {
+            chrome.alarms.create('nuclearSchedule', { when: nextStart.getTime() });
+            return true;
+        }
+        return false;
+    }
+
+    async scheduleNuclearMode(schedule, whitelist = []) {
+        const normalized = this.validateNuclearSchedule(schedule);
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const savedWhitelist = this.normalizeNuclearWhitelist(current.whitelist);
+        const addedWhitelist = Array.isArray(whitelist)
+            ? whitelist.map(site => this.normalizeNuclearSite(site)).filter(Boolean)
+            : [];
+        const combinedWhitelist = [...new Set([...savedWhitelist, ...addedWhitelist])];
+        if (combinedWhitelist.length > 8) throw new Error('Nuclear Mode allows up to 8 sites.');
+        const nextState = this.getCleanNuclearModeState({
+            ...current,
+            whitelist: combinedWhitelist,
+            schedule: { ...normalized, lastStartedToken: null }
+        });
+        await chrome.storage.local.set({ nuclearMode: nextState });
+        await this.ensureNuclearScheduleAlarm(nextState.schedule);
+        return nextState.schedule;
+    }
+
+    async clearNuclearModeSchedule() {
+        await chrome.alarms.clear('nuclearSchedule');
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const nextState = this.getCleanNuclearModeState({
+            ...current,
+            schedule: this.normalizeNuclearSchedule({
+                ...current.schedule,
+                enabled: false,
+                lastStartedToken: null
+            })
+        });
+        await chrome.storage.local.set({ nuclearMode: nextState });
+        return nextState.schedule;
+    }
+
+    async handleNuclearScheduleAlarm() {
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const schedule = this.normalizeNuclearSchedule(current.schedule);
+        if (!schedule.enabled || !schedule.days.length || schedule.duration <= 0) return false;
+
+        const now = new Date();
+        const scheduledStart = this.getLatestNuclearScheduleStart(schedule, now);
+        if (!scheduledStart) {
+            await this.ensureNuclearScheduleAlarm(schedule);
+            return false;
+        }
+        const token = this.getNuclearScheduleToken(scheduledStart);
+        const scheduledEnd = scheduledStart.getTime() + (schedule.duration * 1000);
+        if (now.getTime() >= scheduledEnd || schedule.lastStartedToken === token) {
+            await this.ensureNuclearScheduleAlarm(schedule);
+            return false;
+        }
+
+        // Never replace a manually started or separately scheduled active session.
+        if (this.isNuclearSessionValid(current)) {
+            const activeStart = Number(current.startTime);
+            if (Math.abs(activeStart - scheduledStart.getTime()) > 1000) {
+                await this.ensureNuclearScheduleAlarm(schedule);
+                return false;
+            }
+            await this.ensureNuclearScheduleAlarm(schedule);
+            return true;
+        }
+
+        let excludedTabIds = [];
+        if (schedule.excludeOpenTabs) {
+            const tabs = await chrome.tabs.query({});
+            excludedTabIds = this.normalizeNuclearExcludedTabIds(tabs.map(tab => tab.id));
+        }
+        const whitelist = this.normalizeNuclearWhitelist(current.whitelist);
+        if (!whitelist.length && !excludedTabIds.length) {
+            await this.sendNotification('Nuclear Mode could not start', 'Add an allowed site or disable the open-tabs exception in the Nuclear schedule.', true);
+            await this.ensureNuclearScheduleAlarm(schedule);
+            return false;
+        }
+
+        await this.startNuclearMode(schedule.duration, whitelist, excludedTabIds, {
+            schedule: { ...schedule, lastStartedToken: token }
+        });
+        await this.ensureNuclearScheduleAlarm({ ...schedule, lastStartedToken: token });
+        return true;
+    }
+
+    async restoreNuclearSchedule() {
+        const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
+        const schedule = this.normalizeNuclearSchedule(current.schedule);
+        if (!schedule.enabled || !schedule.days.length || schedule.duration <= 0) {
+            await chrome.alarms.clear('nuclearSchedule');
+            return false;
+        }
+
+        const now = new Date();
+        const scheduledStart = this.getLatestNuclearScheduleStart(schedule, now);
+        const scheduledEnd = scheduledStart
+            ? scheduledStart.getTime() + (schedule.duration * 1000)
+            : 0;
+        const occurrenceIsActive = scheduledStart && now.getTime() < scheduledEnd;
+        const token = scheduledStart ? this.getNuclearScheduleToken(scheduledStart) : '';
+        if (occurrenceIsActive && schedule.lastStartedToken !== token && !this.isNuclearSessionValid(current)) {
+            await this.handleNuclearScheduleAlarm();
+            return true;
+        }
+        await this.ensureNuclearScheduleAlarm(schedule);
+        return true;
+    }
+
+    async startNuclearMode(durationSeconds, whitelist = [], excludedTabIds = [], options = {}) {
         const duration = Math.floor(Number(durationSeconds));
         if (!Number.isFinite(duration) || duration <= 0) {
             throw new Error('Nuclear Mode duration must be greater than zero');
@@ -1377,7 +1596,10 @@ class BackgroundService {
             endTime: now + (duration * 1000),
             whitelist: cleanWhitelist,
             excludedTabIds: cleanExcludedTabIds,
-            freeOneMinutePauseUsed: false
+            freeOneMinutePauseUsed: false,
+            schedule: options.schedule
+                ? this.normalizeNuclearSchedule(options.schedule)
+                : this.normalizeNuclearSchedule(stored.nuclearMode?.schedule)
         });
         await chrome.alarms.clear('nuclearMode');
         await chrome.storage.local.set({ nuclearMode: nuclearState, sessionOverlayDismissed: false });
@@ -1397,8 +1619,17 @@ class BackgroundService {
         await this.disableSiteBlockingRange(501, 600);
         await this.redirectTabsBack('floating/nuclear-block.html');
         const result = await chrome.storage.local.get(['nuclearMode']);
+        const current = result.nuclearMode || this.getCleanNuclearModeState();
         const nuclearState = this.getCleanNuclearModeState({
-            whitelist: this.normalizeNuclearWhitelist(result.nuclearMode?.whitelist)
+            ...current,
+            isActive: false,
+            startTime: null,
+            duration: 0,
+            endTime: null,
+            excludedTabIds: [],
+            freeOneMinutePauseUsed: false,
+            whitelist: this.normalizeNuclearWhitelist(current.whitelist),
+            schedule: this.normalizeNuclearSchedule(current.schedule)
         });
         await chrome.storage.local.set({ nuclearMode: nuclearState });
         return nuclearState;
@@ -2850,7 +3081,15 @@ class BackgroundService {
                 endTime: null,
                 whitelist: [...DEFAULT_NUCLEAR_WHITELIST],
                 excludedTabIds: [],
-                freeOneMinutePauseUsed: false
+                freeOneMinutePauseUsed: false,
+                schedule: {
+                    enabled: false,
+                    startTime: '09:00',
+                    duration: 0,
+                    days: [],
+                    excludeOpenTabs: false,
+                    lastStartedToken: null
+                }
             },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,
@@ -2878,7 +3117,7 @@ class BackgroundService {
 
     async resetAllUserData() {
         const protectionAlarms = [
-            'timer', 'focusMode', 'focusModeActivation', 'nuclearMode', 'pauseExpires', 'breakReminder'
+            'timer', 'focusMode', 'focusModeActivation', 'nuclearMode', 'nuclearSchedule', 'pauseExpires', 'breakReminder'
         ];
         await Promise.all(protectionAlarms.map((name) => chrome.alarms.clear(name).catch(() => false)));
         await this.disableSiteBlockingRange(101, 600).catch(() => undefined);
