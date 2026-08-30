@@ -408,7 +408,7 @@ The repository contains Node-based smoke and regression tests that cover the ext
 node --test tests/smoke.test.mjs
 ```
 
-The current suite contains **56 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, and repository documentation checks.
+The current suite contains **57 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, duplicate-toast suppression, empty-list disable behavior, and repository documentation checks.
 
 ---
 

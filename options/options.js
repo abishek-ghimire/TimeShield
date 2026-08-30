@@ -5,6 +5,7 @@ class OptionsManager {
         this.scheduledBlockedSites = [];
         this.nuclearWhitelist = [];
         this.screenTimeRefDate = new Date();
+        this.notificationRegistry = new Map();
 
         this.init();
     }
@@ -1398,6 +1399,17 @@ class OptionsManager {
     }
 
     showNotification(message, type = 'success') {
+        const notificationKey = `${type}:${String(message)}`;
+        const now = Date.now();
+        const lastShownAt = this.notificationRegistry.get(notificationKey) || 0;
+        if (now - lastShownAt < 1000) return;
+        this.notificationRegistry.set(notificationKey, now);
+        window.setTimeout(() => {
+            if (this.notificationRegistry.get(notificationKey) === now) {
+                this.notificationRegistry.delete(notificationKey);
+            }
+        }, 1000);
+
         const notification = document.createElement('div');
         notification.className = 'notification';
         notification.textContent = message;
@@ -1688,7 +1700,21 @@ class OptionsManager {
         });
     }
 
+    hasConfiguredSitesForAction(actionLabel) {
+        const label = String(actionLabel || '').toLowerCase();
+        if (label.includes('focus')) return this.focusBlockedSites.length > 0;
+        if (label.includes('scheduled')) return this.scheduledBlockedSites.length > 0;
+        if (label.includes('sleep')) {
+            return this.sleepBlocking?.blockAll === true || (Array.isArray(this.sleepBlocking?.whitelist) && this.sleepBlocking.whitelist.length > 0);
+        }
+        if (label.includes('global')) return this.globalLimit.domains.length > 0;
+        if (label.includes('daily time limit') || label.includes('time limit')) return this.timeLimits.length > 0;
+        if (label.includes('nuclear')) return this.nuclearWhitelist.length > 0;
+        return true;
+    }
+
     async runProtectionSequence(actionLabel) {
+        if (!this.hasConfiguredSitesForAction(actionLabel)) return true;
         const allowed = await this.showProtectionWarning(actionLabel);
         if (!allowed) {
             this.showNotification('Focus protection remains active.', 'success');

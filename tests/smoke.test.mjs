@@ -343,6 +343,22 @@ test('Save Settings shows one success notification per save', async () => {
     const clickHandler = options.match(/document\.getElementById\('saveSettings'\)[\s\S]*?document\.getElementById\('resetToDefaults'\)/)?.[0] || '';
     assert.match(options, /async saveSettings\(\)[\s\S]*?this\.showNotification\('Settings saved successfully!', 'success'\)/);
     assert.doesNotMatch(clickHandler, /Settings saved successfully!/);
+    assert.match(options, /notificationRegistry = new Map\(\)/);
+    assert.match(options, /const notificationKey = `\$\{type\}:\$\{String\(message\)\}`/);
+    assert.match(options, /if \(now - lastShownAt < 1000\) return/);
+    assert.match(options, /hasConfiguredSitesForAction\(actionLabel\)/);
+    assert.match(options, /if \(!this\.hasConfiguredSitesForAction\(actionLabel\)\) return true/);
+});
+
+
+test('Protection disable delays apply only to configured protection lists', async () => {
+    const options = await read('options/options.js');
+    assert.match(options, /if \(label\.includes\('focus'\)\) return this\.focusBlockedSites\.length > 0/);
+    assert.match(options, /if \(label\.includes\('scheduled'\)\) return this\.scheduledBlockedSites\.length > 0/);
+    assert.match(options, /if \(label\.includes\('global'\)\) return this\.globalLimit\.domains\.length > 0/);
+    assert.match(options, /if \(label\.includes\('nuclear'\)\) return this\.nuclearWhitelist\.length > 0/);
+    assert.match(options, /return this\.sleepBlocking\?\.blockAll === true/);
+    assert.match(options, /return this\.timeLimits\.length > 0/);
 });
 
 test('Options typography and accordion defaults stay accessible and collapsed-first', async () => {
