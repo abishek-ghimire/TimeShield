@@ -390,21 +390,11 @@ These entries are automatically included in new Nuclear sessions.
 
 ### YouTube Focus Learning Mode
 
-When `youtube.com` or a YouTube subdomain is allowlisted:
+When `youtube.com` or a YouTube subdomain is allowlisted, a compact Focus Learning panel appears only during an active Nuclear session. The panel can be hidden and reopened with its **Hide** and **Show controls** buttons.
 
-- Focus Learning Mode appears only during an active Nuclear session.
-- Search remains available.
-- Related and recommended videos remain available.
-- Playlists remain available.
-- Chapters, transcripts, captions, playback speed, and fullscreen remain available.
-- Autoplay is disabled.
-- Optional controls can:
-  - Hide comments.
-  - Hide Home, Trending, and Shorts distractions.
-  - Filter visible video cards to selected channels.
-  - Start a learning-session timer.
-  - Save videos to a local learning queue.
+The panel provides Unhook-style controls for hiding the Home feed, Shorts, Trending, Explore, subscriptions, related and Up Next videos, end-screen recommendations, the miniplayer, and comments. **Strict learning recommendations** applies stronger recommendation filtering, while **Channel whitelist** filters visible video cards to selected channels. Learning Session and Learning Queue remain available for focused study workflows.
 
+Search, playlists, normal video playback, chapters, transcripts, captions, playback speed, and fullscreen remain available. Autoplay is disabled while the learning mode is active. All controls and styling are removed when Nuclear Mode ends or when YouTube is not allowlisted.
 These YouTube controls do not affect normal YouTube use outside an active Nuclear session.
 
 ---

@@ -344,7 +344,7 @@ test('Save Settings shows one success notification per save', async () => {
     assert.match(options, /async saveSettings\(\)[\s\S]*?this\.showNotification\('Settings saved successfully!', 'success'\)/);
     assert.doesNotMatch(clickHandler, /Settings saved successfully!/);
     assert.match(options, /notificationRegistry = new Map\(\)/);
-    assert.match(options, /const notificationKey = `\$\{type\}:\$\{String\(message\)\}`/);
+    assert.match(options, /const notificationKey = notificationMessage/);
     assert.match(options, /if \(now - lastShownAt < 1000\) return/);
     assert.match(options, /hasConfiguredSitesForAction\(actionLabel\)/);
     assert.match(options, /if \(!this\.hasConfiguredSitesForAction\(actionLabel\)\) return true/);
@@ -965,6 +965,21 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.match(blocker, /soundLastPlayedAt = new Map/);
     assert.match(blocker, /now - lastPlayedAt < 750/);
     assert.match(blocker, /audio\.volume = 0\.7/);
+
+    const options = await read('options/options.js');
+    assert.match(options, /const notificationKey = notificationMessage/);
+    assert.match(options, /activeDuplicate = Array\.from\(document\.querySelectorAll\('\.notification'\)\)/);
+    assert.match(options, /existing\.textContent === notificationMessage/);
+    assert.match(options, /notification\.dataset\.notificationKey = notificationKey/);
+
+    assert.match(blocker, /panelHidden: false/);
+    assert.match(blocker, /data-panel-hide/);
+    assert.match(blocker, /data-panel-show/);
+    for (const preference of ['hideHomeFeed', 'hideShorts', 'hideTrending', 'hideExplore', 'hideSubscriptions', 'hideRelated', 'hideEndScreen', 'hideMiniplayer']) {
+        assert.match(blocker, new RegExp(`data-learning-pref=\\"${preference}\\"`));
+        assert.match(blocker, new RegExp(`prefs\\.${preference}`));
+    }
+    assert.match(blocker, /const allowed = active && this\.isYouTubeAllowedByNuclearWhitelist/);
     assert.ok(manifest.web_accessible_resources.some((entry) => entry.resources.includes('assets/sounds/*')));
 
     for (const asset of ['assets/sounds/timer-complete.mp3', 'assets/sounds/limit-warning.mp3']) {

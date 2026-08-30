@@ -591,6 +591,15 @@ class ContentBlocker {
                 shadowHost: null,
                 shadowRoot: null,
                 preferences: {
+                    panelHidden: false,
+                    hideHomeFeed: false,
+                    hideShorts: false,
+                    hideTrending: false,
+                    hideExplore: false,
+                    hideSubscriptions: false,
+                    hideRelated: false,
+                    hideEndScreen: false,
+                    hideMiniplayer: false,
                     hideComments: false,
                     strictRecommendations: false,
                     channelWhitelist: false,
@@ -651,6 +660,7 @@ class ContentBlocker {
         style.textContent = `
             :host { all: initial; }
             .panel { width: 274px; color: #e5e7eb; background: rgba(15,23,42,.97); border: 1px solid rgba(99,102,241,.55); border-radius: 14px; box-shadow: 0 14px 38px rgba(0,0,0,.42); padding: 12px; font: 12px/1.35 Inter, system-ui, sans-serif; pointer-events:auto; }
+            .titlebar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
             .title { color: #c4b5fd; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
             .subtitle { color: #94a3b8; font-size: 10px; margin-bottom: 9px; }
             .row { display:flex; align-items:center; gap:7px; margin: 7px 0; }
@@ -659,6 +669,9 @@ class ContentBlocker {
             .queue { display:flex; gap:6px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px solid rgba(148,163,184,.18); }
             button { border:0; border-radius:7px; padding:6px 8px; color:#fff; background:#6d28d9; cursor:pointer; font:600 10px Inter,system-ui,sans-serif; }
             button:hover { background:#7c3aed; }
+            button.secondary { background:rgba(148,163,184,.22); color:#e2e8f0; }
+            button.secondary:hover { background:rgba(148,163,184,.34); }
+            .hidden-panel { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#cbd5e1; font-size:11px; }
             .meta { color:#a5b4fc; font-size:10px; margin-left:auto; }
             .channels { display:none; width:100%; margin:2px 0 5px 22px; box-sizing:border-box; border:1px solid rgba(148,163,184,.3); border-radius:6px; padding:5px; color:#e5e7eb; background:#111827; font:10px Inter,system-ui,sans-serif; }
             .channels.visible { display:block; }
@@ -681,9 +694,22 @@ class ContentBlocker {
         const elapsed = prefs.learningSession && this.youtubeLearning.sessionStartedAt
             ? Math.max(0, Math.floor((Date.now() - this.youtubeLearning.sessionStartedAt) / 60000))
             : 0;
+        if (prefs.panelHidden) {
+            panel.innerHTML = `<div class="hidden-panel"><span>Focus Learning controls hidden</span><button class="secondary" data-panel-show type="button">Show controls</button></div>`;
+            panel.querySelector('[data-panel-show]')?.addEventListener('click', () => this.updateYouTubeLearningPreference('panelHidden', false));
+            return;
+        }
         panel.innerHTML = `
-            <div class="title">Focus Learning Mode</div>
+            <div class="titlebar"><div class="title">Focus Learning Mode</div><button class="secondary" data-panel-hide type="button">Hide</button></div>
             <div class="subtitle">Nuclear Mode is active for this allowlisted YouTube session.</div>
+            <label class="row"><input data-learning-pref="hideHomeFeed" type="checkbox" ${prefs.hideHomeFeed ? 'checked' : ''}> Hide home feed</label>
+            <label class="row"><input data-learning-pref="hideShorts" type="checkbox" ${prefs.hideShorts ? 'checked' : ''}> Hide Shorts</label>
+            <label class="row"><input data-learning-pref="hideTrending" type="checkbox" ${prefs.hideTrending ? 'checked' : ''}> Hide Trending</label>
+            <label class="row"><input data-learning-pref="hideExplore" type="checkbox" ${prefs.hideExplore ? 'checked' : ''}> Hide Explore</label>
+            <label class="row"><input data-learning-pref="hideSubscriptions" type="checkbox" ${prefs.hideSubscriptions ? 'checked' : ''}> Hide subscriptions</label>
+            <label class="row"><input data-learning-pref="hideRelated" type="checkbox" ${prefs.hideRelated ? 'checked' : ''}> Hide related and Up Next</label>
+            <label class="row"><input data-learning-pref="hideEndScreen" type="checkbox" ${prefs.hideEndScreen ? 'checked' : ''}> Hide end-screen recommendations</label>
+            <label class="row"><input data-learning-pref="hideMiniplayer" type="checkbox" ${prefs.hideMiniplayer ? 'checked' : ''}> Hide miniplayer</label>
             <label class="row"><input data-learning-pref="hideComments" type="checkbox" ${prefs.hideComments ? 'checked' : ''}> Hide comments</label>
             <label class="row"><input data-learning-pref="strictRecommendations" type="checkbox" ${prefs.strictRecommendations ? 'checked' : ''}> Strict learning recommendations</label>
             <label class="row"><input data-learning-pref="channelWhitelist" type="checkbox" ${prefs.channelWhitelist ? 'checked' : ''}> Channel whitelist</label>
@@ -692,6 +718,7 @@ class ContentBlocker {
             <label class="row"><input data-learning-pref="learningQueue" type="checkbox" ${prefs.learningQueue ? 'checked' : ''}> Learning queue</label>
             <div class="queue"><button data-queue-add type="button">Add current video</button><span class="meta" data-queue-count>0 queued</span></div>
         `;
+        panel.querySelector('[data-panel-hide]')?.addEventListener('click', () => this.updateYouTubeLearningPreference('panelHidden', true));
         panel.querySelectorAll('[data-learning-pref]').forEach((input) => {
             input.addEventListener('change', () => this.updateYouTubeLearningPreference(input.dataset.learningPref, input.checked));
         });
@@ -731,9 +758,15 @@ class ContentBlocker {
         style.id = 'timeshield-youtube-learning-style';
         style.textContent = `
             ${prefs.hideComments ? '#comments, ytd-comments { display:none !important; }' : ''}
+            ${prefs.hideHomeFeed ? 'ytd-browse[page-subtype="home"] #contents, ytd-rich-grid-renderer[is-home] { display:none !important; }' : ''}
+            ${prefs.hideShorts ? 'ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"] { display:none !important; }' : ''}
+            ${prefs.hideTrending ? 'ytd-browse[page-subtype="trending"] #contents, ytd-guide-entry-renderer a[href^="/feed/trending"] { display:none !important; }' : ''}
+            ${prefs.hideExplore ? 'ytd-guide-entry-renderer a[href^="/feed/explore"], ytd-guide-entry-renderer a[href^="/feed/storefront"] { display:none !important; }' : ''}
+            ${prefs.hideSubscriptions ? 'ytd-guide-entry-renderer a[href^="/feed/subscriptions"], ytd-browse[page-subtype="subscriptions"] #contents { display:none !important; }' : ''}
+            ${prefs.hideRelated ? '#related, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
+            ${prefs.hideEndScreen ? '.ytp-endscreen-content, .ytp-ce-element { display:none !important; }' : ''}
+            ${prefs.hideMiniplayer ? 'ytd-miniplayer, #miniplayer { display:none !important; }' : ''}
             ${prefs.strictRecommendations ? `
-                ytd-browse[page-subtype="home"] #contents,
-                ytd-browse[page-subtype="trending"] #contents,
                 ytd-reel-shelf-renderer,
                 ytd-rich-shelf-renderer[is-shorts],
                 ytd-guide-entry-renderer a[href^="/feed/trending"],

@@ -1399,8 +1399,13 @@ class OptionsManager {
     }
 
     showNotification(message, type = 'success') {
-        const notificationKey = `${type}:${String(message)}`;
+        const notificationMessage = String(message);
+        const notificationKey = notificationMessage;
         const now = Date.now();
+        const activeDuplicate = Array.from(document.querySelectorAll('.notification')).find(
+            (existing) => existing.textContent === notificationMessage
+        );
+        if (activeDuplicate) return;
         const lastShownAt = this.notificationRegistry.get(notificationKey) || 0;
         if (now - lastShownAt < 1000) return;
         this.notificationRegistry.set(notificationKey, now);
@@ -1410,9 +1415,16 @@ class OptionsManager {
             }
         }, 1000);
 
+        // Remove matching nodes first. This also fixes duplicates created by separate
+        // save/change handlers or by two overlapping options-page instances.
+        document.querySelectorAll('.notification').forEach((existing) => {
+            if (existing.dataset.notificationKey === notificationKey) existing.remove();
+        });
+
         const notification = document.createElement('div');
         notification.className = 'notification';
-        notification.textContent = message;
+        notification.dataset.notificationKey = notificationKey;
+        notification.textContent = notificationMessage;
 
         if (type === 'error') {
             notification.style.background = '#e11d48'; // Rose 600
