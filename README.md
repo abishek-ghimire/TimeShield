@@ -56,22 +56,10 @@ TimeShield brings everyday focus tools into one extension:
 
 ---
 
-# Why TimeShield?
-
-TimeShield is designed around **deliberate control** rather than automatic restriction.
-
-- Websites are not blocked just because they belong to a category.
-- Protection starts only when we enable a feature or start a session.
-- The control panel keeps the main productivity tools close at hand.
-- Each protection feature has its own settings and behavior.
-- We stay in control of when and how strong the protection should be.
-
----
-
 # Screenshots
 
 <details>
-<summary><strong>View the TimeShield screenshots</strong></summary>
+<summary>View the TimeShield screenshots</summary>
 
 ## Control Center
 
@@ -219,17 +207,6 @@ When a newer release is available:
 3. Open the browser's Extensions page.
 4. Replace the old installation if necessary.
 5. Click **Load unpacked** and select the new TimeShield folder.
-
----
-
-## Which method should we use?
-
-| Method | Best for | Git required? | Updates |
-| --- | --- | --- | --- |
-| **Clone repository** | Developers and contributors | Yes | `git pull` |
-| **Download ZIP** | General users | No | Download the latest release |
-
-> **Recommendation:** Use **Download ZIP** if we only want to use TimeShield. Use **Clone the repository** if we plan to develop, modify, or contribute to the project.
 
 ---
 
@@ -487,28 +464,6 @@ TimeShield requests only the browser permissions needed for its features.
 
 ---
 
-# Browser compatibility and platform limitations
-
-TimeShield targets **Chromium Manifest V3** browsers, including:
-
-- Google Chrome
-- Brave
-- Microsoft Edge
-- Other Chromium-based browsers
-
-### Browser limitations
-
-- Browser-internal pages cannot receive normal extension overlays or content scripts.
-- Extensions cannot reliably block or delay access to extension-management pages.
-- Extensions cannot prevent users from disabling or removing them from those pages.
-- Local-file features require **Allow access to file URLs**.
-- Screen Time cannot reconstruct unrecorded historical activity.
-- Browser-specific restrictions may affect overlays, fullscreen behavior, protected pages, and local documents.
-
-These are browser platform limitations, not hidden TimeShield features.
-
----
-
 # Troubleshooting
 
 ## A website is blocked unexpectedly
@@ -639,32 +594,7 @@ node --test tests/smoke.test.mjs
 | Pause challenge syntax | `node --check floating/pause-challenge.js` |
 | Whitespace errors | `git diff --check` |
 
----
-
-# Testing
-
-The repository contains Node-based smoke and regression tests for extension wiring and protection behavior.
-
-```bash
-node --test tests/smoke.test.mjs
-```
-
-The current suite contains **57 passing tests**, covering:
-
-- Opt-in protection
-- Cleanup behavior
-- Nuclear Mode setup and exit
-- Preserved open tabs
-- DNR session rules
-- Local-file and localhost exceptions
-- Pause verification
-- Screen Time
-- Notification sounds
-- Popup behavior
-- Settings persistence
-- Duplicate-toast suppression
-- Empty-list handling
-- Documentation checks
+The current suite contains **57 passing tests** covering protection modes, Nuclear Mode, Screen Time, notifications, popup behavior, settings persistence, and documentation checks.
 
 ---
 
@@ -672,36 +602,11 @@ The current suite contains **57 passing tests**, covering:
 
 Bug reports, feature ideas, documentation improvements, and code contributions are welcome through the [GitHub issue tracker](https://github.com/abishek-ghimire/TimeShield/issues).
 
-### Before submitting a change
-
-- Review the existing implementation.
-- Preserve local-first operation.
-- Avoid unnecessary permissions.
-- Keep protection modes opt-in.
-- Run the smoke suite.
-- Update the README when behavior changes.
-- Create a release archive only when the change is ready and a release is explicitly requested.
-
 ---
 
 # License
 
 TimeShield is licensed under the [Apache License 2.0](LICENSE).
-
----
-
-# Project philosophy
-
-> **Productivity tools should help people control their attention, not demand more of it.**
-
-TimeShield is built around:
-
-- Deliberate controls
-- Clear warnings
-- Local data
-- No mandatory account
-- No mandatory cloud services
-- Practical protection against distractions
 
 ---
 
@@ -712,5 +617,3 @@ TimeShield is built around:
 [3]: https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest "Chrome Extensions: Declarative Net Request API"
 [4]: https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts "Chrome Extensions: Content scripts"
 [5]: https://docs.github.com/en/repositories/creating-and-managing-repositories/viewing-activity-and-data-for-your-repository "GitHub Docs: Viewing repository activity and data"
-
-The repository links and release information in this document point to the canonical [TimeShield GitHub repository](https://github.com/abishek-ghimire/TimeShield).
