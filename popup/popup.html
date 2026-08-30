@@ -158,40 +158,6 @@
                 <label>Hours<input id="nuclearHours" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
                 <label>Minutes<input id="nuclearMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="0"></label>
             </div>
-            <div class="nuclear-schedule-option">
-                <label class="nuclear-schedule-toggle" for="nuclearScheduleEnabled">
-                    <input id="nuclearScheduleEnabled" type="checkbox">
-                    <span class="nuclear-schedule-control" aria-hidden="true"></span>
-                    <span class="nuclear-schedule-label">
-                        <strong>Schedule Nuclear Mode</strong>
-                        <small>Start this protected session automatically on selected days. The duration above will be used each time.</small>
-                    </span>
-                </label>
-                <div id="nuclearScheduleSettings" class="nuclear-schedule-settings" hidden>
-                    <div class="nuclear-form-row nuclear-schedule-time-row">
-                        <label>Start time<input id="nuclearScheduleStartTime" type="time" value="09:00"></label>
-                        <label class="nuclear-schedule-open-tabs-label">
-                            <span>Open tabs</span>
-                            <span class="nuclear-schedule-inline-check"><input id="nuclearScheduleExcludeOpenTabs" type="checkbox"> Keep tabs open at start</span>
-                        </label>
-                    </div>
-                    <div class="nuclear-schedule-days-heading">
-                        <span>Active days</span>
-                        <label><input id="nuclearScheduleAllDays" type="checkbox"> Every day</label>
-                    </div>
-                    <div class="nuclear-schedule-days" role="group" aria-label="Nuclear Mode schedule days">
-                        <label><input type="checkbox" id="nuclearScheduleDay0" value="0"> Sun</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay1" value="1"> Mon</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay2" value="2"> Tue</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay3" value="3"> Wed</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay4" value="4"> Thu</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay5" value="5"> Fri</label>
-                        <label><input type="checkbox" id="nuclearScheduleDay6" value="6"> Sat</label>
-                    </div>
-                    <p id="nuclearScheduleStatus" class="nuclear-schedule-status" aria-live="polite"></p>
-                    <button id="nuclearScheduleClear" class="nuclear-schedule-clear" type="button" hidden>Turn off saved schedule</button>
-                </div>
-            </div>
             <div class="nuclear-open-tabs-option">
                 <label class="nuclear-open-tabs-toggle" for="nuclearExcludeOpenTabs">
                     <input id="nuclearExcludeOpenTabs" type="checkbox">

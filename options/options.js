@@ -646,7 +646,7 @@ class OptionsManager {
 
     normalizeNuclearWhitelist(sites) {
         return Array.isArray(sites)
-            ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))].slice(0, 8)
+            ? [...new Set(sites.map(site => this.normalizeNuclearSite(site)).filter(Boolean))]
             : [];
     }
 
@@ -679,11 +679,6 @@ class OptionsManager {
             this.showNotification('That site is already on the Nuclear Mode whitelist.', 'warning');
             return;
         }
-        if (this.nuclearWhitelist.length >= 8) {
-            this.showNotification('Nuclear Mode allows up to 8 sites.', 'error');
-            return;
-        }
-
         const response = await chrome.runtime.sendMessage({
             action: 'addNuclearWhitelistSite',
             site

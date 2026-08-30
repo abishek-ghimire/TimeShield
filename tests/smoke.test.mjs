@@ -549,7 +549,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.doesNotMatch(worker, /tabIds: normalizedExcludedTabIds/);
     assert.match(worker, /resourceTypes: \['main_frame'\]/);
     assert.match(worker, /local development pages, all local files, and PDFs available/);
-    assert.match(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
+    assert.doesNotMatch(worker, /whitelist\.slice\(0, 8\)|slice\(0, 8\)/);
+    assert.doesNotMatch(worker, /Nuclear Mode allows up to 8 sites/);
     assert.match(worker, /Nuclear Mode duration must be greater than zero/);
     assert.match(worker, /Add at least one allowed site or choose Exclude all open tabs before starting Nuclear Mode/);
     assert.match(popup, /id="nuclearToggle" class="btn btn-nuclear nuclear-action"/);
@@ -592,6 +593,11 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(popupJs, /renderNuclearSavedEntries/);
     assert.match(popupJs, /Settings whitelist entries are automatically included in every new session/);
     assert.match(popupJs, /durationSeconds = \(hours \* 3600\) \+ \(minutes \* 60\)/);
+    assert.doesNotMatch(popup, /nuclearSchedule/);
+    assert.doesNotMatch(popupJs, /scheduleNuclearMode|clearNuclearModeSchedule|saveNuclearSchedule/);
+    assert.doesNotMatch(options, /Up to 8 domains are allowed/);
+    assert.doesNotMatch(optionsJs, /Nuclear Mode allows up to 8 sites/);
+    assert.doesNotMatch(popupJs, /combined Nuclear whitelist is full/);
     assert.match(popupJs, /Add at least one allowed site in Settings or add an additional entry, or choose Exclude all open tabs/);
     assert.doesNotMatch(popupJs, /25-minute/);
     assert.doesNotMatch(popupJs, /savedDurationSeconds > 0 \? savedDurationSeconds : 25 \* 60/);
@@ -617,39 +623,8 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     }
 });
 
-test('Nuclear Mode scheduling is configurable from the control panel and survives restarts safely', async () => {
-    const worker = await read('background/service-worker.js');
-    const popup = await read('popup/popup.html');
-    const popupJs = await read('popup/popup.js');
-
-    assert.match(popup, /id="nuclearScheduleEnabled"/);
-    assert.match(popup, /Schedule Nuclear Mode/);
-    assert.match(popup, /id="nuclearScheduleStartTime"/);
-    assert.match(popup, /id="nuclearScheduleSettings"[^>]*hidden/);
-    assert.match(popup, /id="nuclearScheduleAllDays"/);
-    for (let day = 0; day <= 6; day++) assert.match(popup, new RegExp(`id="nuclearScheduleDay${day}"`));
-    assert.match(popup, /id="nuclearScheduleExcludeOpenTabs"/);
-    assert.match(popup, /id="nuclearScheduleClear"/);
-    assert.match(popupJs, /action: 'scheduleNuclearMode'/);
-    assert.match(popupJs, /action: 'clearNuclearModeSchedule'/);
-    assert.match(popupJs, /getSelectedNuclearScheduleDays/);
-    assert.match(popupJs, /saveNuclearSchedule/);
-    assert.match(popupJs, /startButton\.textContent = enabled \? 'Save Nuclear Schedule' : 'Continue to Nuclear Mode'/);
-    assert.match(worker, /case 'nuclearSchedule'/);
-    assert.match(worker, /async scheduleNuclearMode\(schedule, whitelist = \[\]\)/);
-    assert.match(worker, /async clearNuclearModeSchedule\(\)/);
-    assert.match(worker, /validateNuclearSchedule/);
-    assert.match(worker, /getLatestNuclearScheduleStart/);
-    assert.match(worker, /lastStartedToken/);
-    assert.match(worker, /restoreNuclearSchedule/);
-    assert.match(worker, /chrome\.alarms\.clear\('nuclearSchedule'\)/);
-    assert.match(worker, /chrome\.tabs\.query\(\{\}\)/);
-    assert.match(worker, /schedule: this\.normalizeNuclearSchedule\(current\.schedule\)/);
-});
-
 
 test('Screen-time tracking follows tab lifecycle changes without overcounting', async () => {
-
     const tracker = await read('background/usage-tracker.js');
     assert.match(tracker, /chrome\.tabs\.onRemoved\.addListener/);
     assert.match(tracker, /this\.activeTabId === tabId/);
