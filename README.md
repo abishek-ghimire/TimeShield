@@ -5,9 +5,25 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Unique Visitors](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fabishek-ghimire%2FTimeShield%2Fmain%2Fdata%2Frepository-traffic-badge.json)](https://github.com/abishek-ghimire/TimeShield/blob/main/data/repository-traffic.json)
 
-**TimeShield is a local-first productivity and focus extension for Chromium-based browsers.** It combines a floating clock, focus protection, scheduled blocking, sleep protection, usage limits, screen-time tracking, tasks, timers, and optional ad protection in one browser extension.
+> **A local-first productivity and focus extension for Chromium-based browsers.**
 
-TimeShield does not require an account or cloud synchronization for its core features. Settings, task data, protection lists, and screen-time records remain in the browser profile.
+TimeShield brings everyday focus tools into one extension:
+
+- Floating and flip clocks
+- Focus and Nuclear Mode
+- Scheduled and sleep protection
+- Website usage limits
+- Screen-time tracking
+- Local tasks and timers
+- Optional ad protection
+- YouTube Focus Learning Mode
+
+### Why TimeShield?
+
+- **Local-first:** Core data stays in the browser.
+- **No account required:** Core productivity features work without an account or cloud sync.
+- **User-controlled:** Protection starts only when we explicitly enable it.
+- **Built for focus:** Tools are designed to reduce distractions without unnecessarily restricting useful websites.
 
 | Resource | Link |
 | --- | --- |
@@ -16,84 +32,88 @@ TimeShield does not require an account or cloud synchronization for its core fea
 | Releases | [View GitHub Releases](https://github.com/abishek-ghimire/TimeShield/releases) |
 | Current manifest version | `2.3.4` |
 
-> **Distribution note:** The latest development changes are maintained on the `main` branch and can be loaded directly as an unpacked extension. No new ZIP or release is created automatically for every change.
+> **Distribution note:** Latest development changes are maintained on `main` and can be loaded as an unpacked extension. New ZIP/release packages are not created for every change.
 
 ---
 
-## Features at a glance
+# Features at a glance
 
-| Feature | Current behavior |
+| Feature | What it does |
 | --- | --- |
-| **Floating Clock** | Displays a draggable and resizable clock on supported webpages, synchronizes its geometry across open tabs, and remains visible in supported fullscreen contexts. |
-| **Flip Clock** | Opens a dedicated split-flap clock in a separate browser tab and provides a route back to the normal clock view. |
-| **Timers** | Runs configurable timers from the control panel, can display timer information independently of Clock View, and plays a completion tone when a timer finishes if sounds are enabled. |
-| **Focus Mode** | Restricts a user-defined website list during an explicitly started focus session. The current site can be added directly from the popup. |
-| **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, dedicated block page, pause flow, verified exit, and an optional YouTube Focus Learning Mode for allowlisted YouTube sessions. |
-| **Scheduled Blocking** | Restricts configured websites during selected days and time ranges. It remains inactive until explicitly enabled and configured. |
-| **Sleep Protection** | Applies a separate protection list during sleep hours, including schedules that cross midnight. |
-| **Usage Limits** | Tracks configured website usage and blocks a site after its daily limit is reached, with warnings and optional sounds before the limit. |
-| **Screen Time** | Records active browsing time by website and presents daily, weekly, and monthly views. |
-| **Tasks** | Provides a small local task list for everyday work. |
-| **Ad Protection** | Offers optional local rule-based filtering, element selection, and custom filters. |
-| **Themes** | Includes Light, Dark, and Solar Ember themes, with Solar Ember as the default. |
-| **Local-first storage** | Keeps core configuration and activity data in browser storage without requiring an account or cloud sync. |
+| **Floating Clock** | Draggable and resizable clock that can sync across supported tabs. |
+| **Flip Clock** | Separate split-flap clock view in a browser tab. |
+| **Timers** | Configurable timers with optional completion sounds and floating display. |
+| **Focus Mode** | Blocks selected websites during an active focus session. |
+| **Nuclear Mode** | Strict timed allowlist with session setup, protected tabs, pause/exit verification, and YouTube Focus Learning Mode. |
+| **Scheduled Blocking** | Blocks selected websites during chosen days and times. |
+| **Sleep Protection** | Separate website protection for sleep hours, including overnight schedules. |
+| **Usage Limits** | Tracks selected websites and blocks them after daily limits. |
+| **Screen Time** | Tracks active browsing time with daily, weekly, and monthly views. |
+| **Tasks** | Simple local task list for everyday work. |
+| **Ad Protection** | Optional local filtering, element selection, and custom rules. |
+| **Themes** | Light, Dark, and Solar Ember themes. |
+| **Local-first storage** | Keeps core settings and activity data in browser storage. |
 
 ---
 
-## Why TimeShield?
+# Why TimeShield?
 
-TimeShield is designed for deliberate protection rather than automatic restriction. A website is not blocked merely because it belongs to a predefined category. Protection begins only when a configured feature is enabled or an explicit session is started.
+TimeShield is designed around **deliberate control** rather than automatic restriction.
 
-The control panel brings the main actions together in one compact view. It shows the current clock, focus controls, Nuclear Mode, settings, active-site limits, timers, tasks, and optional ad protection. Settings pages remain focused on configuration; Nuclear Mode activation itself happens from the control panel.
+- Websites are not blocked just because they belong to a category.
+- Protection starts only when we enable a feature or start a session.
+- The control panel keeps the main productivity tools close at hand.
+- Each protection feature has its own settings and behavior.
+- We stay in control of when and how strong the protection should be.
 
 ---
 
-## Screenshots
+# Screenshots
 
 <details>
-<summary>View the TimeShield screenshots</summary>
+<summary><strong>View the TimeShield screenshots</strong></summary>
 
-### Control Center
+## Control Center
 
 ![TimeShield Control Center with Nuclear Mode](assets/screenshots/control-panel.png)
 
-### General Settings
+## General Settings
 
 ![General Settings](assets/screenshots/general.png)
 
-### Clock Settings
+## Clock Settings
 
 ![Clock Settings](assets/screenshots/clock.png)
 
-### Clock View
+## Clock View
 
 ![Clock View](assets/screenshots/clock-view.webp)
 
-### Flip Clock
+## Flip Clock
 
 ![Flip Clock](assets/screenshots/flip-clock.webp)
 
-### Focus Mode
+## Focus Mode
 
 ![Focus Settings](assets/screenshots/focus.png)
 
-### Scheduled Blocking
+## Scheduled Blocking
 
 ![Scheduled Blocking](assets/screenshots/schedule.png)
 
-### Ad Protection
+## Ad Protection
 
 ![Ad Protection](assets/screenshots/ad.png)
 
-### Tasks
+## Tasks
 
 ![Tasks](assets/screenshots/task.png)
 
-### Screen Time
+## Screen Time
 
 ![Screen Time](assets/screenshots/screen.png)
 
-### Data Management
+## Data Management
 
 ![Data Management](assets/screenshots/data.png)
 
@@ -101,26 +121,37 @@ The control panel brings the main actions together in one compact view. It shows
 
 ---
 
-## Installation
+# Installation
 
-TimeShield is a Manifest V3 extension and currently works as an unpacked extension. The repository can be loaded directly; a build step is not required.
+TimeShield is a **Manifest V3** extension for Chromium-based browsers. It currently runs as an **unpacked extension**, so no build step is required.
 
-### Load the current repository
+We have two ways to install it:
+
+- **Option 1 — Clone the repository:** Best for development and keeping the source up to date.
+- **Option 2 — Download the ZIP:** Easiest for users who simply want to install and use TimeShield.
+
+---
+
+## Option 1 — Clone the repository
+
+This method is recommended if we want to work with the source code or receive future changes through Git.
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/abishek-ghimire/TimeShield.git
 cd TimeShield
 ```
 
-Then complete the following steps:
+### 2. Load TimeShield in the browser
 
 1. Open the browser's extension-management page.
 2. Enable **Developer mode**.
-3. Select **Load unpacked**.
-4. Choose the cloned `TimeShield` directory containing `manifest.json`.
+3. Click **Load unpacked**.
+4. Select the cloned **TimeShield** folder containing `manifest.json`.
 5. Pin TimeShield to the toolbar if desired.
 
-Typical extension-management URLs are:
+### Extension-management pages
 
 | Browser | Extension page |
 | --- | --- |
@@ -129,235 +160,429 @@ Typical extension-management URLs are:
 | Edge | `edge://extensions` |
 | Other Chromium browsers | Open the browser's Extensions page manually |
 
-> **Important:** Select the extracted or cloned folder, not the ZIP file itself. After pulling new code, click **Reload** on the TimeShield card before testing.
+> **Important:** Select the TimeShield project folder containing `manifest.json`, not the ZIP file.
 
-### Release packages
+### Updating a cloned installation
 
-Published packages are listed on the [GitHub Releases page](https://github.com/abishek-ghimire/TimeShield/releases). The current **[TimeShield-v2.3.4.zip](https://github.com/abishek-ghimire/TimeShield/releases/download/v2.3.4/TimeShield-v2.3.4.zip)** package contains the verified post-audit build, including the improved control-panel height and Floating Display visibility. For development changes that are newer than the release, clone the repository and load it as an unpacked extension.
+When new changes are available:
+
+```bash
+cd TimeShield
+git pull
+```
+
+Then:
+
+1. Open the browser's Extensions page.
+2. Find **TimeShield**.
+3. Click **Reload**.
+4. Test the updated version.
 
 ---
 
-## Core features
+## Option 2 — Download the ZIP
 
-### Floating Clock and Flip Clock
+This is the easiest method if we do not want to use Git.
 
-The Floating Clock can be opened from the control panel and displayed on supported webpages. Its position and size can be changed by dragging and resizing. TimeShield synchronizes clock geometry across open supported tabs, so updates made in one tab can be reflected in the others.
+### 1. Download TimeShield
 
-Clock View and Flip Clock are separate views. Clock View can open Flip Clock in a new tab, while Flip Clock provides a route back to Clock View. The clock supports 12-hour and 24-hour formats, and the popup reflects the active view.
+Download the latest release from the [GitHub Releases page](https://github.com/abishek-ghimire/TimeShield/releases).
 
-Local documents and PDFs can receive the floating clock when the browser grants TimeShield access to file URLs. Browser-internal pages remain protected by the browser and cannot receive normal extension content scripts.
+The current release is:
 
-### Timers and floating display
+**[TimeShield-v2.3.4.zip](https://github.com/abishek-ghimire/TimeShield/releases/download/v2.3.4/TimeShield-v2.3.4.zip)**
 
-Timers can be configured from the control panel. Floating display for a timer or focus session is independent of opening Clock View. When enabled and supported by the current page, the relevant timer or session overlay appears without requiring the separate clock interface to be open.
+### 2. Extract the ZIP
 
-### Focus Mode
+After downloading:
 
-Focus Mode restricts only the websites configured in the Focus list and only while an explicit focus session is active. The current site can be added from the control panel when it is open in a supported tab.
+1. Extract the ZIP file.
+2. Open the extracted **TimeShield** folder.
+3. Make sure the folder contains `manifest.json`.
 
-A focus session starts after a save-work warning so that unfinished work can be saved before blocking begins. Focus Mode supports pausing from its block page. General one-minute pauses are challenge-free for the first two eligible requests per local calendar day; later requests use the motivational verification flow.
+### 3. Load the extension
 
-### Scheduled Blocking
+1. Open the browser's extension-management page.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select the extracted **TimeShield** folder.
+5. Pin TimeShield to the toolbar if desired.
 
-Scheduled Blocking supports a configurable website list, selected days, and start and end times. It does not block anything while disabled or while no usable site list has been configured. A schedule that crosses midnight is handled according to its configured time range.
+> **Important:** Do not select the `.zip` file directly. The ZIP must be extracted first.
 
-### Sleep Protection
+### Updating a ZIP installation
 
-Sleep Protection is separate from Scheduled Blocking. It has its own website list and schedule, including overnight ranges that start on one day and end on the next. Scheduled Blocking and Sleep Protection pre-activation warnings also use the master sound setting and play at most one tone per configured threshold for each upcoming session.
+When a newer release is available:
 
-### Usage Limits
+1. Download the latest ZIP from the [GitHub Releases page](https://github.com/abishek-ghimire/TimeShield/releases).
+2. Extract the new ZIP.
+3. Open the browser's Extensions page.
+4. Replace the old installation if necessary.
+5. Click **Load unpacked** and select the new TimeShield folder.
 
-Usage Limits track configured domains and show warnings as the remaining time approaches. The control panel shows the remaining limit only for the currently open site when that site has a configured limit. It does not display unrelated website limits while browsing another site.
+---
 
-When sounds are enabled in General settings, TimeShield plays one brief warning tone at each configured warning threshold, normally **2 minutes** and **1 minute** before the site or global usage limit is reached. The existing warning cache prevents the same threshold from sounding repeatedly during the same local day and configured limit. After a limit is reached, the site-specific pause choices are limited to **1 minute**, **5 minutes**, and **10 minutes**. Usage-limit extensions include additional confirmation so that extending access is deliberate.
+## Which method should we use?
 
-### Screen Time
+| Method | Best for | Git required? | Updates |
+| --- | --- | --- | --- |
+| **Clone repository** | Developers and contributors | Yes | `git pull` |
+| **Download ZIP** | General users | No | Download the latest release |
 
-Screen Time records active browsing time by website and provides daily, weekly, and monthly views. The service worker periodically checkpoints tracking data so that Manifest V3 suspension does not discard all progress.
+> **Recommendation:** Use **Download ZIP** if we only want to use TimeShield. Use **Clone the repository** if we plan to develop, modify, or contribute to the project.
 
-TimeShield cannot reconstruct browsing time from before tracking was enabled or during periods when the extension was unavailable. Local files and PDFs can be tracked after **Allow access to file URLs** is enabled in the extension details.
+---
 
-To enable local-file access:
+# Core features
+
+## Floating Clock and Flip Clock
+
+- Open the Floating Clock from the control panel.
+- Drag and resize the clock on supported pages.
+- Sync clock position and size across supported tabs.
+- Use 12-hour or 24-hour time formats.
+- Switch between Clock View and Flip Clock.
+- Use the clock on supported local documents and PDFs after enabling file URL access.
+- Browser-internal pages remain unavailable to normal extension overlays.
+
+## Timers and floating display
+
+- Create configurable timers from the control panel.
+- Show timer information independently of Clock View.
+- Display timer or focus-session overlays on supported pages.
+- Play a completion sound when enabled.
+
+## Focus Mode
+
+- Choose the websites we want to protect.
+- Start Focus Mode explicitly from the extension.
+- Add the current site directly from the control panel.
+- Get a save-work warning before blocking starts.
+- Pause a session when needed.
+- Use limited challenge-free one-minute pauses before verification is required.
+
+## Scheduled Blocking
+
+- Select websites to block.
+- Choose specific days.
+- Set start and end times.
+- Support schedules that cross midnight.
+- Keep the feature inactive until it is enabled and configured.
+
+## Sleep Protection
+
+- Maintain a separate protection list from Scheduled Blocking.
+- Set dedicated sleep hours.
+- Support overnight schedules.
+- Use the master sound setting for pre-activation warnings.
+
+## Usage Limits
+
+- Set daily limits for selected websites.
+- Track remaining time for configured sites.
+- Receive warnings as the limit approaches.
+- Optional warning sounds normally occur at **2 minutes** and **1 minute**.
+- Avoid repeated warnings for the same threshold during the same local day.
+- After reaching a limit, available pauses are **1, 5, or 10 minutes**.
+- Additional confirmation is required when extending access.
+
+## Screen Time
+
+- Track active browsing time by website.
+- View **daily, weekly, and monthly** statistics.
+- Periodically checkpoint tracking data to handle Manifest V3 service-worker suspension.
+- Historical time cannot be reconstructed if it was never recorded.
+- Local files and PDFs can be tracked after enabling **Allow access to file URLs**.
+
+### Enable local-file access
 
 1. Open the browser's Extensions page.
 2. Open TimeShield's **Details** page.
 3. Enable **Allow access to file URLs**.
-4. Reload TimeShield and reopen the local document if necessary.
+4. Reload TimeShield and reopen the document if needed.
 
-### Tasks
+## Tasks
 
-Tasks are stored locally and are intended for small, practical work items. They do not require a separate account or an external task service.
+- Create small everyday work items.
+- Keep tasks stored locally.
+- Use tasks without a separate account or external service.
 
-### Optional Ad Protection
+## Optional Ad Protection
 
-Ad Protection is independent of the productivity features. It can be enabled or disabled without changing the clock, Focus Mode, Screen Time, Tasks, or Nuclear Mode. It includes local rule lists, an element picker, synchronization controls, and custom filter support.
+- Enable or disable ad protection independently.
+- Use local filtering rules.
+- Pick page elements for filtering.
+- Add custom filters.
+- Manage supported rule lists.
 
-### Themes and interface customization
+## Themes and interface customization
 
-TimeShield includes Light, Dark, and Solar Ember themes. The popup uses compact cards, responsive controls, expandable settings sections, and a control-panel layout designed for the browser toolbar. Solar Ember is the default theme.
+- Choose **Light**, **Dark**, or **Solar Ember**.
+- Use the compact control panel.
+- Use expandable settings sections.
+- Use responsive controls designed for the browser toolbar.
+- **Solar Ember** is the default theme.
 
 ---
 
-## Nuclear Mode
+# Nuclear Mode
 
-Nuclear Mode is the strictest TimeShield protection feature. It is an opt-in timed session for work that requires access to only a small, deliberate set of destinations.
+Nuclear Mode is TimeShield's strongest protection feature.
 
-> **Nuclear Mode rule:** Without an explicit exception, an ordinary unlisted website or link is blocked. Nuclear Mode is never supposed to activate automatically.
+- It is **opt-in**.
+- It runs for a chosen amount of time.
+- Only deliberately allowed destinations remain accessible.
+- Unlisted websites and links are blocked by default.
+- Nuclear Mode never starts automatically.
 
-### Starting a session
+> **Nuclear Mode rule:** Without an explicit exception, an unlisted website or link is blocked.
 
-Nuclear Mode is started from the **Nuclear Mode** button in the control panel. Every activation opens a fresh setup dialog. Entries saved in the Settings whitelist are included automatically; the setup dialog is used for adding any extra websites or links needed for that particular session.
+## Starting a session
 
-The setup sequence is:
+Start Nuclear Mode from the **Nuclear Mode** button in the control panel.
 
-1. Choose a positive duration using separate **Hours** and **Minutes** fields.
-2. Optionally select **Exclude all open tabs** as the first setup choice.
-3. Use the Settings whitelist entries that are included automatically, then add extra work websites or exact links manually or capture the current tab if needed.
-4. Review the save-work warning.
-5. Confirm the Nuclear Mode activation.
+### Setup flow
 
-The duration is explicit. There is no hidden 25-minute fallback or automatic session duration.
+1. Choose **Hours** and **Minutes**.
+2. Optionally enable **Exclude all open tabs**.
+3. Use saved whitelist entries.
+4. Add extra websites or exact links if needed.
+5. Review the save-work warning.
+6. Confirm activation.
 
-### Allowlist and open-tab exclusion
+- Every activation uses a fresh setup dialog.
+- The session duration is always explicit.
+- There is no hidden default duration.
 
-The session allowlist supports bare domains, exact HTTP/HTTPS links, and exact `file://` URLs. Any number of valid allowlisted entries can be used in a session.
+## Allowlist and open-tab exclusion
 
-The optional **Exclude all open tabs** choice captures every tab currently open immediately before Nuclear Mode starts. Captured tabs remain available for the session, including websites, exact links, localhost pages, local files, PDFs, and other content already open in browser tabs. Newly opened tabs are still blocked unless they are otherwise permitted.
+The allowlist supports:
 
-The Settings page contains a Nuclear Mode Whitelist for saved entries. The default entries include `chatgpt.com`, `gemini.google.com`, `notebooklm.google.com`, `claude.ai`, `deepseek.com`, `grok.com`, and `web.whatsapp.com`. Entries in this saved whitelist are automatically included in every new Nuclear session, and additional session entries can be added from the setup dialog.
+- Bare domains
+- Exact HTTP/HTTPS links
+- Exact `file://` URLs
 
-### Automatic exceptions
+With **Exclude all open tabs**:
 
-The following remain available during Nuclear Mode without being added manually:
+- Existing tabs are preserved when Nuclear Mode starts.
+- Preserved tabs can include websites, localhost pages, local files, PDFs, and exact links.
+- Newly opened tabs remain blocked unless otherwise allowed.
+
+### Saved Nuclear Mode whitelist
+
+The default saved entries include:
+
+- `chatgpt.com`
+- `gemini.google.com`
+- `notebooklm.google.com`
+- `claude.ai`
+- `deepseek.com`
+- `grok.com`
+- `web.whatsapp.com`
+
+These entries are automatically included in new Nuclear sessions.
+
+## Automatic exceptions
 
 | Destination | Behavior |
 | --- | --- |
-| Local files | `file://` pages remain available, including local documents and PDFs. Browser file access must be enabled for the extension where required. |
-| Localhost | `localhost`, `127.0.0.1`, `0.0.0.0`, and IPv6 loopback development pages remain available. |
-| PDF URLs | HTTP/HTTPS destinations whose URL identifies a PDF remain available. |
-| Other unlisted websites and links | Blocked unless explicitly allowlisted or preserved through the open-tab exclusion. |
+| Local files | `file://` pages remain available when file access is enabled. |
+| Localhost | `localhost`, `127.0.0.1`, `0.0.0.0`, and IPv6 loopback pages remain available. |
+| PDF URLs | HTTP/HTTPS URLs identifying PDFs remain available. |
+| Other unlisted websites and links | Blocked unless allowlisted or preserved through open-tab exclusion. |
 
-### Pausing and ending Nuclear Mode
+## Pausing and ending Nuclear Mode
 
-The dedicated Nuclear block page provides **Pause Blocks**. In each Nuclear Mode session, exactly one **1-minute pause** is available without a challenge. Later one-minute pause attempts require the lowercase motivational verification challenge. Longer pauses use the existing preparation and challenge flow.
+- One **1-minute pause** is available without a challenge per Nuclear session.
+- Later one-minute pauses and longer pauses require verification.
+- The active control-panel button shows the remaining time.
+- Ending the session requires verification.
 
-When Nuclear Mode is inactive, the control-panel button reads **Nuclear Mode**. During an active session, that same button shows the live remaining timer instead of the label. Clicking the active timer button opens the Nuclear block page rather than stopping the session directly. The required sequence is:
+### End Nuclear Mode
 
 1. Select **Pause Blocks**.
 2. Select **End Nuclear Mode with verification**.
 3. Continue to verification.
 4. Type the displayed motivational sentences exactly in lowercase.
-5. Submit the challenge to end Nuclear Mode.
+5. Submit the challenge.
 
-The challenge uses first-person **“i”** language, such as sentences about staying focused and avoiding distraction. It does not use second-person “you” wording, and it does not accept symbols, numbers, or incorrectly formatted text.
+- The challenge uses first-person **“i”** wording.
+- Symbols, numbers, or incorrectly formatted text are rejected.
+- Nuclear Mode also ends automatically when its selected duration expires.
+- Blocking rules and temporary exceptions are cleaned up afterward.
 
-When `youtube.com` or a YouTube subdomain is included in the Nuclear allowlist, an in-page **Focus Learning Mode** panel appears only while Nuclear Mode is active. It keeps normal search, related videos, playlists, chapters, transcript, captions, playback speed, and fullscreen available. Autoplay is turned off automatically. Optional controls can hide comments, hide common home/trending/Shorts distractions, filter visible video cards to a personal channel list, start a learning-session timer, and save the current video to a local learning queue. These controls and their saved preferences have no effect outside an active Nuclear session or on YouTube that is not included in the Nuclear allowlist.
+### YouTube Focus Learning Mode
 
-Nuclear Mode also ends automatically when its selected duration expires. Cleanup removes its blocking rules and its preserved open-tab exception, and the YouTube learning panel and page restrictions are removed from open YouTube tabs.
+When `youtube.com` or a YouTube subdomain is allowlisted:
+
+- Focus Learning Mode appears only during an active Nuclear session.
+- Search remains available.
+- Related and recommended videos remain available.
+- Playlists remain available.
+- Chapters, transcripts, captions, playback speed, and fullscreen remain available.
+- Autoplay is disabled.
+- Optional controls can:
+  - Hide comments.
+  - Hide Home, Trending, and Shorts distractions.
+  - Filter visible video cards to selected channels.
+  - Start a learning-session timer.
+  - Save videos to a local learning queue.
+
+These YouTube controls do not affect normal YouTube use outside an active Nuclear session.
 
 ---
 
-## Pause behavior
+# Pause behavior
 
-Pause behavior depends on the protection feature and requested duration.
+Pause behavior depends on the active protection feature.
 
 | Protection context | Challenge-free allowance | Verified pause behavior |
 | --- | --- | --- |
-| Nuclear Mode | One 1-minute pause per Nuclear session | Later 1-minute requests and longer pauses use the Nuclear pause flow. |
-| Focus, Schedule, and Sleep | Two eligible 1-minute pauses per local day | Later one-minute requests and supported longer pauses use verification. |
-| Usage Limits | No more than the site-limit pause choices of 1, 5, or 10 minutes | Additional confirmation is used when extending a usage limit. |
+| Nuclear Mode | One 1-minute pause per session | Later 1-minute and longer pauses require verification. |
+| Focus, Schedule, and Sleep | Two eligible 1-minute pauses per local day | Later one-minute and supported longer pauses require verification. |
+| Usage Limits | Site-limit choices of 1, 5, or 10 minutes | Confirmation is required when extending access. |
 
-When verification is required, the block page displays a visible preparation countdown before the motivational challenge. The challenge text is shown in lowercase and must be entered exactly as displayed.
+- A preparation countdown appears before required verification.
+- The motivational challenge must be entered exactly as displayed.
 
 ---
 
-## Privacy and local storage
+# Privacy and local storage
 
-TimeShield follows a local-first design. The following data is stored in the browser profile:
+TimeShield follows a **local-first** design.
 
 | Data | Storage behavior |
 | --- | --- |
-| Settings and themes | Stored locally using browser extension storage. |
-| Website lists and protection state | Stored locally and used by the service worker to enforce configured rules. |
-| Tasks | Stored locally in the extension profile. |
+| Settings and themes | Stored in browser extension storage. |
+| Website lists and protection state | Stored locally and used for enforcement. |
+| Tasks | Stored locally. |
 | Screen Time | Stored locally and periodically checkpointed. |
-| Nuclear Mode session state | Stores the active session, duration, allowlist, preserved tab IDs, and one-minute pause usage. |
+| Nuclear Mode session state | Stores active session, duration, allowlist, preserved tabs, and pause usage. |
 
-TimeShield does not require an account, cloud synchronization, or a TimeShield server for core productivity features. Clearing browser extension data, removing the extension, or resetting the browser can remove locally stored data.
+### Privacy principles
+
+- No account is required for core productivity features.
+- No TimeShield cloud server is required.
+- Core data stays in the browser profile.
+- Clearing extension data or removing the extension can remove locally stored data.
 
 ---
 
-## Permissions
+# Permissions
 
-TimeShield requests permissions because its features use different browser APIs.
+TimeShield requests only the browser permissions needed for its features.
 
 | Permission or access | Purpose |
 | --- | --- |
-| `storage` | Stores settings, tasks, protection lists, session state, and Screen Time data. |
-| `alarms` | Runs scheduled checks, session expiry, pause expiry, and tracking checkpoints. |
-| `tabs` | Reads active tabs, captures open-tab exclusions, and synchronizes supported tab behavior. |
-| `webNavigation` | Observes supported navigation events for blocking and Screen Time tracking. |
-| `scripting` | Injects supported overlays and clock interfaces into eligible pages. |
-| Host permissions | Allows configured website protection and supported page overlays. |
-| Declarative Net Request | Applies blocking rules and optional local ad-protection rules. |
-| File URL access | Enables supported clock, tracking, and Nuclear Mode behavior on local files after the user grants browser access. |
+| `storage` | Stores settings, tasks, protection lists, sessions, and Screen Time data. |
+| `alarms` | Runs schedules, expiry checks, pause expiry, and tracking checkpoints. |
+| `tabs` | Reads active tabs, captures exclusions, and syncs supported behavior. |
+| `webNavigation` | Observes navigation for blocking and Screen Time tracking. |
+| `scripting` | Injects supported overlays and clock interfaces. |
+| Host permissions | Enables website protection and supported page overlays. |
+| Declarative Net Request | Applies blocking and optional ad-protection rules. |
+| File URL access | Enables supported local-file clock, tracking, and Nuclear behavior. |
 
-Browser-internal pages are not ordinary web pages. Normal extensions cannot inject content scripts into pages such as `chrome://settings`, `chrome://extensions`, `brave://extensions`, or the Chrome Web Store.
+> Browser-internal pages such as `chrome://settings`, `chrome://extensions`, `brave://extensions`, and the Chrome Web Store cannot receive normal extension content scripts.
 
 ---
 
-## Browser compatibility and platform limitations
+# Browser compatibility and platform limitations
 
-TimeShield targets browsers that support the Chromium Manifest V3 extension platform, including Chrome, Brave, Microsoft Edge, and other Chromium-based browsers. Small differences can occur because each browser controls its own permissions and protected pages.
+TimeShield targets **Chromium Manifest V3** browsers, including:
 
-The following limitations are imposed by the browser platform:
+- Google Chrome
+- Brave
+- Microsoft Edge
+- Other Chromium-based browsers
+
+### Browser limitations
 
 - Browser-internal pages cannot receive normal extension overlays or content scripts.
-- A normal extension cannot reliably block or delay access to `chrome://extensions` or `brave://extensions`.
-- A normal extension cannot prevent a user from disabling or removing the extension from the browser's extension-management page.
-- Local-file features require the user to enable **Allow access to file URLs**.
-- Screen Time cannot reconstruct historical activity that was not recorded.
+- Extensions cannot reliably block or delay access to extension-management pages.
+- Extensions cannot prevent users from disabling or removing them from those pages.
+- Local-file features require **Allow access to file URLs**.
+- Screen Time cannot reconstruct unrecorded historical activity.
 - Browser-specific restrictions may affect overlays, fullscreen behavior, protected pages, and local documents.
 
-These limitations are expected platform behavior, not hidden TimeShield features.
+These are browser platform limitations, not hidden TimeShield features.
 
 ---
 
-## Troubleshooting
+# Troubleshooting
 
-### A website is blocked unexpectedly
+## A website is blocked unexpectedly
 
-Check whether Focus Mode, Scheduled Blocking, Sleep Protection, a Usage Limit, a Global Limit, or Nuclear Mode is active. Each feature has its own configured state. If no feature should be active, open the extension-management page, click **Reload** on TimeShield, close old block tabs, and reopen the website in a new tab.
+Check whether any of these are active:
 
-Nuclear Mode is strict by design. An unlisted website or link remains blocked while the session is active. Add the destination to the current session, preserve its tab using **Exclude all open tabs** before activation, or wait for the session to expire.
+- Focus Mode
+- Scheduled Blocking
+- Sleep Protection
+- Usage Limit
+- Global Limit
+- Nuclear Mode
 
-### Nuclear Mode shows a DNR rule error
+If none should be active:
 
-Reload the extension from the browser's Extensions page. TimeShield includes cleanup for legacy Nuclear rules and recreates the supported session rule for preserved open tabs. If the error continues, close old TimeShield block tabs and reload the extension once more before starting a new session.
+1. Reload TimeShield from the browser's Extensions page.
+2. Close old block tabs.
+3. Reopen the website in a new tab.
 
-### The Nuclear exit button does not stop the session immediately
+For Nuclear Mode:
 
-That is intentional. **Exit from Nuclear Mode** opens the Nuclear block page. Use **Pause Blocks**, select **End Nuclear Mode with verification**, and complete the displayed lowercase motivational challenge. Direct stopping from the popup is not available.
+- Add the destination to the session.
+- Preserve its tab using **Exclude all open tabs**.
+- Or wait for the session to expire.
 
-### The first Nuclear one-minute pause does not show a challenge
+## Nuclear Mode shows a DNR rule error
 
-That is intentional. Nuclear Mode provides exactly one challenge-free 1-minute pause per session. Later one-minute pauses require verification.
+1. Reload TimeShield from the browser's Extensions page.
+2. Close old TimeShield block tabs.
+3. Reload the extension again if needed.
+4. Start a new Nuclear session.
 
-### Screen Time is empty
+## The Nuclear exit button does not stop the session immediately
 
-Open a supported website, keep it active for at least 30–60 seconds, open Screen Time, and refresh the data. Confirm that TimeShield is enabled and that the page is not a browser-internal page. For local documents, enable **Allow access to file URLs** from the extension details page.
+This is intentional.
 
-### The pause challenge does not appear
+1. Select **Pause Blocks**.
+2. Select **End Nuclear Mode with verification**.
+3. Complete the displayed lowercase challenge.
 
-For a challenge-required pause, wait for the visible preparation countdown to finish. If the page remains stuck, reload TimeShield from the browser's Extensions page, close the old blocked page, open a new blocked tab, and request the pause again.
+## The first Nuclear one-minute pause does not show a challenge
 
-### The popup looks outdated after an update
+This is intentional.
 
-Reload the extension, close any old popup or block pages, and open the control panel again. The browser may retain an older extension page until the extension is reloaded.
+- Nuclear Mode provides exactly one challenge-free 1-minute pause per session.
+- Later one-minute pauses require verification.
+
+## Screen Time is empty
+
+1. Open a supported website.
+2. Keep it active for at least **30–60 seconds**.
+3. Open Screen Time.
+4. Refresh the data.
+5. Confirm TimeShield is enabled.
+6. Confirm the page is not browser-internal.
+7. For local documents, enable **Allow access to file URLs**.
+
+## The pause challenge does not appear
+
+1. Wait for the preparation countdown.
+2. If it remains stuck, reload TimeShield.
+3. Close the old blocked page.
+4. Open a new blocked tab.
+5. Request the pause again.
+
+## The popup looks outdated after an update
+
+1. Reload the extension.
+2. Close old popup/block pages.
+3. Open the control panel again.
 
 ---
 
-## Project structure
+# Project structure
 
 ```text
 TimeShield/
@@ -375,19 +600,35 @@ TimeShield/
 
 ---
 
-## Development
+# Development
 
-TimeShield currently does not require a framework build pipeline. After cloning the repository, load it directly with **Load unpacked** in a Chromium-based browser.
+TimeShield does not require a framework build pipeline.
 
-Run the smoke and regression tests with:
+### Basic workflow
+
+1. Clone the repository.
+2. Load it with **Load unpacked**.
+3. Make changes.
+4. Reload the extension.
+5. Run the test suite.
+
+### Run tests
 
 ```bash
 node --test tests/smoke.test.mjs
 ```
 
-Before submitting a change, verify that the extension loads without manifest errors, the popup and options page open, Clock View and Flip Clock still work, protection modes remain opt-in, Screen Time continues recording, local-file behavior is preserved, and the test suite passes.
+### Before submitting changes
 
-### Test command reference
+- Confirm the extension loads without manifest errors.
+- Check the popup and options page.
+- Test Clock View and Flip Clock.
+- Confirm protection remains opt-in.
+- Check Screen Time tracking.
+- Test local-file behavior when applicable.
+- Run the test suite.
+
+## Test command reference
 
 | Check | Command |
 | --- | --- |
@@ -400,41 +641,71 @@ Before submitting a change, verify that the extension loads without manifest err
 
 ---
 
-## Testing
+# Testing
 
-The repository contains Node-based smoke and regression tests that cover the extension's wiring and important protection behavior without requiring a full browser automation environment.
+The repository contains Node-based smoke and regression tests for extension wiring and protection behavior.
 
 ```bash
 node --test tests/smoke.test.mjs
 ```
 
-The current suite contains **57 passing tests**. It covers, among other areas, opt-in protection, inactive-state cleanup, Nuclear Mode setup and verified exit, preserved open tabs, supported DNR session rules, local-file and localhost exceptions, pause verification, Screen Time tracking, notification-sound wiring and deduplication, popup behavior, settings persistence, duplicate-toast suppression, empty-list disable behavior, and repository documentation checks.
+The current suite contains **57 passing tests**, covering:
+
+- Opt-in protection
+- Cleanup behavior
+- Nuclear Mode setup and exit
+- Preserved open tabs
+- DNR session rules
+- Local-file and localhost exceptions
+- Pause verification
+- Screen Time
+- Notification sounds
+- Popup behavior
+- Settings persistence
+- Duplicate-toast suppression
+- Empty-list handling
+- Documentation checks
 
 ---
 
-## Contributing
+# Contributing
 
 Bug reports, feature ideas, documentation improvements, and code contributions are welcome through the [GitHub issue tracker](https://github.com/abishek-ghimire/TimeShield/issues).
 
-Before changing user-visible behavior, review the existing implementation, preserve local-first operation, avoid unnecessary permissions, keep protection modes opt-in, run the smoke suite, and update the README. Do not create a release archive unless the change is ready and a release is explicitly requested.
+### Before submitting a change
+
+- Review the existing implementation.
+- Preserve local-first operation.
+- Avoid unnecessary permissions.
+- Keep protection modes opt-in.
+- Run the smoke suite.
+- Update the README when behavior changes.
+- Create a release archive only when the change is ready and a release is explicitly requested.
 
 ---
 
-## License
+# License
 
 TimeShield is licensed under the [Apache License 2.0](LICENSE).
 
 ---
 
-## Project philosophy
+# Project philosophy
 
 > **Productivity tools should help people control their attention, not demand more of it.**
 
-TimeShield is intended to provide deliberate tools, clear warnings, and local control without requiring an account or mandatory cloud services.
+TimeShield is built around:
+
+- Deliberate controls
+- Clear warnings
+- Local data
+- No mandatory account
+- No mandatory cloud services
+- Practical protection against distractions
 
 ---
 
-## References
+# References
 
 [1]: https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3 "Chrome Extensions: Manifest V3"
 [2]: https://developer.chrome.com/docs/extensions/develop/concepts/declare-permissions "Chrome Extensions: Declare permissions"
