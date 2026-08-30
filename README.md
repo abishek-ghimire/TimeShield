@@ -28,7 +28,7 @@ TimeShield does not require an account or cloud synchronization for its core fea
 | **Flip Clock** | Opens a dedicated split-flap clock in a separate browser tab and provides a route back to the normal clock view. |
 | **Timers** | Runs configurable timers from the control panel, can display timer information independently of Clock View, and plays a completion tone when a timer finishes if sounds are enabled. |
 | **Focus Mode** | Restricts a user-defined website list during an explicitly started focus session. The current site can be added directly from the popup. |
-| **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, dedicated block page, pause flow, and verified exit. |
+| **Nuclear Mode** | Runs a strict, timed allowlist session with an explicit setup dialog, optional open-tab exclusion, dedicated block page, pause flow, verified exit, and an optional YouTube Focus Learning Mode for allowlisted YouTube sessions. |
 | **Scheduled Blocking** | Restricts configured websites during selected days and time ranges. It remains inactive until explicitly enabled and configured. |
 | **Sleep Protection** | Applies a separate protection list during sleep hours, including schedules that cross midnight. |
 | **Usage Limits** | Tracks configured website usage and blocks a site after its daily limit is reached, with warnings and optional sounds before the limit. |
@@ -251,7 +251,9 @@ When Nuclear Mode is inactive, the control-panel button reads **Nuclear Mode**. 
 
 The challenge uses first-person **“i”** language, such as sentences about staying focused and avoiding distraction. It does not use second-person “you” wording, and it does not accept symbols, numbers, or incorrectly formatted text.
 
-Nuclear Mode also ends automatically when its selected duration expires. Cleanup removes its blocking rules and its preserved open-tab exception.
+When `youtube.com` or a YouTube subdomain is included in the Nuclear allowlist, an in-page **Focus Learning Mode** panel appears only while Nuclear Mode is active. It keeps normal search, related videos, playlists, chapters, transcript, captions, playback speed, and fullscreen available. Autoplay is turned off automatically. Optional controls can hide comments, hide common home/trending/Shorts distractions, filter visible video cards to a personal channel list, start a learning-session timer, and save the current video to a local learning queue. These controls and their saved preferences have no effect outside an active Nuclear session or on YouTube that is not included in the Nuclear allowlist.
+
+Nuclear Mode also ends automatically when its selected duration expires. Cleanup removes its blocking rules and its preserved open-tab exception, and the YouTube learning panel and page restrictions are removed from open YouTube tabs.
 
 ---
 

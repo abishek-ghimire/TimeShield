@@ -495,6 +495,7 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     const manifest = JSON.parse(await read('manifest.json'));
     const resources = manifest.web_accessible_resources.flatMap((entry) => entry.resources || []);
     const worker = await read('background/service-worker.js');
+    const blocker = await read('content/blocker.js');
     const popup = await read('popup/popup.html');
     const popupJs = await read('popup/popup.js');
     const options = await read('options/options.html');
@@ -553,6 +554,18 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.doesNotMatch(worker, /Nuclear Mode allows up to 8 sites/);
     assert.match(worker, /Nuclear Mode duration must be greater than zero/);
     assert.match(worker, /Add at least one allowed site or choose Exclude all open tabs before starting Nuclear Mode/);
+    assert.match(blocker, /syncYouTubeLearningMode/);
+    assert.match(blocker, /isYouTubeAllowedByNuclearWhitelist/);
+    assert.match(blocker, /nuclearState\?\.isActive === true/);
+    assert.match(blocker, /Focus Learning Mode/);
+    assert.match(blocker, /hideComments/);
+    assert.match(blocker, /strictRecommendations/);
+    assert.match(blocker, /channelWhitelist/);
+    assert.match(blocker, /learningSession/);
+    assert.match(blocker, /learningQueue/);
+    assert.match(blocker, /ytp-autonav-toggle-button/);
+    assert.match(blocker, /youtubeLearningQueue/);
+    assert.match(blocker, /disableYouTubeLearningMode/);
     assert.match(popup, /id="nuclearToggle" class="btn btn-nuclear nuclear-action"/);
     assert.match(popup, /id="nuclearToggleLabel">Nuclear Mode<\/span>/);
     assert.match(popup, /aria-pressed="false"/);

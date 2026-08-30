@@ -22,7 +22,16 @@ class ContentBlocker {
         this.setupMessageHandlers();
         this.setupStorageListeners();
         this.setupFullscreenListener();
+        this.setupYouTubeLearningNavigation();
         await this.injectFloatingClock();
+        await this.syncYouTubeLearningMode();
+    }
+
+    setupYouTubeLearningNavigation() {
+        if (!this.isYouTubePage()) return;
+        ['yt-navigate-finish', 'yt-page-data-updated', 'popstate'].forEach((eventName) => {
+            window.addEventListener(eventName, () => this.syncYouTubeLearningMode(), true);
+        });
     }
 
     setupMessageHandlers() {
@@ -74,6 +83,7 @@ class ContentBlocker {
 
     setupStorageListeners() {
         chrome.storage.onChanged.addListener(async (changes) => {
+            if (changes.nuclearMode) await this.syncYouTubeLearningMode();
             if (!this.refs.widget) return;
 
             if (changes.clockVisible) {
@@ -532,6 +542,250 @@ class ContentBlocker {
         const defaultX = Math.max(0, window.innerWidth - 280 - 20);
         const defaultY = 20;
         widget.style.transform = `translate(${defaultX}px, ${defaultY}px)`;
+    }
+
+    async syncYouTubeLearningMode() {
+        if (!this.isYouTubePage()) {
+            this.disableYouTubeLearningMode();
+            return;
+        }
+
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getNuclearModeState' });
+            const nuclearState = response?.nuclearMode;
+            const active = nuclearState?.isActive === true && Number(nuclearState.endTime) > Date.now();
+            const allowed = active && this.isYouTubeAllowedByNuclearWhitelist(nuclearState.whitelist);
+            if (!allowed) {
+                this.disableYouTubeLearningMode();
+                return;
+            }
+            await this.enableYouTubeLearningMode();
+        } catch {
+            this.disableYouTubeLearningMode();
+        }
+    }
+
+    isYouTubePage() {
+        const hostname = String(window.location.hostname || '').toLowerCase().replace(/^www\\./, '');
+        return hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
+    }
+
+    isYouTubeAllowedByNuclearWhitelist(whitelist) {
+        if (!Array.isArray(whitelist)) return false;
+        return whitelist.some((entry) => {
+            const value = String(entry || '').trim().toLowerCase();
+            if (!value) return false;
+            try {
+                const url = new URL(value.includes('://') ? value : `https://${value}`);
+                const hostname = url.hostname.replace(/^www\\./, '').toLowerCase();
+                return hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
+            } catch {
+                return value === 'youtube.com' || value.endsWith('.youtube.com');
+            }
+        });
+    }
+
+    async enableYouTubeLearningMode() {
+        if (!this.youtubeLearning) {
+            this.youtubeLearning = {
+                shadowHost: null,
+                shadowRoot: null,
+                preferences: {
+                    hideComments: false,
+                    strictRecommendations: false,
+                    channelWhitelist: false,
+                    learningSession: false,
+                    learningQueue: false,
+                    channels: []
+                },
+                sessionStartedAt: 0,
+                refreshTimer: null
+            };
+        }
+        const stored = await chrome.storage.local.get(['youtubeLearningPreferences']);
+        const saved = stored.youtubeLearningPreferences || {};
+        this.youtubeLearning.preferences = {
+            ...this.youtubeLearning.preferences,
+            ...saved,
+            channels: Array.isArray(saved.channels) ? saved.channels.slice(0, 100) : []
+        };
+        if (this.youtubeLearning.preferences.learningSession && !this.youtubeLearning.sessionStartedAt) {
+            this.youtubeLearning.sessionStartedAt = Date.now();
+        }
+        this.ensureYouTubeLearningPanel();
+        this.applyYouTubeLearningStyles();
+        this.applyYouTubeAutoplayOff();
+        this.applyYouTubeChannelWhitelist();
+        if (!this.youtubeLearning.refreshTimer) {
+            this.youtubeLearning.refreshTimer = window.setInterval(() => {
+                this.applyYouTubeAutoplayOff();
+                this.applyYouTubeChannelWhitelist();
+            }, 1500);
+        }
+    }
+
+    disableYouTubeLearningMode() {
+        if (this.youtubeLearning?.refreshTimer) {
+            window.clearInterval(this.youtubeLearning.refreshTimer);
+            this.youtubeLearning.refreshTimer = null;
+        }
+        document.getElementById('timeshield-youtube-learning-style')?.remove();
+        this.youtubeLearning?.shadowHost?.remove();
+        if (this.youtubeLearning) {
+            this.youtubeLearning.shadowHost = null;
+            this.youtubeLearning.shadowRoot = null;
+            this.youtubeLearning.sessionStartedAt = 0;
+        }
+    }
+
+    ensureYouTubeLearningPanel() {
+        if (this.youtubeLearning.shadowHost?.isConnected) {
+            this.renderYouTubeLearningPanel();
+            return;
+        }
+        const host = document.createElement('div');
+        host.id = 'timeshield-youtube-learning';
+        host.style.cssText = 'all:initial;position:fixed;top:76px;right:16px;z-index:2147483645;pointer-events:none;';
+        const shadowRoot = host.attachShadow({ mode: 'open' });
+        const style = document.createElement('style');
+        style.textContent = `
+            :host { all: initial; }
+            .panel { width: 274px; color: #e5e7eb; background: rgba(15,23,42,.97); border: 1px solid rgba(99,102,241,.55); border-radius: 14px; box-shadow: 0 14px 38px rgba(0,0,0,.42); padding: 12px; font: 12px/1.35 Inter, system-ui, sans-serif; pointer-events:auto; }
+            .title { color: #c4b5fd; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
+            .subtitle { color: #94a3b8; font-size: 10px; margin-bottom: 9px; }
+            .row { display:flex; align-items:center; gap:7px; margin: 7px 0; }
+            .row input { accent-color:#8b5cf6; }
+            label { cursor:pointer; }
+            .queue { display:flex; gap:6px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px solid rgba(148,163,184,.18); }
+            button { border:0; border-radius:7px; padding:6px 8px; color:#fff; background:#6d28d9; cursor:pointer; font:600 10px Inter,system-ui,sans-serif; }
+            button:hover { background:#7c3aed; }
+            .meta { color:#a5b4fc; font-size:10px; margin-left:auto; }
+            .channels { display:none; width:100%; margin:2px 0 5px 22px; box-sizing:border-box; border:1px solid rgba(148,163,184,.3); border-radius:6px; padding:5px; color:#e5e7eb; background:#111827; font:10px Inter,system-ui,sans-serif; }
+            .channels.visible { display:block; }
+        `;
+        shadowRoot.appendChild(style);
+        const panel = document.createElement('section');
+        panel.className = 'panel';
+        shadowRoot.appendChild(panel);
+        (document.body || document.documentElement).appendChild(host);
+        this.youtubeLearning.shadowHost = host;
+        this.youtubeLearning.shadowRoot = shadowRoot;
+        this.renderYouTubeLearningPanel();
+    }
+
+    renderYouTubeLearningPanel() {
+        const root = this.youtubeLearning?.shadowRoot;
+        const panel = root?.querySelector('.panel');
+        if (!panel) return;
+        const prefs = this.youtubeLearning.preferences;
+        const elapsed = prefs.learningSession && this.youtubeLearning.sessionStartedAt
+            ? Math.max(0, Math.floor((Date.now() - this.youtubeLearning.sessionStartedAt) / 60000))
+            : 0;
+        panel.innerHTML = `
+            <div class="title">Focus Learning Mode</div>
+            <div class="subtitle">Nuclear Mode is active for this allowlisted YouTube session.</div>
+            <label class="row"><input data-learning-pref="hideComments" type="checkbox" ${prefs.hideComments ? 'checked' : ''}> Hide comments</label>
+            <label class="row"><input data-learning-pref="strictRecommendations" type="checkbox" ${prefs.strictRecommendations ? 'checked' : ''}> Strict learning recommendations</label>
+            <label class="row"><input data-learning-pref="channelWhitelist" type="checkbox" ${prefs.channelWhitelist ? 'checked' : ''}> Channel whitelist</label>
+            <input class="channels ${prefs.channelWhitelist ? 'visible' : ''}" data-channel-list placeholder="channel names, comma separated" value="${this.escapeYouTubeAttribute(prefs.channels.join(', '))}">
+            <label class="row"><input data-learning-pref="learningSession" type="checkbox" ${prefs.learningSession ? 'checked' : ''}> Learning session ${elapsed ? `<span class="meta">${elapsed} min</span>` : ''}</label>
+            <label class="row"><input data-learning-pref="learningQueue" type="checkbox" ${prefs.learningQueue ? 'checked' : ''}> Learning queue</label>
+            <div class="queue"><button data-queue-add type="button">Add current video</button><span class="meta" data-queue-count>0 queued</span></div>
+        `;
+        panel.querySelectorAll('[data-learning-pref]').forEach((input) => {
+            input.addEventListener('change', () => this.updateYouTubeLearningPreference(input.dataset.learningPref, input.checked));
+        });
+        panel.querySelector('[data-channel-list]')?.addEventListener('change', (event) => {
+            this.updateYouTubeLearningChannels(event.target.value);
+        });
+        panel.querySelector('[data-queue-add]')?.addEventListener('click', () => this.addCurrentYouTubeVideoToQueue());
+        this.updateYouTubeQueueCount();
+    }
+
+    escapeYouTubeAttribute(value) {
+        return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async updateYouTubeLearningPreference(name, enabled) {
+        if (!this.youtubeLearning?.preferences) return;
+        this.youtubeLearning.preferences[name] = Boolean(enabled);
+        if (name === 'learningSession') {
+            this.youtubeLearning.sessionStartedAt = enabled ? (this.youtubeLearning.sessionStartedAt || Date.now()) : 0;
+        }
+        await chrome.storage.local.set({ youtubeLearningPreferences: this.youtubeLearning.preferences });
+        this.applyYouTubeLearningStyles();
+        this.renderYouTubeLearningPanel();
+    }
+
+    async updateYouTubeLearningChannels(value) {
+        const channels = [...new Set(String(value || '').split(',').map((item) => item.trim().toLowerCase()).filter(Boolean))].slice(0, 100);
+        this.youtubeLearning.preferences.channels = channels;
+        await chrome.storage.local.set({ youtubeLearningPreferences: this.youtubeLearning.preferences });
+        this.applyYouTubeChannelWhitelist();
+    }
+
+    applyYouTubeLearningStyles() {
+        const prefs = this.youtubeLearning?.preferences || {};
+        document.getElementById('timeshield-youtube-learning-style')?.remove();
+        const style = document.createElement('style');
+        style.id = 'timeshield-youtube-learning-style';
+        style.textContent = `
+            ${prefs.hideComments ? '#comments, ytd-comments { display:none !important; }' : ''}
+            ${prefs.strictRecommendations ? `
+                ytd-browse[page-subtype="home"] #contents,
+                ytd-browse[page-subtype="trending"] #contents,
+                ytd-reel-shelf-renderer,
+                ytd-rich-shelf-renderer[is-shorts],
+                ytd-guide-entry-renderer a[href^="/feed/trending"],
+                ytd-guide-entry-renderer a[href^="/shorts"],
+                ytd-mini-guide-entry-renderer a[href^="/shorts"],
+                ytd-rich-section-renderer[mini-guide-entry-renderer] { display:none !important; }
+            ` : ''}
+        `;
+        (document.head || document.documentElement).appendChild(style);
+    }
+
+    applyYouTubeAutoplayOff() {
+        if (!this.youtubeLearning?.shadowHost?.isConnected) return;
+        const video = document.querySelector('video');
+        if (video) video.autoplay = false;
+        const autoplayButton = document.querySelector('.ytp-autonav-toggle-button[aria-checked="true"]');
+        if (autoplayButton && !autoplayButton.dataset.timeshieldAutoplayOff) {
+            autoplayButton.dataset.timeshieldAutoplayOff = 'true';
+            autoplayButton.click();
+        }
+    }
+
+    applyYouTubeChannelWhitelist() {
+        const prefs = this.youtubeLearning?.preferences;
+        if (!prefs?.channelWhitelist || !prefs.channels.length) return;
+        const channels = prefs.channels;
+        document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer').forEach((card) => {
+            const channel = card.querySelector('#channel-name, ytd-channel-name, .ytd-channel-name')?.textContent?.trim().toLowerCase() || '';
+            if (channel) card.style.display = channels.some((allowed) => channel.includes(allowed)) ? '' : 'none';
+        });
+    }
+
+    async addCurrentYouTubeVideoToQueue() {
+        const url = window.location.href;
+        let parsedUrl;
+        try { parsedUrl = new URL(url); } catch { return; }
+        if (!parsedUrl.hostname.toLowerCase().endsWith('youtube.com') || parsedUrl.pathname !== '/watch') return;
+        const title = document.querySelector('h1.ytd-watch-metadata, h1.title')?.textContent?.trim() || document.title;
+        const stored = await chrome.storage.local.get(['youtubeLearningQueue']);
+        const queue = Array.isArray(stored.youtubeLearningQueue) ? stored.youtubeLearningQueue : [];
+        if (!queue.some((item) => item.url === url)) {
+            queue.push({ url, title, addedAt: Date.now() });
+            await chrome.storage.local.set({ youtubeLearningQueue: queue.slice(-100) });
+        }
+        this.updateYouTubeQueueCount();
+    }
+
+    async updateYouTubeQueueCount() {
+        const stored = await chrome.storage.local.get(['youtubeLearningQueue']);
+        const count = Array.isArray(stored.youtubeLearningQueue) ? stored.youtubeLearningQueue.length : 0;
+        const target = this.youtubeLearning?.shadowRoot?.querySelector('[data-queue-count]');
+        if (target) target.textContent = `${count} queued`;
     }
 
     showTimeLimitWarning(site, remaining) {
