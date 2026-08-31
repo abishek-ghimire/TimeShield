@@ -15,6 +15,7 @@ class ContentBlocker {
         this.blockingCountdownTimer = null;
         this.blockingCountdownEndAt = 0;
         this.soundLastPlayedAt = new Map();
+        this.youtubeShortsNavigationHandler = null;
         this.init();
     }
 
@@ -23,8 +24,13 @@ class ContentBlocker {
         this.setupStorageListeners();
         this.setupFullscreenListener();
         this.setupYouTubeLearningNavigation();
-        await this.injectFloatingClock();
-        await this.syncYouTubeLearningMode();
+        if (this.isYouTubePage()) await this.syncYouTubeLearningMode();
+        const mountClock = () => this.injectFloatingClock().catch(() => undefined);
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(mountClock, { timeout: 1500 });
+        } else {
+            window.setTimeout(mountClock, 0);
+        }
     }
 
     setupYouTubeLearningNavigation() {
@@ -559,12 +565,24 @@ class ContentBlocker {
                 this.disableYouTubeLearningMode();
                 return;
             }
+            if (this.isYouTubeShortsPage()) {
+                this.redirectFromYouTubeShorts();
+                return;
+            }
             await this.enableYouTubeLearningMode();
         } catch {
             this.disableYouTubeLearningMode();
         }
     }
 
+    isYouTubeShortsPage() {
+        const pathname = String(window.location.pathname || '').replace(/\/+$/, '') || '/';
+        return pathname === '/shorts' || pathname.startsWith('/shorts/');
+    }
+    redirectFromYouTubeShorts() {
+        if (!this.isYouTubeShortsPage()) return;
+        window.location.replace('/');
+    }
     isYouTubePage() {
         const hostname = String(window.location.hostname || '').toLowerCase().replace(/^www\\./, '');
         return hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
@@ -685,6 +703,23 @@ class ContentBlocker {
         this.applyYouTubeShortsFilter();
         this.applyYouTubeChannelWhitelist();
         this.applyYouTubeSubscriptionRedirect();
+        if (!this.youtubeShortsNavigationHandler) {
+            this.youtubeShortsNavigationHandler = (event) => {
+                const anchor = event.target?.closest?.('a[href*="/shorts"]');
+                if (!anchor) return;
+                const href = anchor.getAttribute('href') || '';
+                try {
+                    const parsed = new URL(href, window.location.origin);
+                    if (parsed.pathname !== '/shorts' && !parsed.pathname.startsWith('/shorts/')) return;
+                } catch {
+                    return;
+                }
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                window.location.replace('/');
+            };
+            document.addEventListener('click', this.youtubeShortsNavigationHandler, true);
+        }
         if (!this.youtubeLearning.mutationObserver && document.body) {
             this.youtubeLearning.mutationObserver = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
@@ -710,6 +745,10 @@ class ContentBlocker {
             this.youtubeLearning.shortsFilterFrame = 0;
         }
         this.youtubeLearning?.mutationObserver?.disconnect();
+        if (this.youtubeShortsNavigationHandler) {
+            document.removeEventListener('click', this.youtubeShortsNavigationHandler, true);
+            this.youtubeShortsNavigationHandler = null;
+        }
         if (this.youtubeLearning) {
             this.youtubeLearning.mutationObserver = null;
             this.youtubeLearning.shortsFilterNodes.clear();
