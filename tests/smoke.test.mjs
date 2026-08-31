@@ -975,11 +975,15 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.match(blocker, /panelHidden: false/);
     assert.match(blocker, /data-panel-hide/);
     assert.match(blocker, /data-panel-show/);
-    for (const preference of ['hideHomeFeed', 'hideShorts', 'hideTrending', 'hideExplore', 'hideSubscriptions', 'hideRelated', 'hideEndScreen', 'hideMiniplayer']) {
+    for (const preference of ['hideHomeFeed', 'hideVideoSidebar', 'hideLiveChat', 'hidePlaylist', 'hideShorts', 'hideTrending', 'hideExplore', 'hideSubscriptions', 'redirectSubscriptions', 'hideRelated', 'showRecommended', 'hideEndScreenVideowall', 'hideEndScreenCards', 'hideMiniplayer', 'hideMixRadioPlaylists', 'hideComments', 'hideVideoInfo', 'hideVideoButtonsBar', 'hideChannelInfo', 'hideVideoDescription', 'hideTopHeader', 'hideNotificationBell', 'hideIrrelevantSearchResults', 'hideMoreFromYouTube', 'disableAutoplay', 'disableAnnotations', 'hideMerchOffers', 'strictRecommendations', 'channelWhitelist', 'learningSession', 'learningQueue']) {
         assert.match(blocker, new RegExp(`data-learning-pref=\\"${preference}\\"`));
         assert.match(blocker, new RegExp(`prefs\\.${preference}`));
     }
     assert.match(blocker, /const allowed = active && this\.isYouTubeAllowedByNuclearWhitelist/);
+    assert.match(blocker, /applyYouTubeSubscriptionRedirect/);
+    assert.match(blocker, /window\.location\.pathname !== '\/feed\/subscriptions'/);
+    assert.match(blocker, /sessionStorage\.getItem\('timeshield-subscriptions-redirected'\)/);
+    assert.match(blocker, /prefs\.hideRelated && !prefs\.showRecommended/);
     assert.ok(manifest.web_accessible_resources.some((entry) => entry.resources.includes('assets/sounds/*')));
 
     for (const asset of ['assets/sounds/timer-complete.mp3', 'assets/sounds/limit-warning.mp3']) {

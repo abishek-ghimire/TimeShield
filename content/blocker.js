@@ -593,14 +593,32 @@ class ContentBlocker {
                 preferences: {
                     panelHidden: false,
                     hideHomeFeed: false,
+                    hideVideoSidebar: false,
+                    hideLiveChat: false,
+                    hidePlaylist: false,
                     hideShorts: false,
                     hideTrending: false,
                     hideExplore: false,
                     hideSubscriptions: false,
+                    redirectSubscriptions: false,
                     hideRelated: false,
+                    showRecommended: true,
                     hideEndScreen: false,
+                    hideEndScreenVideowall: false,
+                    hideEndScreenCards: false,
                     hideMiniplayer: false,
+                    hideMixRadioPlaylists: false,
                     hideComments: false,
+                    hideVideoInfo: false,
+                    hideVideoButtonsBar: false,
+                    hideChannelInfo: false,
+                    hideVideoDescription: false,
+                    hideTopHeader: false,
+                    hideNotificationBell: false,
+                    hideIrrelevantSearchResults: false,
+                    hideMoreFromYouTube: false,
+                    disableAutoplay: true,
+                    disableAnnotations: false,
                     strictRecommendations: false,
                     channelWhitelist: false,
                     learningSession: false,
@@ -625,10 +643,12 @@ class ContentBlocker {
         this.applyYouTubeLearningStyles();
         this.applyYouTubeAutoplayOff();
         this.applyYouTubeChannelWhitelist();
+        this.applyYouTubeSubscriptionRedirect();
         if (!this.youtubeLearning.refreshTimer) {
             this.youtubeLearning.refreshTimer = window.setInterval(() => {
                 this.applyYouTubeAutoplayOff();
                 this.applyYouTubeChannelWhitelist();
+                this.applyYouTubeSubscriptionRedirect();
             }, 1500);
         }
     }
@@ -663,7 +683,8 @@ class ContentBlocker {
             .titlebar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
             .title { color: #c4b5fd; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
             .subtitle { color: #94a3b8; font-size: 10px; margin-bottom: 9px; }
-            .row { display:flex; align-items:center; gap:7px; margin: 7px 0; }
+            .group-label { color:#a5b4fc; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin:9px 0 3px; border-top:1px solid rgba(148,163,184,.14); padding-top:7px; }
+            .row { display:flex; align-items:center; gap:7px; margin: 6px 0; }
             .row input { accent-color:#8b5cf6; }
             label { cursor:pointer; }
             .queue { display:flex; gap:6px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px solid rgba(148,163,184,.18); }
@@ -702,17 +723,39 @@ class ContentBlocker {
         panel.innerHTML = `
             <div class="titlebar"><div class="title">Focus Learning Mode</div><button class="secondary" data-panel-hide type="button">Hide</button></div>
             <div class="subtitle">Nuclear Mode is active for this allowlisted YouTube session.</div>
-            <label class="row"><input data-learning-pref="hideHomeFeed" type="checkbox" ${prefs.hideHomeFeed ? 'checked' : ''}> Hide home feed</label>
-            <label class="row"><input data-learning-pref="hideShorts" type="checkbox" ${prefs.hideShorts ? 'checked' : ''}> Hide Shorts</label>
+            <div class="group-label">Discovery and navigation</div>
+            <label class="row"><input data-learning-pref="hideHomeFeed" type="checkbox" ${prefs.hideHomeFeed ? 'checked' : ''}> Hide Homepage Feed</label>
+            <label class="row"><input data-learning-pref="hideShorts" type="checkbox" ${prefs.hideShorts ? 'checked' : ''}> Hide YouTube Shorts</label>
             <label class="row"><input data-learning-pref="hideTrending" type="checkbox" ${prefs.hideTrending ? 'checked' : ''}> Hide Trending</label>
             <label class="row"><input data-learning-pref="hideExplore" type="checkbox" ${prefs.hideExplore ? 'checked' : ''}> Hide Explore</label>
-            <label class="row"><input data-learning-pref="hideSubscriptions" type="checkbox" ${prefs.hideSubscriptions ? 'checked' : ''}> Hide subscriptions</label>
-            <label class="row"><input data-learning-pref="hideRelated" type="checkbox" ${prefs.hideRelated ? 'checked' : ''}> Hide related and Up Next</label>
-            <label class="row"><input data-learning-pref="hideEndScreen" type="checkbox" ${prefs.hideEndScreen ? 'checked' : ''}> Hide end-screen recommendations</label>
-            <label class="row"><input data-learning-pref="hideMiniplayer" type="checkbox" ${prefs.hideMiniplayer ? 'checked' : ''}> Hide miniplayer</label>
-            <label class="row"><input data-learning-pref="hideComments" type="checkbox" ${prefs.hideComments ? 'checked' : ''}> Hide comments</label>
-            <label class="row"><input data-learning-pref="strictRecommendations" type="checkbox" ${prefs.strictRecommendations ? 'checked' : ''}> Strict learning recommendations</label>
-            <label class="row"><input data-learning-pref="channelWhitelist" type="checkbox" ${prefs.channelWhitelist ? 'checked' : ''}> Channel whitelist</label>
+            <label class="row"><input data-learning-pref="hideMoreFromYouTube" type="checkbox" ${prefs.hideMoreFromYouTube ? 'checked' : ''}> Hide More from YouTube</label>
+            <label class="row"><input data-learning-pref="hideIrrelevantSearchResults" type="checkbox" ${prefs.hideIrrelevantSearchResults ? 'checked' : ''}> Hide Irrelevant Search Results</label>
+            <label class="row"><input data-learning-pref="hideSubscriptions" type="checkbox" ${prefs.hideSubscriptions ? 'checked' : ''}> Hide and Redirect Subscriptions</label>
+            <label class="row"><input data-learning-pref="redirectSubscriptions" type="checkbox" ${prefs.redirectSubscriptions ? 'checked' : ''}> Redirect Subscriptions</label>
+            <label class="row"><input data-learning-pref="hideVideoSidebar" type="checkbox" ${prefs.hideVideoSidebar ? 'checked' : ''}> Hide Video Sidebar</label>
+            <label class="row"><input data-learning-pref="hidePlaylist" type="checkbox" ${prefs.hidePlaylist ? 'checked' : ''}> Hide Playlist</label>
+            <div class="group-label">Playback and recommendations</div>
+            <label class="row"><input data-learning-pref="disableAutoplay" type="checkbox" ${prefs.disableAutoplay ? 'checked' : ''}> Disable Autoplay</label>
+            <label class="row"><input data-learning-pref="disableAnnotations" type="checkbox" ${prefs.disableAnnotations ? 'checked' : ''}> Disable Annotations</label>
+            <label class="row"><input data-learning-pref="hideRelated" type="checkbox" ${prefs.hideRelated ? 'checked' : ''}> Hide Recommended (Related Videos)</label>
+            <label class="row"><input data-learning-pref="showRecommended" type="checkbox" ${prefs.showRecommended ? 'checked' : ''}> Show Recommended</label>
+            <label class="row"><input data-learning-pref="hideEndScreen" type="checkbox" ${prefs.hideEndScreen ? 'checked' : ''}> Hide End Screen</label>
+            <label class="row"><input data-learning-pref="hideEndScreenVideowall" type="checkbox" ${prefs.hideEndScreenVideowall ? 'checked' : ''}> Hide End Screen Videowall</label>
+            <label class="row"><input data-learning-pref="hideEndScreenCards" type="checkbox" ${prefs.hideEndScreenCards ? 'checked' : ''}> Hide End Screen Cards</label>
+            <label class="row"><input data-learning-pref="hideMixRadioPlaylists" type="checkbox" ${prefs.hideMixRadioPlaylists ? 'checked' : ''}> Hide Mix Radio Playlists</label>
+            <label class="row"><input data-learning-pref="hideMiniplayer" type="checkbox" ${prefs.hideMiniplayer ? 'checked' : ''}> Hide Miniplayer</label>
+            <div class="group-label">Video details and page chrome</div>
+            <label class="row"><input data-learning-pref="hideLiveChat" type="checkbox" ${prefs.hideLiveChat ? 'checked' : ''}> Hide Live Chat</label>
+            <label class="row"><input data-learning-pref="hideComments" type="checkbox" ${prefs.hideComments ? 'checked' : ''}> Hide Comments</label>
+            <label class="row"><input data-learning-pref="hideVideoInfo" type="checkbox" ${prefs.hideVideoInfo ? 'checked' : ''}> Hide Video Info</label>
+            <label class="row"><input data-learning-pref="hideVideoButtonsBar" type="checkbox" ${prefs.hideVideoButtonsBar ? 'checked' : ''}> Hide Video Buttons Bar</label>
+            <label class="row"><input data-learning-pref="hideChannelInfo" type="checkbox" ${prefs.hideChannelInfo ? 'checked' : ''}> Hide Channel</label>
+            <label class="row"><input data-learning-pref="hideVideoDescription" type="checkbox" ${prefs.hideVideoDescription ? 'checked' : ''}> Hide Video Description</label>
+            <label class="row"><input data-learning-pref="hideTopHeader" type="checkbox" ${prefs.hideTopHeader ? 'checked' : ''}> Hide Top Header</label>
+            <label class="row"><input data-learning-pref="hideNotificationBell" type="checkbox" ${prefs.hideNotificationBell ? 'checked' : ''}> Hide Notification Bell</label>
+            <label class="row"><input data-learning-pref="hideMerchOffers" type="checkbox" ${prefs.hideMerchOffers ? 'checked' : ''}> Hide Merch, Tickets, Offers</label>
+            <label class="row"><input data-learning-pref="strictRecommendations" type="checkbox" ${prefs.strictRecommendations ? 'checked' : ''}> Strict Learning Recommendations</label>
+            <label class="row"><input data-learning-pref="channelWhitelist" type="checkbox" ${prefs.channelWhitelist ? 'checked' : ''}> Channel Whitelist</label>
             <input class="channels ${prefs.channelWhitelist ? 'visible' : ''}" data-channel-list placeholder="channel names, comma separated" value="${this.escapeYouTubeAttribute(prefs.channels.join(', '))}">
             <label class="row"><input data-learning-pref="learningSession" type="checkbox" ${prefs.learningSession ? 'checked' : ''}> Learning session ${elapsed ? `<span class="meta">${elapsed} min</span>` : ''}</label>
             <label class="row"><input data-learning-pref="learningQueue" type="checkbox" ${prefs.learningQueue ? 'checked' : ''}> Learning queue</label>
@@ -757,15 +800,30 @@ class ContentBlocker {
         const style = document.createElement('style');
         style.id = 'timeshield-youtube-learning-style';
         style.textContent = `
-            ${prefs.hideComments ? '#comments, ytd-comments { display:none !important; }' : ''}
+            ${prefs.hideComments ? '#comments, ytd-comments, #chat { display:none !important; }' : ''}
             ${prefs.hideHomeFeed ? 'ytd-browse[page-subtype="home"] #contents, ytd-rich-grid-renderer[is-home] { display:none !important; }' : ''}
+            ${prefs.hideVideoSidebar ? '#secondary, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
+            ${prefs.hideLiveChat ? '#chat, ytd-live-chat-frame, ytd-live-chat-renderer { display:none !important; }' : ''}
+            ${prefs.hidePlaylist ? '#panels ytd-playlist-panel-renderer, ytd-playlist-panel-renderer, ytd-watch-metadata ytd-playlist-panel-renderer { display:none !important; }' : ''}
             ${prefs.hideShorts ? 'ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"] { display:none !important; }' : ''}
             ${prefs.hideTrending ? 'ytd-browse[page-subtype="trending"] #contents, ytd-guide-entry-renderer a[href^="/feed/trending"] { display:none !important; }' : ''}
             ${prefs.hideExplore ? 'ytd-guide-entry-renderer a[href^="/feed/explore"], ytd-guide-entry-renderer a[href^="/feed/storefront"] { display:none !important; }' : ''}
+            ${prefs.hideMoreFromYouTube ? 'ytd-rich-section-renderer, ytd-shelf-renderer[expanded], ytd-rich-shelf-renderer:not([is-shorts]) { display:none !important; }' : ''}
             ${prefs.hideSubscriptions ? 'ytd-guide-entry-renderer a[href^="/feed/subscriptions"], ytd-browse[page-subtype="subscriptions"] #contents { display:none !important; }' : ''}
-            ${prefs.hideRelated ? '#related, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
-            ${prefs.hideEndScreen ? '.ytp-endscreen-content, .ytp-ce-element { display:none !important; }' : ''}
+            ${prefs.hideRelated && !prefs.showRecommended ? '#related, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
+            ${prefs.hideEndScreen ? '.ytp-endscreen-content, .ytp-ce-element, .ytp-endscreen-previous, .ytp-endscreen-next { display:none !important; }' : ''}
+            ${prefs.hideEndScreenVideowall ? '.ytp-endscreen-content { display:none !important; }' : ''}
+            ${prefs.hideEndScreenCards ? '.ytp-ce-element { display:none !important; }' : ''}
             ${prefs.hideMiniplayer ? 'ytd-miniplayer, #miniplayer { display:none !important; }' : ''}
+            ${prefs.hideMixRadioPlaylists ? 'ytd-compact-radio-renderer, ytd-radio-renderer, ytd-playlist-renderer[is-mix] { display:none !important; }' : ''}
+            ${prefs.hideVideoInfo ? '#above-the-fold, #info, ytd-watch-metadata { display:none !important; }' : ''}
+            ${prefs.hideVideoButtonsBar ? '#top-level-buttons-computed, #actions, ytd-menu-renderer { display:none !important; }' : ''}
+            ${prefs.hideChannelInfo ? '#owner, ytd-video-owner-renderer { display:none !important; }' : ''}
+            ${prefs.hideVideoDescription ? '#description, ytd-text-inline-expander, ytd-watch-metadata #description { display:none !important; }' : ''}
+            ${prefs.hideTopHeader ? 'ytd-masthead, #masthead-container { display:none !important; }' : ''}
+            ${prefs.hideNotificationBell ? 'ytd-notification-topbar-button-renderer, a[href^="/feed/notifications"] { display:none !important; }' : ''}
+            ${prefs.hideMerchOffers ? '#offer-module, ytd-merch-shelf-renderer, ytd-product-shelf-renderer, ytd-ticket-shelf-renderer { display:none !important; }' : ''}
+            ${prefs.hideIrrelevantSearchResults ? 'ytd-search ytd-shelf-renderer, ytd-search ytd-horizontal-card-list-renderer, ytd-search ytd-reel-shelf-renderer { display:none !important; }' : ''}
             ${prefs.strictRecommendations ? `
                 ytd-reel-shelf-renderer,
                 ytd-rich-shelf-renderer[is-shorts],
@@ -779,7 +837,7 @@ class ContentBlocker {
     }
 
     applyYouTubeAutoplayOff() {
-        if (!this.youtubeLearning?.shadowHost?.isConnected) return;
+        if (!this.youtubeLearning?.shadowHost?.isConnected || this.youtubeLearning.preferences.disableAutoplay === false) return;
         const video = document.querySelector('video');
         if (video) video.autoplay = false;
         const autoplayButton = document.querySelector('.ytp-autonav-toggle-button[aria-checked="true"]');
@@ -789,6 +847,13 @@ class ContentBlocker {
         }
     }
 
+    applyYouTubeSubscriptionRedirect() {
+        const prefs = this.youtubeLearning?.preferences;
+        if (!prefs?.redirectSubscriptions || window.location.pathname !== '/feed/subscriptions') return;
+        if (sessionStorage.getItem('timeshield-subscriptions-redirected') === 'true') return;
+        sessionStorage.setItem('timeshield-subscriptions-redirected', 'true');
+        window.location.assign('/');
+    }
     applyYouTubeChannelWhitelist() {
         const prefs = this.youtubeLearning?.preferences;
         if (!prefs?.channelWhitelist || !prefs.channels.length) return;
