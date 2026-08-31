@@ -390,17 +390,11 @@ These entries are automatically included in new Nuclear sessions.
 
 ### YouTube Focus Learning Mode
 
-When `youtube.com` or a YouTube subdomain is allowlisted, a compact Focus Learning panel appears only during an active Nuclear session. The panel can be hidden and reopened with its **Hide** and **Show controls** buttons.
+When `youtube.com` or a YouTube subdomain is allowlisted, Nuclear Mode automatically applies a strict Focus Learning layout. No YouTube settings panel or option buttons are shown on the page.
 
-The panel provides Unhook-style controls for:
+The layout keeps only the search bar, normal video playback, comments, video description, and recommended videos available. It automatically hides the homepage feed, video sidebar, live chat, playlists, Shorts, end-screen videowall and cards, miniplayer, Mix Radio playlists, merch, tickets, offers, video buttons, channel details, the top header and notification bell, Explore, Trending, More from YouTube, irrelevant search-result shelves, and Subscriptions. Subscription pages redirect to the YouTube home page. Autoplay and annotations are disabled.
 
-- hiding the homepage feed, video sidebar, live chat, playlists, Shorts, end-screen videowall, end-screen cards, comments, Mix Radio playlists, merch, tickets, offers, video information, the buttons bar, channel details, video descriptions, the top header, the notification bell, Explore, Trending, More from YouTube, and irrelevant search-result shelves;
-- hiding or redirecting Subscriptions, hiding related videos, and optionally showing recommended videos;
-- disabling autoplay and annotations; and
-- enabling Strict Learning Recommendations, Channel Whitelist, Learning Session, and Learning Queue.
-
-Search, normal video playback, chapters, transcripts, captions, playback speed, and fullscreen remain available unless an optional control hides the related page element. All controls, filters, and styling are removed when Nuclear Mode ends or when YouTube is not allowlisted.
-These YouTube controls do not affect normal YouTube use outside an active Nuclear session.
+All filters and styling are removed when Nuclear Mode ends or when YouTube is not allowlisted. The automatic learning layout does not affect normal YouTube use outside an active Nuclear session.
 
 ---
 

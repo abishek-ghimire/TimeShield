@@ -631,15 +631,53 @@ class ContentBlocker {
         }
         const stored = await chrome.storage.local.get(['youtubeLearningPreferences']);
         const saved = stored.youtubeLearningPreferences || {};
+        const strictNuclearPolicy = {
+            panelHidden: true,
+            hideHomeFeed: true,
+            hideVideoSidebar: false,
+            hideLiveChat: true,
+            hidePlaylist: true,
+            hideShorts: true,
+            hideTrending: true,
+            hideExplore: true,
+            hideSubscriptions: true,
+            redirectSubscriptions: true,
+            hideRelated: false,
+            showRecommended: true,
+            hideEndScreen: true,
+            hideEndScreenVideowall: true,
+            hideEndScreenCards: true,
+            hideMiniplayer: true,
+            hideMixRadioPlaylists: true,
+            hideComments: false,
+            hideVideoInfo: false,
+            hideVideoButtonsBar: true,
+            hideChannelInfo: true,
+            hideVideoDescription: false,
+            hideTopHeader: false,
+            hideNotificationBell: true,
+            hideIrrelevantSearchResults: true,
+            hideMoreFromYouTube: true,
+            disableAutoplay: true,
+            disableAnnotations: true,
+            strictRecommendations: true,
+            channelWhitelist: false,
+            learningSession: false,
+            learningQueue: false
+        };
         this.youtubeLearning.preferences = {
             ...this.youtubeLearning.preferences,
             ...saved,
+            ...strictNuclearPolicy,
             channels: Array.isArray(saved.channels) ? saved.channels.slice(0, 100) : []
         };
         if (this.youtubeLearning.preferences.learningSession && !this.youtubeLearning.sessionStartedAt) {
             this.youtubeLearning.sessionStartedAt = Date.now();
         }
-        this.ensureYouTubeLearningPanel();
+        // Nuclear Mode uses an automatic strict layout; no settings panel is shown on YouTube.
+        this.youtubeLearning.shadowHost?.remove();
+        this.youtubeLearning.shadowHost = null;
+        this.youtubeLearning.shadowRoot = null;
         this.applyYouTubeLearningStyles();
         this.applyYouTubeAutoplayOff();
         this.applyYouTubeChannelWhitelist();
@@ -837,7 +875,7 @@ class ContentBlocker {
     }
 
     applyYouTubeAutoplayOff() {
-        if (!this.youtubeLearning?.shadowHost?.isConnected || this.youtubeLearning.preferences.disableAutoplay === false) return;
+        if (!this.youtubeLearning?.preferences || this.youtubeLearning.preferences.disableAutoplay === false) return;
         const video = document.querySelector('video');
         if (video) video.autoplay = false;
         const autoplayButton = document.querySelector('.ytp-autonav-toggle-button[aria-checked="true"]');

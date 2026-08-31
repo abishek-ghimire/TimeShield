@@ -972,13 +972,21 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.match(options, /existing\.textContent === notificationMessage/);
     assert.match(options, /notification\.dataset\.notificationKey = notificationKey/);
 
-    assert.match(blocker, /panelHidden: false/);
-    assert.match(blocker, /data-panel-hide/);
-    assert.match(blocker, /data-panel-show/);
-    for (const preference of ['hideHomeFeed', 'hideVideoSidebar', 'hideLiveChat', 'hidePlaylist', 'hideShorts', 'hideTrending', 'hideExplore', 'hideSubscriptions', 'redirectSubscriptions', 'hideRelated', 'showRecommended', 'hideEndScreenVideowall', 'hideEndScreenCards', 'hideMiniplayer', 'hideMixRadioPlaylists', 'hideComments', 'hideVideoInfo', 'hideVideoButtonsBar', 'hideChannelInfo', 'hideVideoDescription', 'hideTopHeader', 'hideNotificationBell', 'hideIrrelevantSearchResults', 'hideMoreFromYouTube', 'disableAutoplay', 'disableAnnotations', 'hideMerchOffers', 'strictRecommendations', 'channelWhitelist', 'learningSession', 'learningQueue']) {
-        assert.match(blocker, new RegExp(`data-learning-pref=\\"${preference}\\"`));
-        assert.match(blocker, new RegExp(`prefs\\.${preference}`));
-    }
+    assert.match(blocker, /const strictNuclearPolicy = \{/);
+    assert.match(blocker, /panelHidden: true/);
+    assert.match(blocker, /hideHomeFeed: true/);
+    assert.match(blocker, /hideShorts: true/);
+    assert.match(blocker, /hideRelated: false/);
+    assert.match(blocker, /showRecommended: true/);
+    assert.match(blocker, /hideComments: false/);
+    assert.match(blocker, /hideVideoInfo: false/);
+    assert.match(blocker, /hideVideoDescription: false/);
+    assert.match(blocker, /disableAutoplay: true/);
+    assert.match(blocker, /disableAnnotations: true/);
+    assert.match(blocker, /strictRecommendations: true/);
+    assert.match(blocker, /no settings panel is shown on YouTube/);
+    assert.doesNotMatch(blocker, /this\.ensureYouTubeLearningPanel\(\);/);
+    assert.match(blocker, /this\.youtubeLearning\.shadowHost\?\.remove\(\)/);
     assert.match(blocker, /const allowed = active && this\.isYouTubeAllowedByNuclearWhitelist/);
     assert.match(blocker, /applyYouTubeSubscriptionRedirect/);
     assert.match(blocker, /window\.location\.pathname !== '\/feed\/subscriptions'/);
