@@ -392,7 +392,7 @@ These entries are automatically included in new Nuclear sessions.
 
 When `youtube.com` or a YouTube subdomain is allowlisted, Nuclear Mode automatically applies a strict Focus Learning layout. No YouTube settings panel or option buttons are shown on the page.
 
-The layout keeps only the search bar, normal video playback, comments, video description, and recommended videos available. It automatically hides the homepage feed, video sidebar, live chat, playlists, Shorts, end-screen videowall and cards, miniplayer, Mix Radio playlists, merch, tickets, offers, video buttons, channel details, the top header and notification bell, Explore, Trending, More from YouTube, irrelevant search-result shelves, and Subscriptions. Subscription pages redirect to the YouTube home page. Autoplay and annotations are disabled.
+The layout keeps only the search bar, normal video playback, comments, video description, and recommended videos available. It automatically hides the homepage feed, video sidebar, live chat, playlists, Shorts, the Shorts entry in the left navigation, dynamically loaded Shorts shelves and video cards in search results, end-screen videowall and cards, miniplayer, Mix Radio playlists, merch, tickets, offers, video buttons, channel details, the top header and notification bell, Explore, Trending, More from YouTube, irrelevant search-result shelves, and Subscriptions. Subscription pages redirect to the YouTube home page. Autoplay and annotations are disabled.
 
 All filters and styling are removed when Nuclear Mode ends or when YouTube is not allowlisted. The automatic learning layout does not affect normal YouTube use outside an active Nuclear session.
 

@@ -685,6 +685,7 @@ class ContentBlocker {
         if (!this.youtubeLearning.refreshTimer) {
             this.youtubeLearning.refreshTimer = window.setInterval(() => {
                 this.applyYouTubeAutoplayOff();
+                this.applyYouTubeShortsFilter();
                 this.applyYouTubeChannelWhitelist();
                 this.applyYouTubeSubscriptionRedirect();
             }, 1500);
@@ -697,6 +698,13 @@ class ContentBlocker {
             this.youtubeLearning.refreshTimer = null;
         }
         document.getElementById('timeshield-youtube-learning-style')?.remove();
+        document.querySelectorAll('[data-timeshield-hidden-shorts]').forEach((element) => {
+            const previousDisplay = element.dataset.timeshieldPreviousDisplay || '';
+            element.style.removeProperty('display');
+            if (previousDisplay) element.style.display = previousDisplay;
+            delete element.dataset.timeshieldHiddenShorts;
+            delete element.dataset.timeshieldPreviousDisplay;
+        });
         this.youtubeLearning?.shadowHost?.remove();
         if (this.youtubeLearning) {
             this.youtubeLearning.shadowHost = null;
@@ -865,9 +873,17 @@ class ContentBlocker {
             ${prefs.strictRecommendations ? `
                 ytd-reel-shelf-renderer,
                 ytd-rich-shelf-renderer[is-shorts],
-                ytd-guide-entry-renderer a[href^="/feed/trending"],
+                ytd-rich-shelf-renderer:has(a[href^="/shorts"]),
+                ytd-rich-section-renderer:has(a[href^="/shorts"]),
+                ytd-item-section-renderer:has(a[href^="/shorts"]),
+                ytd-guide-entry-renderer:has(a[href^="/shorts"]),
+                ytd-mini-guide-entry-renderer:has(a[href^="/shorts"]),
                 ytd-guide-entry-renderer a[href^="/shorts"],
                 ytd-mini-guide-entry-renderer a[href^="/shorts"],
+                ytd-video-renderer:has(a[href^="/shorts"]),
+                ytd-grid-video-renderer:has(a[href^="/shorts"]),
+                ytd-rich-item-renderer:has(a[href^="/shorts"]),
+                ytd-reel-item-renderer,
                 ytd-rich-section-renderer[mini-guide-entry-renderer] { display:none !important; }
             ` : ''}
         `;
@@ -892,6 +908,38 @@ class ContentBlocker {
         sessionStorage.setItem('timeshield-subscriptions-redirected', 'true');
         window.location.assign('/');
     }
+    applyYouTubeShortsFilter() {
+        if (!this.youtubeLearning?.preferences?.strictRecommendations) return;
+        const shortsHref = (href) => {
+            const value = String(href || '');
+            return value === '/shorts' || value.startsWith('/shorts/') || value.startsWith('/shorts?');
+        };
+        const targets = new Set();
+        document.querySelectorAll('a[href^="/shorts"], a[href*="/shorts?"]').forEach((anchor) => {
+            if (!shortsHref(anchor.getAttribute('href'))) return;
+            const target = anchor.closest([
+                'ytd-guide-entry-renderer',
+                'ytd-mini-guide-entry-renderer',
+                'ytd-reel-item-renderer',
+                'ytd-video-renderer',
+                'ytd-grid-video-renderer',
+                'ytd-rich-item-renderer',
+                'ytd-reel-shelf-renderer',
+                'ytd-rich-shelf-renderer',
+                'ytd-rich-section-renderer',
+                'ytd-item-section-renderer'
+            ].join(',')) || anchor;
+            targets.add(target);
+        });
+        targets.forEach((element) => {
+            if (!element.dataset.timeshieldHiddenShorts) {
+                element.dataset.timeshieldHiddenShorts = 'true';
+                element.dataset.timeshieldPreviousDisplay = element.style.display || '';
+            }
+            element.style.setProperty('display', 'none', 'important');
+        });
+    }
+
     applyYouTubeChannelWhitelist() {
         const prefs = this.youtubeLearning?.preferences;
         if (!prefs?.channelWhitelist || !prefs.channels.length) return;

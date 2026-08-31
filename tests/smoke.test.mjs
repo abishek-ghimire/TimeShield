@@ -987,6 +987,14 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.match(blocker, /no settings panel is shown on YouTube/);
     assert.doesNotMatch(blocker, /this\.ensureYouTubeLearningPanel\(\);/);
     assert.match(blocker, /this\.youtubeLearning\.shadowHost\?\.remove\(\)/);
+    assert.match(blocker, /applyYouTubeShortsFilter\(\)/);
+    assert.match(blocker, /a\[href\^="\/shorts/);
+    assert.match(blocker, /ytd-guide-entry-renderer/);
+    assert.match(blocker, /ytd-rich-shelf-renderer/);
+    assert.match(blocker, /ytd-video-renderer/);
+    assert.match(blocker, /timeshieldHiddenShorts/);
+    assert.match(blocker, /timeshieldPreviousDisplay/);
+    assert.match(blocker, /style\.setProperty\('display', 'none', 'important'\)/);
     assert.match(blocker, /const allowed = active && this\.isYouTubeAllowedByNuclearWhitelist/);
     assert.match(blocker, /applyYouTubeSubscriptionRedirect/);
     assert.match(blocker, /window\.location\.pathname !== '\/feed\/subscriptions'/);
