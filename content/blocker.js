@@ -626,7 +626,9 @@ class ContentBlocker {
                     channels: []
                 },
                 sessionStartedAt: 0,
-                refreshTimer: null
+                mutationObserver: null,
+                shortsFilterFrame: 0,
+                shortsFilterNodes: new Set()
             };
         }
         const stored = await chrome.storage.local.get(['youtubeLearningPreferences']);
@@ -680,22 +682,37 @@ class ContentBlocker {
         this.youtubeLearning.shadowRoot = null;
         this.applyYouTubeLearningStyles();
         this.applyYouTubeAutoplayOff();
+        this.applyYouTubeShortsFilter();
         this.applyYouTubeChannelWhitelist();
         this.applyYouTubeSubscriptionRedirect();
-        if (!this.youtubeLearning.refreshTimer) {
-            this.youtubeLearning.refreshTimer = window.setInterval(() => {
-                this.applyYouTubeAutoplayOff();
-                this.applyYouTubeShortsFilter();
-                this.applyYouTubeChannelWhitelist();
-                this.applyYouTubeSubscriptionRedirect();
-            }, 1500);
+        if (!this.youtubeLearning.mutationObserver && document.body) {
+            this.youtubeLearning.mutationObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) this.youtubeLearning.shortsFilterNodes.add(node);
+                }));
+                if (this.youtubeLearning.shortsFilterFrame) return;
+                this.youtubeLearning.shortsFilterFrame = window.setTimeout(() => {
+                    this.youtubeLearning.shortsFilterFrame = 0;
+                    if (!this.youtubeLearning?.preferences?.strictRecommendations) return;
+                    const nodes = [...this.youtubeLearning.shortsFilterNodes];
+                    this.youtubeLearning.shortsFilterNodes.clear();
+                    nodes.forEach((node) => this.applyYouTubeShortsFilter(node));
+                    this.applyYouTubeAutoplayOff();
+                }, 250);
+            });
+            this.youtubeLearning.mutationObserver.observe(document.body, { childList: true, subtree: true });
         }
     }
 
     disableYouTubeLearningMode() {
-        if (this.youtubeLearning?.refreshTimer) {
-            window.clearInterval(this.youtubeLearning.refreshTimer);
-            this.youtubeLearning.refreshTimer = null;
+        if (this.youtubeLearning?.shortsFilterFrame) {
+            window.clearTimeout(this.youtubeLearning.shortsFilterFrame);
+            this.youtubeLearning.shortsFilterFrame = 0;
+        }
+        this.youtubeLearning?.mutationObserver?.disconnect();
+        if (this.youtubeLearning) {
+            this.youtubeLearning.mutationObserver = null;
+            this.youtubeLearning.shortsFilterNodes.clear();
         }
         document.getElementById('timeshield-youtube-learning-style')?.remove();
         document.querySelectorAll('[data-timeshield-hidden-shorts]').forEach((element) => {
@@ -851,7 +868,7 @@ class ContentBlocker {
             ${prefs.hideVideoSidebar ? '#secondary, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
             ${prefs.hideLiveChat ? '#chat, ytd-live-chat-frame, ytd-live-chat-renderer { display:none !important; }' : ''}
             ${prefs.hidePlaylist ? '#panels ytd-playlist-panel-renderer, ytd-playlist-panel-renderer, ytd-watch-metadata ytd-playlist-panel-renderer { display:none !important; }' : ''}
-            ${prefs.hideShorts ? 'ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"] { display:none !important; }' : ''}
+            ${prefs.hideShorts ? 'ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-rich-shelf-renderer:has(a[href*="/shorts"]), ytd-rich-section-renderer:has(a[href*="/shorts"]), ytd-item-section-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer:has(a[href*="/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer a[href*="/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"], ytd-reel-item-renderer, ytd-video-renderer:has(a[href*="/shorts"]), ytd-grid-video-renderer:has(a[href*="/shorts"]), ytd-rich-item-renderer:has(a[href*="/shorts"]) { display:none !important; }' : ''}
             ${prefs.hideTrending ? 'ytd-browse[page-subtype="trending"] #contents, ytd-guide-entry-renderer a[href^="/feed/trending"] { display:none !important; }' : ''}
             ${prefs.hideExplore ? 'ytd-guide-entry-renderer a[href^="/feed/explore"], ytd-guide-entry-renderer a[href^="/feed/storefront"] { display:none !important; }' : ''}
             ${prefs.hideMoreFromYouTube ? 'ytd-rich-section-renderer, ytd-shelf-renderer[expanded], ytd-rich-shelf-renderer:not([is-shorts]) { display:none !important; }' : ''}
@@ -908,14 +925,22 @@ class ContentBlocker {
         sessionStorage.setItem('timeshield-subscriptions-redirected', 'true');
         window.location.assign('/');
     }
-    applyYouTubeShortsFilter() {
+    applyYouTubeShortsFilter(root = document) {
         if (!this.youtubeLearning?.preferences?.strictRecommendations) return;
         const shortsHref = (href) => {
             const value = String(href || '');
-            return value === '/shorts' || value.startsWith('/shorts/') || value.startsWith('/shorts?');
+            try {
+                const parsed = new URL(value, window.location.origin);
+                return parsed.pathname === '/shorts' || parsed.pathname.startsWith('/shorts/');
+            } catch {
+                return value === '/shorts' || value.startsWith('/shorts/') || value.startsWith('/shorts?');
+            }
         };
         const targets = new Set();
-        document.querySelectorAll('a[href^="/shorts"], a[href*="/shorts?"]').forEach((anchor) => {
+        const anchors = [];
+        if (root.nodeType === Node.ELEMENT_NODE && root.matches('a[href*="/shorts"]')) anchors.push(root);
+        if (typeof root.querySelectorAll === 'function') anchors.push(...root.querySelectorAll('a[href*="/shorts"]'));
+        anchors.forEach((anchor) => {
             if (!shortsHref(anchor.getAttribute('href'))) return;
             const target = anchor.closest([
                 'ytd-guide-entry-renderer',
@@ -927,7 +952,9 @@ class ContentBlocker {
                 'ytd-reel-shelf-renderer',
                 'ytd-rich-shelf-renderer',
                 'ytd-rich-section-renderer',
-                'ytd-item-section-renderer'
+                'ytd-item-section-renderer',
+                'ytd-rich-grid-row',
+                'ytd-rich-grid-renderer'
             ].join(',')) || anchor;
             targets.add(target);
         });

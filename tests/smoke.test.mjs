@@ -988,6 +988,10 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.doesNotMatch(blocker, /this\.ensureYouTubeLearningPanel\(\);/);
     assert.match(blocker, /this\.youtubeLearning\.shadowHost\?\.remove\(\)/);
     assert.match(blocker, /applyYouTubeShortsFilter\(\)/);
+    assert.match(blocker, /new MutationObserver/);
+    assert.match(blocker, /shortsFilterNodes/);
+    assert.match(blocker, /setTimeout\(\(\) =>/);
+    assert.match(blocker, /250\)/);
     assert.match(blocker, /a\[href\^="\/shorts/);
     assert.match(blocker, /ytd-guide-entry-renderer/);
     assert.match(blocker, /ytd-rich-shelf-renderer/);
