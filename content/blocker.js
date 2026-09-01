@@ -906,11 +906,11 @@ class ContentBlocker {
             ${prefs.hideVideoSidebar ? '#secondary, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
             ${prefs.hideLiveChat ? '#chat, ytd-live-chat-frame, ytd-live-chat-renderer { display:none !important; }' : ''}
             ${prefs.hidePlaylist ? '#panels ytd-playlist-panel-renderer, ytd-playlist-panel-renderer, ytd-watch-metadata ytd-playlist-panel-renderer { display:none !important; }' : ''}
-            ${prefs.hideShorts ? 'ytd-shorts, #shorts-container, #shorts-player, ytd-reel-video-renderer, ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-rich-shelf-renderer:has(a[href*="/shorts"]), ytd-rich-shelf-renderer:has(a[href*="youtube.com/shorts"]), ytd-rich-section-renderer:has(a[href*="/shorts"]), ytd-rich-section-renderer:has(a[href*="youtube.com/shorts"]), ytd-item-section-renderer:has(a[href*="/shorts"]), ytd-item-section-renderer:has(a[href*="youtube.com/shorts"]), ytd-guide-entry-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer:has(a[href*="youtube.com/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="youtube.com/shorts"]), ytd-guide-entry-renderer a[href*="/shorts"], ytd-guide-entry-renderer a[href*="youtube.com/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"], ytd-mini-guide-entry-renderer a[href*="youtube.com/shorts"], ytd-reel-item-renderer, ytd-video-renderer:has(a[href*="/shorts"]), ytd-video-renderer:has(a[href*="youtube.com/shorts"]), ytd-grid-video-renderer:has(a[href*="/shorts"]), ytd-grid-video-renderer:has(a[href*="youtube.com/shorts"]), ytd-rich-item-renderer:has(a[href*="/shorts"]), ytd-rich-item-renderer:has(a[href*="youtube.com/shorts"]) { display:none !important; }' : ''}
+            ${prefs.hideShorts ? 'ytd-shorts, #shorts-container, #shorts-player, ytd-reel-video-renderer, ytd-reel-shelf-renderer, ytd-reel-item-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-guide-entry-renderer a[href^="/shorts"], ytd-mini-guide-entry-renderer a[href^="/shorts"], a[href^="/shorts"] { display:none !important; }' : ''}
             ${prefs.hideShorts && this.isYouTubeShortsPage() ? 'ytd-browse, ytd-shorts, #page-manager, #content, #shorts-container, #shorts-player, ytd-reel-video-renderer { display:none !important; }' : ''}
             ${prefs.hideTrending ? 'ytd-browse[page-subtype="trending"] #contents, ytd-guide-entry-renderer a[href^="/feed/trending"] { display:none !important; }' : ''}
             ${prefs.hideExplore ? 'ytd-guide-entry-renderer a[href^="/feed/explore"], ytd-guide-entry-renderer a[href^="/feed/storefront"] { display:none !important; }' : ''}
-            ${prefs.hideMoreFromYouTube ? 'ytd-rich-section-renderer, ytd-shelf-renderer[expanded], ytd-rich-shelf-renderer:not([is-shorts]) { display:none !important; }' : ''}
+            ${prefs.hideMoreFromYouTube ? 'ytd-shelf-renderer[expanded], ytd-rich-shelf-renderer:not([is-shorts])#more-from-youtube, ytd-rich-section-renderer[mini-guide-entry-renderer] { display:none !important; }' : ''}
             ${prefs.hideSubscriptions ? 'ytd-guide-entry-renderer a[href^="/feed/subscriptions"], ytd-browse[page-subtype="subscriptions"] #contents { display:none !important; }' : ''}
             ${prefs.hideRelated && !prefs.showRecommended ? '#related, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
             ${prefs.hideEndScreen ? '.ytp-endscreen-content, .ytp-ce-element, .ytp-endscreen-previous, .ytp-endscreen-next { display:none !important; }' : ''}
@@ -928,19 +928,11 @@ class ContentBlocker {
             ${prefs.hideIrrelevantSearchResults ? 'ytd-search ytd-shelf-renderer, ytd-search ytd-horizontal-card-list-renderer, ytd-search ytd-reel-shelf-renderer { display:none !important; }' : ''}
             ${prefs.strictRecommendations ? `
                 ytd-reel-shelf-renderer,
+                ytd-reel-item-renderer,
                 ytd-rich-shelf-renderer[is-shorts],
-                ytd-rich-shelf-renderer:has(a[href^="/shorts"]),
-                ytd-rich-section-renderer:has(a[href^="/shorts"]),
-                ytd-item-section-renderer:has(a[href^="/shorts"]),
-                ytd-guide-entry-renderer:has(a[href^="/shorts"]),
-                ytd-mini-guide-entry-renderer:has(a[href^="/shorts"]),
                 ytd-guide-entry-renderer a[href^="/shorts"],
                 ytd-mini-guide-entry-renderer a[href^="/shorts"],
-                ytd-video-renderer:has(a[href^="/shorts"]),
-                ytd-grid-video-renderer:has(a[href^="/shorts"]),
-                ytd-rich-item-renderer:has(a[href^="/shorts"]),
-                ytd-reel-item-renderer,
-                ytd-rich-section-renderer[mini-guide-entry-renderer] { display:none !important; }
+                a[href^="/shorts"] { display:none !important; }
             ` : ''}
         `;
         (document.head || document.documentElement).appendChild(style);
@@ -1007,7 +999,11 @@ class ContentBlocker {
             'ytd-rich-grid-row'
         ].join(',')) || [];
         textContainers.forEach((container) => {
-            const label = [container.getAttribute('aria-label'), container.getAttribute('title'), container.textContent]
+            const headingText = [...container.querySelectorAll('#title, #header, yt-formatted-string, [aria-label], [title]')]
+                .slice(0, 8)
+                .map((node) => node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || '')
+                .join(' ');
+            const label = [container.getAttribute('aria-label'), container.getAttribute('title'), headingText]
                 .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
             if (!/(^|\s)shorts(\s|$)/i.test(label)) return;
             targets.add(container);
