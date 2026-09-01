@@ -16,6 +16,7 @@ class ContentBlocker {
         this.blockingCountdownEndAt = 0;
         this.soundLastPlayedAt = new Map();
         this.youtubeShortsNavigationHandler = null;
+        this.youtubeShortsPlaybackHandler = null;
         this.init();
     }
 
@@ -565,10 +566,6 @@ class ContentBlocker {
                 this.disableYouTubeLearningMode();
                 return;
             }
-            if (this.isYouTubeShortsPage()) {
-                this.redirectFromYouTubeShorts();
-                return;
-            }
             await this.enableYouTubeLearningMode();
         } catch {
             this.disableYouTubeLearningMode();
@@ -579,9 +576,8 @@ class ContentBlocker {
         const pathname = String(window.location.pathname || '').replace(/\/+$/, '') || '/';
         return pathname === '/shorts' || pathname.startsWith('/shorts/');
     }
-    redirectFromYouTubeShorts() {
-        if (!this.isYouTubeShortsPage()) return;
-        window.location.replace('/');
+    isYouTubeWatchPage() {
+        return String(window.location.pathname || '') === '/watch';
     }
     isYouTubePage() {
         const hostname = String(window.location.hostname || '').toLowerCase().replace(/^www\\./, '');
@@ -699,28 +695,28 @@ class ContentBlocker {
         this.youtubeLearning.shadowHost = null;
         this.youtubeLearning.shadowRoot = null;
         this.applyYouTubeLearningStyles();
-        this.applyYouTubeAutoplayOff();
-        this.applyYouTubeShortsFilter();
-        this.applyYouTubeChannelWhitelist();
-        this.applyYouTubeSubscriptionRedirect();
-        if (!this.youtubeShortsNavigationHandler) {
-            this.youtubeShortsNavigationHandler = (event) => {
-                const anchor = event.target?.closest?.('a[href*="/shorts"]');
-                if (!anchor) return;
-                const href = anchor.getAttribute('href') || '';
-                try {
-                    const parsed = new URL(href, window.location.origin);
-                    if (parsed.pathname !== '/shorts' && !parsed.pathname.startsWith('/shorts/')) return;
-                } catch {
-                    return;
+        if (this.isYouTubeShortsPage() && !this.youtubeShortsPlaybackHandler) {
+            this.youtubeShortsPlaybackHandler = (event) => {
+                const media = event.target;
+                if (media instanceof HTMLMediaElement) {
+                    media.pause();
+                    media.removeAttribute('autoplay');
                 }
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                window.location.replace('/');
             };
-            document.addEventListener('click', this.youtubeShortsNavigationHandler, true);
+            document.addEventListener('play', this.youtubeShortsPlaybackHandler, true);
         }
-        if (!this.youtubeLearning.mutationObserver && document.body) {
+        if (this.isYouTubeShortsPage()) {
+            document.querySelectorAll('video, audio').forEach((media) => {
+                media.pause();
+                media.removeAttribute('autoplay');
+            });
+        }
+        if (!this.isYouTubeWatchPage() && !this.isYouTubeShortsPage()) {
+            this.applyYouTubeShortsFilter();
+            this.applyYouTubeChannelWhitelist();
+            this.applyYouTubeSubscriptionRedirect();
+        }
+        if (!this.youtubeLearning.mutationObserver && document.body && !this.isYouTubeWatchPage() && !this.isYouTubeShortsPage()) {
             this.youtubeLearning.mutationObserver = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === Node.ELEMENT_NODE) this.youtubeLearning.shortsFilterNodes.add(node);
@@ -732,7 +728,6 @@ class ContentBlocker {
                     const nodes = [...this.youtubeLearning.shortsFilterNodes];
                     this.youtubeLearning.shortsFilterNodes.clear();
                     nodes.forEach((node) => this.applyYouTubeShortsFilter(node));
-                    this.applyYouTubeAutoplayOff();
                 }, 250);
             });
             this.youtubeLearning.mutationObserver.observe(document.body, { childList: true, subtree: true });
@@ -748,6 +743,10 @@ class ContentBlocker {
         if (this.youtubeShortsNavigationHandler) {
             document.removeEventListener('click', this.youtubeShortsNavigationHandler, true);
             this.youtubeShortsNavigationHandler = null;
+        }
+        if (this.youtubeShortsPlaybackHandler) {
+            document.removeEventListener('play', this.youtubeShortsPlaybackHandler, true);
+            this.youtubeShortsPlaybackHandler = null;
         }
         if (this.youtubeLearning) {
             this.youtubeLearning.mutationObserver = null;
@@ -907,7 +906,8 @@ class ContentBlocker {
             ${prefs.hideVideoSidebar ? '#secondary, ytd-watch-next-secondary-results-renderer { display:none !important; }' : ''}
             ${prefs.hideLiveChat ? '#chat, ytd-live-chat-frame, ytd-live-chat-renderer { display:none !important; }' : ''}
             ${prefs.hidePlaylist ? '#panels ytd-playlist-panel-renderer, ytd-playlist-panel-renderer, ytd-watch-metadata ytd-playlist-panel-renderer { display:none !important; }' : ''}
-            ${prefs.hideShorts ? 'ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-rich-shelf-renderer:has(a[href*="/shorts"]), ytd-rich-section-renderer:has(a[href*="/shorts"]), ytd-item-section-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer:has(a[href*="/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer a[href*="/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"], ytd-reel-item-renderer, ytd-video-renderer:has(a[href*="/shorts"]), ytd-grid-video-renderer:has(a[href*="/shorts"]), ytd-rich-item-renderer:has(a[href*="/shorts"]) { display:none !important; }' : ''}
+            ${prefs.hideShorts ? 'ytd-shorts, #shorts-container, #shorts-player, ytd-reel-video-renderer, ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts], ytd-rich-shelf-renderer:has(a[href*="/shorts"]), ytd-rich-shelf-renderer:has(a[href*="youtube.com/shorts"]), ytd-rich-section-renderer:has(a[href*="/shorts"]), ytd-rich-section-renderer:has(a[href*="youtube.com/shorts"]), ytd-item-section-renderer:has(a[href*="/shorts"]), ytd-item-section-renderer:has(a[href*="youtube.com/shorts"]), ytd-guide-entry-renderer:has(a[href*="/shorts"]), ytd-guide-entry-renderer:has(a[href*="youtube.com/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="/shorts"]), ytd-mini-guide-entry-renderer:has(a[href*="youtube.com/shorts"]), ytd-guide-entry-renderer a[href*="/shorts"], ytd-guide-entry-renderer a[href*="youtube.com/shorts"], ytd-mini-guide-entry-renderer a[href*="/shorts"], ytd-mini-guide-entry-renderer a[href*="youtube.com/shorts"], ytd-reel-item-renderer, ytd-video-renderer:has(a[href*="/shorts"]), ytd-video-renderer:has(a[href*="youtube.com/shorts"]), ytd-grid-video-renderer:has(a[href*="/shorts"]), ytd-grid-video-renderer:has(a[href*="youtube.com/shorts"]), ytd-rich-item-renderer:has(a[href*="/shorts"]), ytd-rich-item-renderer:has(a[href*="youtube.com/shorts"]) { display:none !important; }' : ''}
+            ${prefs.hideShorts && this.isYouTubeShortsPage() ? 'ytd-browse, ytd-shorts, #page-manager, #content, #shorts-container, #shorts-player, ytd-reel-video-renderer { display:none !important; }' : ''}
             ${prefs.hideTrending ? 'ytd-browse[page-subtype="trending"] #contents, ytd-guide-entry-renderer a[href^="/feed/trending"] { display:none !important; }' : ''}
             ${prefs.hideExplore ? 'ytd-guide-entry-renderer a[href^="/feed/explore"], ytd-guide-entry-renderer a[href^="/feed/storefront"] { display:none !important; }' : ''}
             ${prefs.hideMoreFromYouTube ? 'ytd-rich-section-renderer, ytd-shelf-renderer[expanded], ytd-rich-shelf-renderer:not([is-shorts]) { display:none !important; }' : ''}
@@ -997,6 +997,21 @@ class ContentBlocker {
             ].join(',')) || anchor;
             targets.add(target);
         });
+                const textContainers = root.querySelectorAll?.([
+            'ytd-guide-entry-renderer',
+            'ytd-mini-guide-entry-renderer',
+            'ytd-rich-shelf-renderer',
+            'ytd-rich-section-renderer',
+            'ytd-item-section-renderer',
+            'ytd-reel-shelf-renderer',
+            'ytd-rich-grid-row'
+        ].join(',')) || [];
+        textContainers.forEach((container) => {
+            const label = [container.getAttribute('aria-label'), container.getAttribute('title'), container.textContent]
+                .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+            if (!/(^|\s)shorts(\s|$)/i.test(label)) return;
+            targets.add(container);
+        });
         targets.forEach((element) => {
             if (!element.dataset.timeshieldHiddenShorts) {
                 element.dataset.timeshieldHiddenShorts = 'true';
@@ -1005,7 +1020,6 @@ class ContentBlocker {
             element.style.setProperty('display', 'none', 'important');
         });
     }
-
     applyYouTubeChannelWhitelist() {
         const prefs = this.youtubeLearning?.preferences;
         if (!prefs?.channelWhitelist || !prefs.channels.length) return;

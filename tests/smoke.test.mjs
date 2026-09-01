@@ -990,7 +990,10 @@ test('Notification sounds respect settings and fire once per timer or limit thre
     assert.match(blocker, /applyYouTubeShortsFilter\(\)/);
     assert.match(blocker, /new MutationObserver/);
     assert.match(blocker, /isYouTubeShortsPage/);
-    assert.match(blocker, /redirectFromYouTubeShorts/);
+    assert.match(blocker, /youtubeShortsPlaybackHandler/);
+    assert.match(blocker, /isYouTubeWatchPage\(\)/);
+    assert.match(blocker, /#shorts-container/);
+    assert.match(blocker, /ytd-shorts/);
     assert.match(blocker, /youtubeShortsNavigationHandler/);
     assert.match(blocker, /requestIdleCallback/);
     assert.doesNotMatch(blocker, /refreshTimer/);
