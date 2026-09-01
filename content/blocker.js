@@ -712,25 +712,32 @@ class ContentBlocker {
             });
         }
         if (!this.isYouTubeWatchPage() && !this.isYouTubeShortsPage()) {
-            this.applyYouTubeShortsFilter();
-            this.applyYouTubeChannelWhitelist();
             this.applyYouTubeSubscriptionRedirect();
-        }
-        if (!this.youtubeLearning.mutationObserver && document.body && !this.isYouTubeWatchPage() && !this.isYouTubeShortsPage()) {
-            this.youtubeLearning.mutationObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE) this.youtubeLearning.shortsFilterNodes.add(node);
-                }));
-                if (this.youtubeLearning.shortsFilterFrame) return;
-                this.youtubeLearning.shortsFilterFrame = window.setTimeout(() => {
-                    this.youtubeLearning.shortsFilterFrame = 0;
-                    if (!this.youtubeLearning?.preferences?.strictRecommendations) return;
-                    const nodes = [...this.youtubeLearning.shortsFilterNodes];
-                    this.youtubeLearning.shortsFilterNodes.clear();
-                    nodes.forEach((node) => this.applyYouTubeShortsFilter(node));
-                }, 250);
-            });
-            this.youtubeLearning.mutationObserver.observe(document.body, { childList: true, subtree: true });
+            const startNonCriticalFiltering = () => {
+                if (!this.youtubeLearning?.preferences?.strictRecommendations || this.isYouTubeWatchPage() || this.isYouTubeShortsPage()) return;
+                this.applyYouTubeShortsFilter();
+                this.applyYouTubeChannelWhitelist();
+                if (this.youtubeLearning.mutationObserver || !document.body) return;
+                this.youtubeLearning.mutationObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) this.youtubeLearning.shortsFilterNodes.add(node);
+                    }));
+                    if (this.youtubeLearning.shortsFilterFrame) return;
+                    this.youtubeLearning.shortsFilterFrame = window.setTimeout(() => {
+                        this.youtubeLearning.shortsFilterFrame = 0;
+                        if (!this.youtubeLearning?.preferences?.strictRecommendations) return;
+                        const nodes = [...this.youtubeLearning.shortsFilterNodes];
+                        this.youtubeLearning.shortsFilterNodes.clear();
+                        nodes.forEach((node) => this.applyYouTubeShortsFilter(node));
+                    }, 250);
+                });
+                this.youtubeLearning.mutationObserver.observe(document.body, { childList: true, subtree: true });
+            };
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(startNonCriticalFiltering, { timeout: 1200 });
+            } else {
+                window.setTimeout(startNonCriticalFiltering, 800);
+            }
         }
     }
 
