@@ -431,7 +431,8 @@ class OptionsManager {
     }
 
     async saveGlobalLimit() {
-        this.globalLimit.minutes = parseInt(document.getElementById('globalLimitMinutes').value) || 60;
+        const value = Number(document.getElementById('globalLimitMinutes').value);
+        this.globalLimit.minutes = Number.isFinite(value) && value >= 0 ? Math.floor(value) : 60;
         await chrome.storage.local.set({ globalLimit: this.globalLimit });
     }
 
@@ -1215,7 +1216,7 @@ class OptionsManager {
         const site = document.getElementById('limitSite').value.trim();
         const minutes = parseInt(document.getElementById('limitMinutes').value);
 
-        if (site && minutes && minutes > 0) {
+        if (site && Number.isFinite(minutes) && minutes >= 0) {
             const existingIndex = this.timeLimits.findIndex(limit => limit.site === site);
             if (existingIndex !== -1) {
                 this.timeLimits[existingIndex].minutes = minutes;
@@ -1245,8 +1246,8 @@ class OptionsManager {
         if (newMinsStr === null) return;
 
         const newMins = parseInt(newMinsStr);
-        if (isNaN(newMins) || newMins <= 0) {
-            this.showNotification('Please enter a valid number of minutes.', 'error');
+        if (isNaN(newMins) || newMins < 0) {
+            this.showNotification('Please enter a valid number of minutes (0 or more).', 'error');
             return;
         }
 

@@ -2664,8 +2664,8 @@
                                     <div class="site-list" id="timeLimitsList"></div>
                                     <div class="add-site-form" style="margin-top:12px;">
                                         <input type="text" id="limitSite" placeholder="Site domain (e.g., youtube.com)">
-                                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="1"
-                                            max="480" style="width:170px;">
+                                        <input type="number" id="limitMinutes" placeholder="Minutes per day" min="0"
+                                            max="480" style="width:170px;" title="0 minutes blocks the site immediately">
                                         <button class="btn btn-primary" id="addTimeLimit">Add Limit</button>
                                     </div>
                                 </div>
@@ -2705,7 +2705,7 @@
                                         style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
                                         <label for="globalLimitMinutes" style="margin:0; white-space:nowrap;">Max Time
                                             Allowed (min):</label>
-                                        <input type="number" id="globalLimitMinutes" value="60" min="1" max="1440"
+                                        <input type="number" id="globalLimitMinutes" value="60" min="0" max="1440"
                                             style="width:100px;">
                                     </div>
                                     <div class="section-heading" style="margin-top:16px;">Sites in Global Pool</div>

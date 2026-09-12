@@ -100,6 +100,12 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(helper, /isUsageLimit/);
     assert.doesNotMatch(worker, /new Uint32Array\(25\)/);
     assert.doesNotMatch(worker, /alphabet\.length/);
+    const options = await read('options/options.html');
+    const optionsJs = await read('options/options.js');
+    assert.match(options, /id="limitMinutes"[^>]*min="0"/);
+    assert.match(options, /id="globalLimitMinutes"[^>]*min="0"/);
+    assert.match(optionsJs, /Number\.isFinite\(minutes\) && minutes >= 0/);
+    assert.match(optionsJs, /isNaN\(newMins\) \|\| newMins < 0/);
     assert.match(usageLimit, /data-minutes="1"/);
     assert.match(usageLimit, /data-minutes="5"/);
     assert.match(usageLimit, /data-minutes="10"/);
@@ -661,6 +667,11 @@ test('Screen-time tracking follows tab lifecycle changes without overcounting', 
     assert.match(tracker, /this\.activeTabId === removedTabId/);
     assert.match(tracker, /this\.handleTabChange\(addedTabId\)/);
     assert.match(tracker, /this\.startTracking\(domain, tabId\)/);
+    assert.match(tracker, /const transitionToken = \+\+this\.transitionToken/);
+    assert.match(tracker, /transitionToken !== this\.transitionToken/);
+    assert.match(tracker, /tab\.active !== true/);
+    assert.match(tracker, /Number\.isFinite\(Number\(limitObj\.minutes\)\)/);
+    assert.match(tracker, /Number\(limitObj\.minutes\) >= 0/);
 });
 
 

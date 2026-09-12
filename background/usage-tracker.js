@@ -7,6 +7,7 @@ class UsageTracker {
         this.activeTabId = null;
         this.lastCheckpointAt = 0;
         this.intervalId = null;
+        this.transitionToken = 0;
         this.injectionPromises = new Map();
         this.usageAlarmName = 'timeShieldUsageTick';
         // All domains share one queue because each write reads and rewrites the
@@ -94,8 +95,10 @@ class UsageTracker {
     }
 
     handleTabChange(tabId) {
+        const transitionToken = ++this.transitionToken;
         chrome.tabs.get(tabId, tab => {
-            if (chrome.runtime.lastError || !tab || !tab.url) {
+            if (transitionToken !== this.transitionToken) return;
+            if (chrome.runtime.lastError || !tab || !tab.url || tab.active !== true) {
                 this.stopTracking();
                 return;
             }
@@ -134,8 +137,7 @@ class UsageTracker {
     }
 
     startTracking(domain, tabId = null) {
-        if (this.activeDomain === domain) {
-            if (tabId !== null) this.activeTabId = tabId;
+        if (this.activeDomain === domain && this.activeTabId === tabId) {
             return;
         }
 
@@ -158,6 +160,7 @@ class UsageTracker {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
+        this.transitionToken += 1;
         this.activeDomain = null;
         this.activeTabId = null;
         this.lastCheckpointAt = 0;
@@ -301,8 +304,8 @@ class UsageTracker {
 
         // 1. Check individual time limit
         const limitObj = timeLimits.find(l => l.site === domain);
-        if (limitObj && Number(limitObj.minutes) > 0) {
-            const limitSeconds = Math.floor(Number(limitObj.minutes) * 60);
+        if (limitObj && Number.isFinite(Number(limitObj.minutes)) && Number(limitObj.minutes) >= 0) {
+            const limitSeconds = Math.max(0, Math.floor(Number(limitObj.minutes) * 60));
             const usedSeconds = data[today][domain];
             const remaining = limitSeconds - usedSeconds;
             const warningToken = `${today}:${limitSeconds}`;
