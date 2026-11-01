@@ -106,6 +106,91 @@
         },
 
         render({ pauseSection, pauseButton, response, durationMs }) {
+            pauseSection.innerHTML = `
+                <h3>🔐 Pause Verification</h3>
+                <p class="pause-message" id="pauseDelayMessage">Please wait while the 15-second delay timer completes before continuing.</p>
+                <div class="pause-preparation-countdown" aria-live="polite" aria-atomic="true" style="display:grid;place-items:center;margin:18px auto;width:76px;height:76px;border:4px solid rgba(129,140,248,.35);border-top-color:#818cf8;border-radius:50%;font:700 1.8rem/1 ui-sans-serif,system-ui,sans-serif;color:#a5b4fc;">
+                    <span id="pauseDelayCountdown">15</span>
+                </div>
+                <div class="pause-challenge-actions" style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;">
+                    <button class="duration-btn" id="submitDelayPause" type="button" disabled>Continue</button>
+                    <button class="cancel-pause-btn" id="cancelDelayPause" type="button">Stay Focused</button>
+                </div>
+                <p class="pause-message" id="delayError" style="display:none;color:#fb7185;"></p>
+            `;
+
+            const countdown = pauseSection.querySelector('#pauseDelayCountdown');
+            const message = pauseSection.querySelector('#pauseDelayMessage');
+            const submit = pauseSection.querySelector('#submitDelayPause');
+            const cancel = pauseSection.querySelector('#cancelDelayPause');
+            const error = pauseSection.querySelector('#delayError');
+            if (!countdown || !message || !submit || !cancel) {
+                pauseSection.innerHTML = '<p class="pause-message" style="color:#fb7185;">The verification form could not be opened. Please reload the blocked page.</p>';
+                return;
+            }
+
+            const isUsageLimit = response?.pauseContext === 'usageLimit';
+            const isNuclearPause = response?.pauseContext === 'nuclear';
+            const isNuclearExit = response?.pauseContext === 'nuclearExit';
+
+            let remaining = 15;
+            let countdownTimer = null;
+
+            const stopCountdown = () => {
+                if (countdownTimer) {
+                    window.clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
+            };
+
+            const tick = () => {
+                remaining--;
+                countdown.textContent = String(remaining);
+                if (remaining > 0) {
+                    message.textContent = `Please wait ${remaining} seconds before continuing.`;
+                } else {
+                    stopCountdown();
+                    message.textContent = 'The delay timer has completed. You can now continue.';
+                    submit.disabled = false;
+                    submit.focus();
+                }
+            };
+
+            cancel.addEventListener('click', () => {
+                stopCountdown();
+                pauseSection.style.display = 'none';
+                if (pauseButton) pauseButton.style.display = 'flex';
+            });
+
+            submit.addEventListener('click', () => {
+                submit.disabled = true;
+                cancel.disabled = true;
+                message.textContent = 'Processing pause request...';
+
+                chrome.runtime.sendMessage({
+                    action: isNuclearExit ? 'completeNuclearExitWithPassword' : 'pauseBlockingWithPassword',
+                    durationMs,
+                    pauseContext: isNuclearExit ? 'nuclearExit' : (isUsageLimit ? 'usageLimit' : (isNuclearPause ? 'nuclear' : 'general')),
+                    password: '',
+                    confirmUsagePause: isUsageLimit ? true : false
+                }, (result) => {
+                    if (chrome.runtime.lastError || !result?.success) {
+                        submit.disabled = false;
+                        cancel.disabled = false;
+                        error.textContent = result?.error || 'Unable to complete pause request. Please try again.';
+                        error.style.display = 'block';
+                        message.textContent = 'Please try again.';
+                        return;
+                    }
+                    showSuccess(pauseSection, isNuclearExit ? 'Nuclear Mode has ended.' : undefined);
+                });
+            });
+
+            tick();
+            countdownTimer = window.setInterval(tick, 1000);
+        },
+
+        render({ pauseSection, pauseButton, response, durationMs }) {
             const challenge = String(response?.challenge || '');
             const challengeLines = challenge.split('\n');
             const validChallenge = challengeLines.length >= 2

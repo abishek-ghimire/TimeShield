@@ -466,15 +466,13 @@ test('Screen-time renderer refreshes from storage changes and compares local cal
 });
 
 
-test('Pause verification shows a ten-second countdown before the challenge', async () => {
+test('Pause verification shows a fifteen-second delay timer', async () => {
     const helper = await read('floating/pause-challenge.js');
-    assert.match(helper, /startPreparation\(/);
-    assert.match(helper, /let remaining = 10/);
-    assert.match(helper, /pausePreparationCountdown/);
+    assert.match(helper, /let remaining = 15/);
+    assert.match(helper, /pauseDelayCountdown/);
+    assert.match(helper, /pauseDelayMessage/);
     assert.match(helper, /window\.setInterval\(tick, 1000\)/);
-    assert.match(helper, /window\.TimeShieldPauseChallenge\.render/);
-    assert.match(helper, /id="submitChallenge"/);
-    assert.match(helper, /Continue Anyway/);
+    assert.match(helper, /submitDelayPause/);
 });
 
 test('All pause block pages use the shared preparation flow', async () => {
