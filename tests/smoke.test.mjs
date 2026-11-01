@@ -92,7 +92,7 @@ test('Pause challenge uses lowercase motivational sentences and context-specific
     assert.match(worker, /pauseContext === 'usageLimit'/);
     assert.match(worker, /requiresFinalConfirmation: true/);
     assert.match(worker, /confirmUsagePause/);
-    assert.match(worker, /Date\.now\(\) \+ \(10 \* 1000\)/);
+    assert.match(worker, /Date\.now\(\) \+ \(15 \* 1000\)/);
     assert.match(helper, /wait ten seconds/);
     assert.match(helper, /confirm pause/);
     assert.match(worker, /\[1, 5, 10\]/);

@@ -1222,7 +1222,7 @@ class BackgroundService {
                 // motivational challenge. This adds modest friction without changing the
                 // pause flow for Focus, scheduled, or sleep blocking.
                 if (challenge.pauseContext === 'usageLimit' && !message.confirmUsagePause) {
-                    const readyAt = Date.now() + (10 * 1000);
+                    const readyAt = Date.now() + (15 * 1000);
                     await chrome.storage.local.set({
                         pauseChallenge: { ...challenge, readyAt }
                     });

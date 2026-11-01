@@ -1257,17 +1257,9 @@ class OptionsManager {
             // Decreasing is good!
             this.showNotification('Awesome! Reducing your distractible time. Keep it up!', 'success');
         } else {
-            // Increasing requires protection
+            // Increasing requires protection (no typing challenge, 15s delay handled by protection sequence)
             const allowed = await this.runProtectionSequence(`Increase time limit for ${site} to ${newMins} mins`);
             if (!allowed) return;
-
-            // MANDATORY EXTRA CHALLENGE for increasing limits as requested
-            const challenge = "I will respect my boundaries and focus on my work.";
-            const typed = prompt(`FINAL CONFIRMATION: To increase the limit to ${newMins} minutes, type this exactly:\n\n"${challenge}"`, "");
-            if (typed !== challenge) {
-                this.showNotification('Limit increase cancelled. Challenge failed.', 'error');
-                return;
-            }
         }
 
         limit.minutes = newMins;
