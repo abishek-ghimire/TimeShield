@@ -1838,7 +1838,6 @@
         }
 
         .pause-protection-stat span:last-child,
-        .challenge-summary-list span,
         .pause-protection-note {
             color: var(--text-soft);
             font-size: 0.82rem;
@@ -1863,41 +1862,12 @@
             font-weight: 600;
         }
 
-        .pause-setting-row {
-            margin-top: 18px;
-        }
-
-        .pause-delay-field {
-            max-width: 300px;
-            margin-top: 12px;
-        }
-
         .pause-protection-note {
             margin-top: 12px;
             padding: 10px 12px;
             border-left: 3px solid #6366f1;
             border-radius: 0 8px 8px 0;
             background: var(--surface-muted);
-        }
-
-        .challenge-summary-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .challenge-summary-list > div {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            padding: 11px 13px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            background: var(--surface-muted);
-        }
-
-        .challenge-summary-list strong {
-            color: var(--text-main);
-            font-size: 0.88rem;
         }
 
         .light-theme .pause-duration-pill {
@@ -2241,37 +2211,13 @@
                         </div>
                     </div>
 
-                    <!-- Protection Challenges -->
-                    <div class="accordion-item" id="acc-foc-challenges">
-                        <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-challenges">
-                            <span class="accordion-icon">🛡️</span>
-                            <span class="accordion-title-wrap">
-                                <span class="accordion-title">Protection Challenges</span>
-                                <span class="accordion-subtitle">Make it harder to disable protection</span>
-                            </span>
-                            <span class="accordion-chevron"><svg viewBox="0 0 24 24">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg></span>
-                        </button>
-                        <div class="accordion-body">
-                            <div class="accordion-inner">
-                                <div class="accordion-divider"></div>
-                                <p class="hint" style="margin-bottom:14px;">Protection Challenges are handled when a pause or protection change needs deliberate confirmation. Pause-specific options are available in the Pause Protection panel below.</p>
-                                <div class="challenge-summary-list">
-                                    <div><strong>Motivational verification</strong><span>Required for repeated one-minute pauses and longer pauses.</span></div>
-                                    <div><strong>Timed confirmation</strong><span>Optional countdown settings can be configured under Pause Protection.</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Pause Protection -->
                     <div class="accordion-item" id="acc-foc-pause">
                         <button type="button" class="accordion-header" aria-expanded="false" data-target="acc-foc-pause">
                             <span class="accordion-icon">⏸️</span>
                             <span class="accordion-title-wrap">
                                 <span class="accordion-title">Pause Protection</span>
-                                <span class="accordion-subtitle">Challenge required for extended pauses</span>
+                                <span class="accordion-subtitle">Fixed delay before every pause</span>
                             </span>
                             <span class="accordion-chevron"><svg viewBox="0 0 24 24">
                                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -2280,13 +2226,13 @@
                         <div class="accordion-body">
                             <div class="accordion-inner">
                                                                 <div class="accordion-divider"></div>
-                                <p class="hint pause-protection-intro">Pause Protection keeps a deliberate step between a protection session and a temporary pause. Short pauses stay quick, while repeated or longer pauses require motivational verification.</p>
+                                <p class="hint pause-protection-intro">Pause Protection keeps a fixed 15-second delay between a protection session and a temporary pause.</p>
 
                                 <div class="pause-protection-grid" aria-label="Pause Protection overview">
                                     <div class="pause-protection-stat">
                                         <span class="pause-protection-stat-label">Free short pauses</span>
                                         <strong>2 × 1 minute each day</strong>
-                                        <span>After that, verification is required.</span>
+                                        <span>Each pause uses the same delay.</span>
                                     </div>
                                     <div class="pause-protection-stat">
                                         <span class="pause-protection-stat-label">Available durations</span>
@@ -2304,15 +2250,7 @@
                                     <span class="pause-duration-pill">3 hr</span>
                                 </div>
 
-                                <div class="checkbox-group pause-setting-row">
-                                    <input type="checkbox" id="challengeDelayEnabled">
-                                    <label for="challengeDelayEnabled">Add a countdown before protection changes</label>
-                                </div>
-                                <div class="form-group pause-delay-field">
-                                    <label for="challengeDelaySeconds">Countdown seconds (3–60)</label>
-                                    <input type="number" id="challengeDelaySeconds" min="3" max="60" value="8">
-                                </div>
-                                <p class="pause-protection-note">When verification appears, type the two lowercase motivational sentences exactly as shown. The pause begins only after the challenge is completed successfully.</p>
+                                <p class="pause-protection-note">Every pause starts after a fixed 15-second delay.</p>
                             </div>
                         </div>
                     </div>

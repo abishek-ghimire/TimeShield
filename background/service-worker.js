@@ -34,7 +34,7 @@ class BackgroundService {
 
         // sleepBlockingState removed
 
-        // Track challenge-free one-minute pauses (maximum two per local day).
+        // Track the daily one-minute pause allowance.
                 this.shortPauseUsage = {
             count: 0,
             lastResetDate: new Date().toDateString()
@@ -658,7 +658,7 @@ class BackgroundService {
                     // or tab initialization, which can suspend or take longer
                     // than the block-page request timeout.
                     const pauseRequest = message.action === 'pauseBlocking'
-                        || message.action === 'pauseBlockingWithPassword';
+                        || message.action === 'endNuclearModeAfterDelay';
                     if (!pauseRequest) await this.initPromise;
                     if (message.action === 'showStatusWidget') {
                         await chrome.storage.local.set({ sessionOverlayDismissed: false });
@@ -803,7 +803,7 @@ class BackgroundService {
             case 'stopNuclearMode':
                 sendResponse({
                     success: false,
-                    error: 'Nuclear Mode can only be ended through the verified block-page challenge.'
+                    error: 'Nuclear Mode can only be ended through the block-page delay.'
                 });
                 break;
             case 'getNuclearModeState': {
@@ -1099,44 +1099,13 @@ class BackgroundService {
                 await this.updateFilters();
                 sendResponse({ success: true });
                 break;
-            case 'requestNuclearExitChallenge': {
+            case 'endNuclearModeAfterDelay': {
                 const nuclearResult = await chrome.storage.local.get(['nuclearMode']);
                 if (!this.isNuclearSessionValid(nuclearResult.nuclearMode)) {
                     sendResponse({ success: false, error: 'Nuclear Mode is not active.' });
                     break;
                 }
-                const challenge = this.generatePauseChallenge();
-                await chrome.storage.local.set({
-                    pauseChallenge: {
-                        value: challenge,
-                        durationMs: 0,
-                        pauseContext: 'nuclearExit',
-                        expiresAt: Date.now() + (10 * 60 * 1000)
-                    }
-                });
-                sendResponse({
-                    success: false,
-                    requiresPassword: true,
-                    challenge,
-                    pauseContext: 'nuclearExit'
-                });
-                break;
-            }
-            case 'completeNuclearExitWithPassword': {
-                const challengeResult = await chrome.storage.local.get(['pauseChallenge']);
-                const challenge = challengeResult.pauseChallenge;
-                const submitted = String(message.password || '').replace(/\r\n?/g, '\n').trim();
-                const isValid = challenge
-                    && challenge.pauseContext === 'nuclearExit'
-                    && Date.now() < challenge.expiresAt
-                    && this.isValidPauseChallenge(submitted)
-                    && submitted === challenge.value;
-                if (!isValid) {
-                    sendResponse({ success: false, error: 'Incorrect motivational sentences or expired challenge' });
-                    break;
-                }
                 const state = await this.stopNuclearMode();
-                await chrome.storage.local.remove('pauseChallenge');
                 sendResponse({ success: true, nuclearMode: state });
                 break;
             }
@@ -1155,7 +1124,7 @@ class BackgroundService {
 
                 // Focus, scheduled, and sleep pauses keep their existing daily allowance.
                 // Nuclear Mode has its own single free one-minute pause per session;
-                // later Nuclear requests use the motivational verification flow.
+                // later Nuclear requests use the same fixed delay in the block page.
                 const isOneMinuteNuclearPause = pauseContext === 'nuclear' && durationMs === 60 * 1000;
                 if (isOneMinuteNuclearPause) {
                     const freePauseResult = await this.tryFreeNuclearOneMinutePause();
@@ -1182,68 +1151,8 @@ class BackgroundService {
                     }
                 }
 
-                const challenge = this.generatePauseChallenge();
-                await chrome.storage.local.set({
-                    pauseChallenge: {
-                        value: challenge,
-                        durationMs,
-                        pauseContext,
-                        expiresAt: Date.now() + (10 * 60 * 1000)
-                    }
-                });
-                sendResponse({
-                    success: false,
-                    requiresPassword: true,
-                    challenge,
-                    pauseContext
-                });
-                break;
-            }
-            case 'pauseBlockingWithPassword': {
-                const challengeResult = await chrome.storage.local.get(['pauseChallenge']);
-                const challenge = challengeResult.pauseChallenge;
-                const submitted = String(message.password || '').replace(/\r\n?/g, '\n').trim();
-                const isValid = challenge
-                    && Date.now() < challenge.expiresAt
-                    && this.isValidPauseChallenge(submitted)
-                    && submitted === challenge.value;
-                if (!isValid) {
-                    sendResponse({ success: false, error: 'Incorrect motivational sentences or expired challenge' });
-                    break;
-                }
-
-                const durationMs = Number(challenge.durationMs);
-                if (!this.isAllowedPauseDuration(durationMs, challenge.pauseContext)) {
-                    sendResponse({ success: false, error: 'This pause duration is no longer available.' });
-                    break;
-                }
-
-                // Usage-limit pauses require one deliberate final confirmation after the
-                // motivational challenge. This adds modest friction without changing the
-                // pause flow for Focus, scheduled, or sleep blocking.
-                if (challenge.pauseContext === 'usageLimit' && !message.confirmUsagePause) {
-                    const readyAt = Date.now() + (15 * 1000);
-                    await chrome.storage.local.set({
-                        pauseChallenge: { ...challenge, readyAt }
-                    });
-                    sendResponse({
-                        success: false,
-                        requiresFinalConfirmation: true,
-                        readyAt,
-                        pauseContext: challenge.pauseContext
-                    });
-                    break;
-                }
-                if (challenge.pauseContext === 'usageLimit') {
-                    if (!challenge.readyAt || Date.now() < challenge.readyAt) {
-                        sendResponse({ success: false, error: 'Please wait before confirming this usage-limit pause.' });
-                        break;
-                    }
-                }
-
                 const paused = await this.pauseBlocking(durationMs);
                 if (paused) {
-                    await chrome.storage.local.remove('pauseChallenge');
                     sendResponse({ success: true });
                 } else {
                     sendResponse({ success: false, error: 'Unable to pause protection' });
@@ -1285,26 +1194,7 @@ class BackgroundService {
         return this.getAllowedPauseDurationsMs(pauseContext).includes(Number(durationMs));
     }
 
-    isValidPauseChallenge(value) {
-        const lines = String(value || '').split('\n');
-        return lines.length >= 2
-            && lines.length <= 3
-            && lines.every(line => /^[a-z]+(?: [a-z]+)*$/.test(line));
-    }
-
-    generatePauseChallenge() {
-        const challenges = [
-'i am focused and i will not get distracted\ni choose to protect my time and finish what matters',
-            'i am building the discipline to finish what matters most\ni return my attention to the work in front of me',
-            'i choose to stay on task and honor the commitment i made to myself\ni will not let distraction win today'
-        ];
-        const values = new Uint32Array(1);
-        globalThis.crypto.getRandomValues(values);
-        return challenges[values[0] % challenges.length];
-    }
-
     async pauseBlocking(durationMs) {
-        // Focus Mode may be paused after the same visible challenge as every other protection.
         // ResumeBlocking() re-evaluates Focus Mode and restores its rules when the pause expires.
         const pauseDurationMs = Number(durationMs);
         if (!Number.isFinite(pauseDurationMs) || pauseDurationMs <= 0) return false;
@@ -2849,7 +2739,6 @@ class BackgroundService {
             },
             timerState: { isRunning: false, startTime: null, duration: 0, type: null },
             pauseBlockingUntil: null,
-            pauseChallenge: null,
             siteUsageData: {},
             siteUsageTimeline: {},
             siteOpenCounts: {},

@@ -44,7 +44,7 @@ TimeShield brings everyday focus tools into one extension:
 | **Flip Clock** | Separate split-flap clock view in a browser tab. |
 | **Timers** | Configurable timers with optional completion sounds and floating display. |
 | **Focus Mode** | Blocks selected websites during an active focus session. |
-| **Nuclear Mode** | Strict timed allowlist with session setup, protected tabs, pause/exit verification, and YouTube Focus Learning Mode. |
+| **Nuclear Mode** | Strict timed allowlist with session setup, protected tabs, pause/exit delay, and YouTube Focus Learning Mode. |
 | **Scheduled Blocking** | Blocks selected websites during chosen days and times. |
 | **Sleep Protection** | Separate website protection for sleep hours, including overnight schedules. |
 | **Usage Limits** | Tracks selected websites and blocks them after daily limits. |
@@ -236,7 +236,7 @@ When a newer release is available:
 - Add the current site directly from the control panel.
 - Get a save-work warning before blocking starts.
 - Pause a session when needed.
-- Use limited challenge-free one-minute pauses before verification is required.
+- Wait through a fixed 15-second delay before pausing protection.
 
 ## Scheduled Blocking
 
@@ -370,21 +370,15 @@ These entries are automatically included in new Nuclear sessions.
 
 ## Pausing and ending Nuclear Mode
 
-- One **1-minute pause** is available without a challenge per Nuclear session.
-- Later one-minute pauses and longer pauses require verification.
+- Every pause uses a fixed **15-second delay**.
 - The active control-panel button shows the remaining time.
-- Ending the session requires verification.
+- Ending the session requires the fixed delay.
 
 ### End Nuclear Mode
 
 1. Select **Pause Blocks**.
-2. Select **End Nuclear Mode with verification**.
-3. Continue to verification.
-4. Type the displayed motivational sentences exactly in lowercase.
-5. Submit the challenge.
-
-- The challenge uses first-person **“i”** wording.
-- Symbols, numbers, or incorrectly formatted text are rejected.
+2. Select **End Nuclear Mode**.
+3. Start the 15-second delay and wait for it to complete.
 - Nuclear Mode also ends automatically when its selected duration expires.
 - Blocking rules and temporary exceptions are cleaned up afterward.
 
@@ -402,14 +396,13 @@ All filters and styling are removed when Nuclear Mode ends or when YouTube is no
 
 Pause behavior depends on the active protection feature.
 
-| Protection context | Challenge-free allowance | Verified pause behavior |
+| Protection context | Pause behavior |
 | --- | --- | --- |
-| Nuclear Mode | One 1-minute pause per session | Later 1-minute and longer pauses require verification. |
-| Focus, Schedule, and Sleep | Two eligible 1-minute pauses per local day | Later one-minute and supported longer pauses require verification. |
-| Usage Limits | Site-limit choices of 1, 5, or 10 minutes | Confirmation is required when extending access. |
+| Nuclear Mode | All supported pauses begin after a fixed 15-second delay. |
+| Focus, Schedule, and Sleep | All supported pauses begin after a fixed 15-second delay. |
+| Usage Limits | All supported pauses begin after a fixed 15-second delay. |
 
-- A preparation countdown appears before required verification.
-- The motivational challenge must be entered exactly as displayed.
+- A 15-second preparation countdown appears before every pause.
 
 ---
 
@@ -490,15 +483,8 @@ For Nuclear Mode:
 This is intentional.
 
 1. Select **Pause Blocks**.
-2. Select **End Nuclear Mode with verification**.
-3. Complete the displayed lowercase challenge.
-
-## The first Nuclear one-minute pause does not show a challenge
-
-This is intentional.
-
-- Nuclear Mode provides exactly one challenge-free 1-minute pause per session.
-- Later one-minute pauses require verification.
+2. Select **End Nuclear Mode**.
+3. Start the 15-second delay and wait for it to complete.
 
 ## Screen Time is empty
 
@@ -510,9 +496,9 @@ This is intentional.
 6. Confirm the page is not browser-internal.
 7. For local documents, enable **Allow access to file URLs**.
 
-## The pause challenge does not appear
+## The pause delay does not appear
 
-1. Wait for the preparation countdown.
+1. Wait for the 15-second preparation countdown.
 2. If it remains stuck, reload TimeShield.
 3. Close the old blocked page.
 4. Open a new blocked tab.
@@ -532,7 +518,7 @@ This is intentional.
 TimeShield/
 ├── background/      Manifest V3 service worker and protection enforcement
 ├── content/         Page-level scripts and floating interfaces
-├── floating/        Clock, timer, block pages, and pause challenges
+├── floating/        Clock, timer, block pages, and pause delays
 ├── options/         Settings and Screen Time dashboard
 ├── popup/           Browser toolbar control panel
 ├── rules/           Local declarative network rules
@@ -580,7 +566,7 @@ node --test tests/smoke.test.mjs
 | Service worker syntax | `node --check background/service-worker.js` |
 | Popup syntax | `node --check popup/popup.js` |
 | Block-page syntax | `node --check floating/nuclear-block.js` |
-| Pause challenge syntax | `node --check floating/pause-challenge.js` |
+| Pause delay syntax | `node --check floating/pause-delay.js` |
 | Whitespace errors | `git diff --check` |
 
 The current suite contains **57 passing tests** covering protection modes, Nuclear Mode, Screen Time, notifications, popup behavior, settings persistence, and documentation checks.

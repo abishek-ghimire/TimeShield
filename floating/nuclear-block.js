@@ -48,22 +48,23 @@ class NuclearBlockPage {
 
         startExitBtn?.addEventListener('click', () => {
             startExitBtn.disabled = true;
-            chrome.runtime.sendMessage({ action: 'requestNuclearExitChallenge' }, (response) => {
+            if (typeof window.TimeShieldPauseDelay?.start !== 'function') {
                 startExitBtn.disabled = false;
-                if (chrome.runtime.lastError) {
-                    if (exitSection) exitSection.innerHTML = `<h3>Unable to open verification</h3><p class="pause-message">${chrome.runtime.lastError.message}</p>`;
-                    return;
-                }
-                if (response?.requiresPassword && typeof window.TimeShieldPauseChallenge?.render === 'function') {
-                    window.TimeShieldPauseChallenge.render({
-                        pauseSection: exitSection,
-                        pauseButton: pauseBtn,
-                        response,
-                        durationMs: 0
+                return;
+            }
+            window.TimeShieldPauseDelay.start({
+                pauseSection: exitSection,
+                pauseButton: pauseBtn,
+                onCancel: () => { startExitBtn.disabled = false; },
+                successMessage: 'Nuclear Mode has ended.',
+                requestPause: () => new Promise((resolve, reject) => {
+                    chrome.runtime.sendMessage({ action: 'endNuclearModeAfterDelay' }, (response) => {
+                        startExitBtn.disabled = false;
+                        const error = chrome.runtime.lastError;
+                        if (error) reject(new Error(error.message));
+                        else resolve(response);
                     });
-                    return;
-                }
-                if (exitSection) exitSection.innerHTML = `<h3>Unable to open verification</h3><p class="pause-message">${response?.error || 'Please try again.'}</p>`;
+                })
             });
         });
 
@@ -74,13 +75,13 @@ class NuclearBlockPage {
                 if (!Number.isFinite(durationMs) || durationMs <= 0) return;
 
                 btn.disabled = true;
-                if (typeof window.TimeShieldPauseChallenge?.startPreparation === 'function') {
-                    window.TimeShieldPauseChallenge.startPreparation({
+                if (typeof window.TimeShieldPauseDelay?.start === 'function') {
+                    window.TimeShieldPauseDelay.start({
                         pauseSection,
                         pauseButton: pauseBtn,
                         durationMs,
                         pauseContext: 'nuclear',
-                        requestChallenge: () => new Promise((resolve, reject) => {
+                        requestPause: () => new Promise((resolve, reject) => {
                             chrome.runtime.sendMessage({
                                 action: 'pauseBlocking',
                                 durationMs,

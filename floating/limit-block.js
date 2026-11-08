@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Every duration opens a visible verification challenge before blocking is paused.
+    // Every pause has a visible fixed delay before protection is changed.
     document.querySelectorAll('.duration-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const duration = btn.dataset.minutes;
@@ -48,13 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!Number.isFinite(durationMs) || durationMs <= 0) return;
 
             btn.disabled = true;
-            if (typeof window.TimeShieldPauseChallenge?.startPreparation === 'function') {
-                window.TimeShieldPauseChallenge.startPreparation({
+            if (typeof window.TimeShieldPauseDelay?.start === 'function') {
+                window.TimeShieldPauseDelay.start({
                     pauseSection,
                     pauseButton: pauseBtn,
                     durationMs,
                     pauseContext: 'usageLimit',
-                    requestChallenge: () => new Promise((resolve, reject) => {
+                    requestPause: () => new Promise((resolve, reject) => {
                         chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'usageLimit' }, response => {
                             const error = chrome.runtime.lastError;
                             if (error) reject(new Error(error.message));

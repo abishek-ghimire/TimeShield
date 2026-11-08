@@ -67,37 +67,20 @@ test('Warning and countdown contracts are connected end to end', async () => {
     assert.match(blocker, /right:\s*12px/);
 });
 
-test('Pause challenge uses lowercase motivational sentences and context-specific durations', async () => {
-    const helper = await read('floating/pause-challenge.js');
+test('Pause delay uses a fixed fifteen-second timer and context-specific durations', async () => {
+    const helper = await read('floating/pause-delay.js');
     const worker = await read('background/service-worker.js');
     const usageLimit = await read('floating/limit-block.html');
     const focus = await read('floating/focus-block.html');
     const schedule = await read('floating/schedule-block.html');
     const sleep = await read('floating/sleep-block.html');
-    assert.match(helper, /motivational sentences/);
-    assert.match(helper, /valueLines\.length >= 2/);
-    assert.match(helper, /\^\[a-z\]\+\(\?: \[a-z\]\+\)\*\$/);
-    assert.match(worker, /generatePauseChallenge/);
-    assert.match(worker, /i am focused and i will not get distracted/);
-    assert.match(worker, /i choose to protect my time and finish what matters/);
-    assert.match(worker, /i return my attention to the work in front of me/);
-    assert.match(worker, /'i am focused and i will not get distracted\\ni choose to protect my time and finish what matters'/);
-    assert.match(worker, /'i am building the discipline to finish what matters most\\ni return my attention to the work in front of me'/);
-    assert.match(worker, /'i choose to stay on task and honor the commitment i made to myself\\ni will not let distraction win today'/);
-    assert.match(worker, /isValidPauseChallenge/);
-    const challengeSource = worker.match(/const challenges = \[([\s\S]*?)\n        \];/)?.[1] || '';
-    assert.doesNotMatch(challengeSource, /\bwe\b/);
-    const challengeText = challengeSource.replace(/,\s*/g, '');
-    assert.doesNotMatch(challengeText, /[A-Z]|[.,!?]/);
-    assert.match(worker, /pauseContext === 'usageLimit'/);
-    assert.match(worker, /requiresFinalConfirmation: true/);
-    assert.match(worker, /confirmUsagePause/);
-    assert.match(worker, /Date\.now\(\) \+ \(15 \* 1000\)/);
-    assert.match(helper, /wait ten seconds/);
-    assert.match(helper, /confirm pause/);
+    assert.match(helper, /DELAY_SECONDS = 15/);
+    assert.match(helper, /pauseDelayCountdown/);
+    assert.match(helper, /pauseDelayMessage/);
+    assert.doesNotMatch(helper, /textarea|motivation|challenge/i);
+    assert.doesNotMatch(worker, /generatePauseChallenge|isValidPauseChallenge|pauseChallenge/);
     assert.match(worker, /\[1, 5, 10\]/);
     assert.match(worker, /\[1, 5, 60, 180\]/);
-    assert.match(helper, /isUsageLimit/);
     assert.doesNotMatch(worker, /new Uint32Array\(25\)/);
     assert.doesNotMatch(worker, /alphabet\.length/);
     const options = await read('options/options.html');
@@ -172,8 +155,7 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
     assert.doesNotMatch(options, /categoryPreset|scheduleCategoryPreset|renderBlockingCategoryControls|getCategoryEntriesForTarget|saveBlockingCategories/);
     assert.doesNotMatch(worker, /blockingCategories|getActiveBlockingSites/);
     assert.match(options, /'scheduledBlockedSites'/);
-    assert.match(worker, /isValidPauseChallenge/);
-    assert.match(worker, /requiresPassword: true/);
+    assert.match(worker, /pauseBlocking/);
     assert.match(popup, /renderClock\(\)/);
     assert.match(popup, /timeFormat: '12h'/);
 
@@ -187,9 +169,9 @@ test('Manual blocking lists, independent sleep enforcement, and delayed focus co
 
     const focusBlock = await read('floating/focus-block.js');
     const pauseOverlay = await read('floating/pause-overlay.js');
-    assert.match(focusBlock, /TimeShieldPauseChallenge\?\.startPreparation/);
-    assert.match(pauseOverlay, /const motTextEl.*motivationText/);
-    assert.match(pauseOverlay, /action: 'pauseBlockingWithPassword'/);
+    assert.match(focusBlock, /TimeShieldPauseDelay\?\.start/);
+    assert.match(pauseOverlay, /TimeShieldPauseDelay\.start/);
+    assert.match(pauseOverlay, /action: 'pauseBlocking'/);
 
     for (const source of [options, popup]) {
         assert.match(source, /showProtectionWarning\(actionLabel\)/);
@@ -467,12 +449,12 @@ test('Screen-time renderer refreshes from storage changes and compares local cal
 
 
 test('Pause verification shows a fifteen-second delay timer', async () => {
-    const helper = await read('floating/pause-challenge.js');
-    assert.match(helper, /let remaining = 15/);
+    const helper = await read('floating/pause-delay.js');
+    assert.match(helper, /DELAY_SECONDS = 15/);
     assert.match(helper, /pauseDelayCountdown/);
     assert.match(helper, /pauseDelayMessage/);
     assert.match(helper, /window\.setInterval\(tick, 1000\)/);
-    assert.match(helper, /submitDelayPause/);
+    assert.match(helper, /cancelPauseDelay/);
 });
 
 test('All pause block pages use the shared preparation flow', async () => {
@@ -484,8 +466,8 @@ test('All pause block pages use the shared preparation flow', async () => {
         read('floating/nuclear-block.js')
     ]);
     for (const source of sources) {
-        assert.match(source, /TimeShieldPauseChallenge\?\.startPreparation/);
-        assert.match(source, /requestChallenge:/);
+        assert.match(source, /TimeShieldPauseDelay\?\.start/);
+        assert.match(source, /requestPause:/);
         assert.match(source, /action: 'pauseBlocking'/);
     }
     assert.match(sources[4], /pauseContext: 'nuclear'/);
@@ -499,15 +481,12 @@ test('Pause Protection accordion exposes useful settings and supported durations
 
     assert.match(options, /id="acc-foc-pause"/);
     assert.match(options, /pause-protection-grid/);
-    assert.match(options, /2 × 1 minute each day/);
-    assert.match(options, /id="challengeDelayEnabled"/);
-    assert.match(options, /id="challengeDelaySeconds"/);
+    assert.match(options, /fixed 15-second delay/);
     for (const duration of ['1 min', '5 min', '10 min', '1 hr', '3 hr']) {
         assert.match(options, new RegExp(duration.replace(' ', '\\s+')));
     }
-    assert.match(optionsJs, /challengeDelayEnabled/);
-    assert.match(optionsJs, /challengeDelaySeconds/);
-    assert.match(popup, /s\.challengeDelayEnabled/);
+    assert.doesNotMatch(optionsJs, /challengeDelayEnabled|challengeDelaySeconds/);
+    assert.doesNotMatch(popup, /challengeDelayEnabled|challengeDelaySeconds/);
 });
 
 
@@ -522,16 +501,16 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     const optionsJs = await read('options/options.js');
     const blockPage = await read('floating/nuclear-block.html');
     const blockController = await read('floating/nuclear-block.js');
-    const pauseHelper = await read('floating/pause-challenge.js');
+    const pauseHelper = await read('floating/pause-delay.js');
 
     assert.ok(resources.includes('floating/nuclear-block.html'));
     assert.ok(resources.includes('floating/nuclear-block.js'));
     assert.match(blockPage, /Nuclear Mode Active/);
-    assert.match(blockPage, /pause-challenge\.js/);
+    assert.match(blockPage, /pause-delay\.js/);
     assert.match(blockController, /pauseContext: 'nuclear'/);
-    assert.match(blockController, /requestNuclearExitChallenge/);
+    assert.match(blockController, /endNuclearModeAfterDelay/);
     assert.match(blockController, /showNuclearExitBtn/);
-    assert.match(pauseHelper, /completeNuclearExitWithPassword/);
+    assert.match(pauseHelper, /DELAY_SECONDS = 15/);
     assert.match(worker, /startNuclearMode/);
     assert.match(worker, /excludedTabIds/);
     assert.match(worker, /normalizeNuclearExcludedTabIds/);
@@ -542,13 +521,9 @@ test('Nuclear Mode is wired as an isolated opt-in protection feature', async () 
     assert.match(worker, /getNuclearModeState/);
     assert.match(worker, /addNuclearWhitelistSite/);
     assert.match(worker, /removeNuclearWhitelistSite/);
-    assert.match(worker, /requestNuclearExitChallenge/);
-    assert.match(worker, /completeNuclearExitWithPassword/);
-    assert.match(worker, /Nuclear Mode can only be ended through the verified block-page challenge/);
-    assert.match(worker, /pauseContext: 'nuclearExit'/);
-    assert.match(pauseHelper, /pauseContext === 'nuclearExit'/);
-    assert.match(pauseHelper, /pauseContext === 'nuclear'/);
-    assert.match(pauseHelper, /pauseContext === 'general' \|\| pauseContext === 'nuclear'/);
+    assert.match(worker, /endNuclearModeAfterDelay/);
+    assert.match(worker, /Nuclear Mode can only be ended through the block-page delay/);
+    assert.match(pauseHelper, /DELAY_SECONDS = 15/);
     assert.match(worker, /enableSiteBlocking\(\['\*'\], 501, 'nuclear'/);
     assert.match(worker, /isNuclearAutomaticException/);
     assert.ok(worker.includes("target.startsWith('file://')"));
@@ -726,10 +701,9 @@ test('Disabled schedule state remains opt-in and is immediately rechecked', asyn
 
 
 test('Pause preparation exposes a visible failure path instead of a stuck zero state', async () => {
-    const helper = await read('floating/pause-challenge.js');
-    assert.match(helper, /verification request timed out/);
-    assert.match(helper, /retryPausePreparation/);
-    assert.match(helper, /Unable to prepare verification/);
+    const helper = await read('floating/pause-delay.js');
+    assert.match(helper, /Unable to pause protection/);
+    assert.match(helper, /Try Again/);
 });
 
 
@@ -750,18 +724,16 @@ test('Pause verification is not blocked by general worker initialization', async
 });
 
 
-test('Pause requests still return a challenge after the initialization bypass', async () => {
+test('Pause requests remain available after the initialization bypass', async () => {
     const worker = await read('background/service-worker.js');
     assert.match(worker, /case 'pauseBlocking':/);
-    assert.match(worker, /requiresPassword: true/);
-    assert.match(worker, /await chrome\.storage\.local\.set\(\{\s*pauseChallenge:/);
+    assert.match(worker, /const paused = await this\.pauseBlocking\(durationMs\)/);
 });
 
 
 test('Focus block page reports a retryable pause request failure', async () => {
-    const helper = await read('floating/pause-challenge.js');
-    assert.match(helper, /requestChallenge\(\)/);
-    assert.match(helper, /verification request timed out/);
+    const helper = await read('floating/pause-delay.js');
+    assert.match(helper, /requestPause\(\)/);
     assert.match(helper, /Try Again/);
 });
 
@@ -857,7 +829,7 @@ test('Light-theme popup header keeps the brand and format control readable', asy
 
 test('Pause screens keep readable typography at normal browser zoom', async () => {
     const stylesheet = await read('floating/pause-screen.css');
-    const challenge = await read('floating/pause-challenge.js');
+    const delay = await read('floating/pause-delay.js');
     const manifest = JSON.parse(await read('manifest.json'));
     const pausePages = await Promise.all([
         'floating/pause-overlay.html',
@@ -874,16 +846,14 @@ test('Pause screens keep readable typography at normal browser zoom', async () =
     assert.match(stylesheet, /font-size: clamp\(2rem, 4vw, 3\.25rem\)/);
     assert.match(stylesheet, /pause-preparation-countdown/);
     assert.match(stylesheet, /font-size: 3rem/);
-    assert.match(stylesheet, /pause-challenge-actions/);
-    assert.match(stylesheet, /font-size: 1\.1rem !important/);
-    assert.match(challenge, /class="pause-preparation-countdown"/);
-    assert.match(challenge, /class="pause-challenge-actions"/);
+    assert.match(stylesheet, /pause-preparation-countdown/);
+    assert.match(delay, /class="pause-preparation-countdown"/);
 });
 
 
 test('One-minute general pauses get two daily free uses before verification', async () => {
     const worker = await read('background/service-worker.js');
-    const helper = await read('floating/pause-challenge.js');
+    const helper = await read('floating/pause-delay.js');
     const options = await read('options/options.html');
 
     assert.equal(options.includes('Free 5-minute pauses are limited'), false);
@@ -893,10 +863,8 @@ test('One-minute general pauses get two daily free uses before verification', as
     assert.match(worker, /const isOneMinuteGeneralPause = pauseContext === 'general' && durationMs === 60 \* 1000/);
     assert.match(worker, /const freePauseResult = await this\.tryFreeOneMinutePause\(\)/);
     assert.match(worker, /freePause: true/);
-    assert.match(helper, /pauseContext === 'general' \|\| pauseContext === 'nuclear'/);
-    assert.match(helper, /durationMs === 60 \* 1000/);
-    assert.match(helper, /if \(response\?\.success\) \{\s*showSuccess\(pauseSection\)/);
-    assert.match(helper, /response\?\.requiresPassword[\s\S]*?TimeShieldPauseChallenge\.render/);
+    assert.match(helper, /if \(!response\?\.success\) throw/);
+    assert.doesNotMatch(helper, /textarea|challenge|motivation/i);
 });
 
 

@@ -1003,15 +1003,6 @@ class PopupController {
         const { settings } = await chrome.storage.local.get(['settings']);
         const s = settings || {};
 
-        // Removed text challenge per user request
-
-        // Removed PIN and Password challenges per user request
-
-        if (s.challengeDelayEnabled) {
-            const delay = Math.max(3, Math.min(60, Number(s.challengeDelaySeconds || 8)));
-            await new Promise((resolve) => setTimeout(resolve, delay * 1000));
-        }
-
         return true;
     }
 

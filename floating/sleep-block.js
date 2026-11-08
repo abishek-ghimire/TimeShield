@@ -61,7 +61,7 @@ class SleepBlockPage {
             });
         }
 
-        // Every duration requests a visible verification challenge instead of pausing silently.
+        // Every pause has a visible fixed delay before protection is changed.
         document.querySelectorAll('.duration-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const duration = btn.dataset.minutes;
@@ -70,13 +70,13 @@ class SleepBlockPage {
                 if (!Number.isFinite(durationMs) || durationMs <= 0) return;
 
                 btn.disabled = true;
-                if (typeof window.TimeShieldPauseChallenge?.startPreparation === 'function') {
-                    window.TimeShieldPauseChallenge.startPreparation({
+                if (typeof window.TimeShieldPauseDelay?.start === 'function') {
+                    window.TimeShieldPauseDelay.start({
                         pauseSection,
                         pauseButton: pauseBtn,
                         durationMs,
                         pauseContext: 'general',
-                        requestChallenge: () => new Promise((resolve, reject) => {
+                        requestPause: () => new Promise((resolve, reject) => {
                             chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'general' }, response => {
                                 const error = chrome.runtime.lastError;
                                 if (error) reject(new Error(error.message));

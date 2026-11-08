@@ -935,14 +935,6 @@ class OptionsManager {
             showDate: true,
             showTimezone: true,
             timezone: 'Asia/Kathmandu',
-            challengeTextEnabled: true,
-            challengeTextValue: 'I choose discipline over distraction, for my dreams are worth more than temporary comfort.',
-            challengePinEnabled: false,
-            challengePinValue: '1234',
-            challengePasswordEnabled: false,
-            challengePasswordValue: 'focus',
-            challengeDelayEnabled: false,
-            challengeDelaySeconds: 8,
             siteWarningFirstMinutes: 2,
             siteWarningFinalMinutes: 1,
             scheduleWarningFirstMinutes: 5,
@@ -1257,7 +1249,7 @@ class OptionsManager {
             // Decreasing is good!
             this.showNotification('Awesome! Reducing your distractible time. Keep it up!', 'success');
         } else {
-            // Increasing requires protection (no typing challenge, 15s delay handled by protection sequence)
+            // Increasing requires protection; the pause sequence supplies the fixed delay.
             const allowed = await this.runProtectionSequence(`Increase time limit for ${site} to ${newMins} mins`);
             if (!allowed) return;
         }
