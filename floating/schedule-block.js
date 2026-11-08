@@ -69,8 +69,8 @@ class ScheduleBlockPage {
                         pauseButton: pauseBtn,
                         durationMs,
                         pauseContext: 'general',
-                        requestPause: () => new Promise((resolve, reject) => {
-                            chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'general' }, response => {
+                        requestPause: (delayComplete) => new Promise((resolve, reject) => {
+                            chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'general', delayComplete }, response => {
                                 const error = chrome.runtime.lastError;
                                 if (error) reject(new Error(error.message));
                                 else resolve(response);

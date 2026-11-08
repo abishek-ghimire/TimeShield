@@ -68,11 +68,12 @@ class FocusBlockPage {
                         pauseButton: pauseBtn,
                         durationMs,
                         pauseContext: 'general',
-                        requestPause: () => new Promise((resolve, reject) => {
+                        requestPause: (delayComplete) => new Promise((resolve, reject) => {
                             chrome.runtime.sendMessage({
                                 action: 'pauseBlocking',
                                 durationMs,
-                                pauseContext: 'general'
+                                pauseContext: 'general',
+                                delayComplete
                             }, response => {
                                 const error = chrome.runtime.lastError;
                                 if (error) reject(new Error(error.message));

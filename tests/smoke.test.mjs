@@ -448,13 +448,23 @@ test('Screen-time renderer refreshes from storage changes and compares local cal
 });
 
 
-test('Pause verification shows a fifteen-second delay timer', async () => {
+test('Pause delays apply only after the free one-minute allowance', async () => {
     const helper = await read('floating/pause-delay.js');
+    const worker = await read('background/service-worker.js');
+    const tracker = await read('background/usage-tracker.js');
+    const popupCss = await read('popup/popup.css');
     assert.match(helper, /DELAY_SECONDS = 15/);
     assert.match(helper, /pauseDelayCountdown/);
     assert.match(helper, /pauseDelayMessage/);
     assert.match(helper, /window\.setInterval\(tick, 1000\)/);
     assert.match(helper, /cancelPauseDelay/);
+    assert.match(helper, /requestPause\(false\)/);
+    assert.match(helper, /requestPause\(true\)/);
+    assert.match(worker, /if \(!message\.delayComplete\) \{\s*sendResponse\(\{ success: false, requiresDelay: true/);
+    assert.match(tracker, /pauseBlockingUntil/);
+    assert.match(tracker, /if \(pauseUntil === -1 \|\|/);
+    assert.match(popupCss, /width: 440px/);
+    assert.match(popupCss, /height: 700px/);
 });
 
 test('All pause block pages use the shared preparation flow', async () => {
@@ -733,7 +743,7 @@ test('Pause requests remain available after the initialization bypass', async ()
 
 test('Focus block page reports a retryable pause request failure', async () => {
     const helper = await read('floating/pause-delay.js');
-    assert.match(helper, /requestPause\(\)/);
+    assert.match(helper, /requestPause\(true\)/);
     assert.match(helper, /Try Again/);
 });
 

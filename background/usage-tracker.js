@@ -262,8 +262,14 @@ class UsageTracker {
             'timeLimits',
             'globalLimit',
             'timeLimitWarningCache',
-            'settings'
+            'settings',
+            'pauseBlockingUntil'
         ]);
+
+        const pauseUntil = Number(result.pauseBlockingUntil);
+        if (pauseUntil === -1 || (Number.isFinite(pauseUntil) && pauseUntil > Date.now())) {
+            return;
+        }
 
         let data = result.siteUsageData || {};
         let timeline = result.siteUsageTimeline || {};

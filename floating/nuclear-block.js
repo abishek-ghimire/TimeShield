@@ -57,8 +57,8 @@ class NuclearBlockPage {
                 pauseButton: pauseBtn,
                 onCancel: () => { startExitBtn.disabled = false; },
                 successMessage: 'Nuclear Mode has ended.',
-                requestPause: () => new Promise((resolve, reject) => {
-                    chrome.runtime.sendMessage({ action: 'endNuclearModeAfterDelay' }, (response) => {
+                requestPause: (delayComplete) => new Promise((resolve, reject) => {
+                    chrome.runtime.sendMessage({ action: 'endNuclearModeAfterDelay', delayComplete }, (response) => {
                         startExitBtn.disabled = false;
                         const error = chrome.runtime.lastError;
                         if (error) reject(new Error(error.message));
@@ -81,11 +81,12 @@ class NuclearBlockPage {
                         pauseButton: pauseBtn,
                         durationMs,
                         pauseContext: 'nuclear',
-                        requestPause: () => new Promise((resolve, reject) => {
+                        requestPause: (delayComplete) => new Promise((resolve, reject) => {
                             chrome.runtime.sendMessage({
                                 action: 'pauseBlocking',
                                 durationMs,
-                                pauseContext: 'nuclear'
+                                pauseContext: 'nuclear',
+                                delayComplete
                             }, (response) => {
                                 const error = chrome.runtime.lastError;
                                 if (error) reject(new Error(error.message));

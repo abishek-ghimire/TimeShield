@@ -936,6 +936,54 @@ body {
     }
 }
 
+/* Keep the action popup comfortable to read without requiring browser zoom. */
+html,
+body {
+    width: 440px;
+    min-width: 440px;
+    height: 700px;
+    min-height: 700px;
+    max-height: 700px;
+}
+
+.popup-container {
+    width: 440px;
+    min-height: 700px;
+    padding: 20px;
+}
+
+.brand h1 {
+    font-size: 1.55rem;
+}
+
+.brand-subtitle {
+    font-size: 0.84rem;
+}
+
+.current-time {
+    font-size: 1.38rem;
+    padding: 8px 13px;
+}
+
+.btn {
+    font-size: 0.92rem;
+    padding: 12px;
+}
+
+.card {
+    padding: 16px;
+}
+
+.card-title {
+    font-size: 0.9rem;
+}
+
+.card,
+.popup-utility-row,
+.quick-actions-modern {
+    margin-bottom: 14px;
+}
+
 @media (max-width: 360px) {
     body,
     .popup-container {

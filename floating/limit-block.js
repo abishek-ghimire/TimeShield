@@ -54,8 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     pauseButton: pauseBtn,
                     durationMs,
                     pauseContext: 'usageLimit',
-                    requestPause: () => new Promise((resolve, reject) => {
-                        chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'usageLimit' }, response => {
+                    requestPause: (delayComplete) => new Promise((resolve, reject) => {
+                        chrome.runtime.sendMessage({ action: 'pauseBlocking', durationMs, pauseContext: 'usageLimit', delayComplete }, response => {
                             const error = chrome.runtime.lastError;
                             if (error) reject(new Error(error.message));
                             else resolve(response);

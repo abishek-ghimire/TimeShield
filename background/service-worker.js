@@ -1105,6 +1105,10 @@ class BackgroundService {
                     sendResponse({ success: false, error: 'Nuclear Mode is not active.' });
                     break;
                 }
+                if (!message.delayComplete) {
+                    sendResponse({ success: false, requiresDelay: true });
+                    break;
+                }
                 const state = await this.stopNuclearMode();
                 sendResponse({ success: true, nuclearMode: state });
                 break;
@@ -1122,9 +1126,8 @@ class BackgroundService {
                     break;
                 }
 
-                // Focus, scheduled, and sleep pauses keep their existing daily allowance.
-                // Nuclear Mode has its own single free one-minute pause per session;
-                // later Nuclear requests use the same fixed delay in the block page.
+                // The first two general one-minute pauses are immediate. Later
+                // one-minute pauses and all longer pauses require the UI delay.
                 const isOneMinuteNuclearPause = pauseContext === 'nuclear' && durationMs === 60 * 1000;
                 if (isOneMinuteNuclearPause) {
                     const freePauseResult = await this.tryFreeNuclearOneMinutePause();
@@ -1134,6 +1137,10 @@ class BackgroundService {
                     }
                     if (freePauseResult === false) {
                         sendResponse({ success: false, error: 'Unable to pause Nuclear Mode' });
+                        break;
+                    }
+                    if (!message.delayComplete) {
+                        sendResponse({ success: false, requiresDelay: true, pauseContext });
                         break;
                     }
                 }
@@ -1149,6 +1156,13 @@ class BackgroundService {
                         sendResponse({ success: false, error: 'Unable to pause protection' });
                         break;
                     }
+                    if (!message.delayComplete) {
+                        sendResponse({ success: false, requiresDelay: true, pauseContext });
+                        break;
+                    }
+                } else if (!message.delayComplete) {
+                    sendResponse({ success: false, requiresDelay: true, pauseContext });
+                    break;
                 }
 
                 const paused = await this.pauseBlocking(durationMs);

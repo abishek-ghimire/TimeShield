@@ -25,6 +25,7 @@
 
             let remaining = DELAY_SECONDS;
             let timer = null;
+            let delayRequired = false;
             pauseSection.innerHTML = `
                 <h3>⏳ Pause Delay</h3>
                 <p class="pause-message" id="pauseDelayMessage">Please wait ${DELAY_SECONDS} seconds before continuing.</p>
@@ -48,7 +49,7 @@
                 if (countdown) countdown.textContent = '✓';
                 if (cancel) cancel.disabled = true;
                 try {
-                    const response = await requestPause();
+                    const response = await requestPause(true);
                     if (!response?.success) throw new Error(response?.error || 'Unable to pause protection.');
                     showSuccess(pauseSection, successMessage);
                 } catch (error) {
@@ -56,6 +57,7 @@
                 }
             };
             const tick = () => {
+                if (!delayRequired) return;
                 remaining -= 1;
                 if (countdown) countdown.textContent = String(Math.max(remaining, 0));
                 if (remaining > 0) {
@@ -71,7 +73,22 @@
                 pauseSection.style.display = 'none';
                 if (pauseButton) pauseButton.style.display = 'flex';
             });
-            timer = window.setInterval(tick, 1000);
+
+            Promise.resolve()
+                .then(() => requestPause(false))
+                .then((response) => {
+                    if (response?.success) {
+                        showSuccess(pauseSection, successMessage);
+                        return;
+                    }
+                    if (!response?.requiresDelay) {
+                        throw new Error(response?.error || 'Unable to pause protection.');
+                    }
+                    delayRequired = true;
+                    if (message) message.textContent = `Please wait ${DELAY_SECONDS} seconds before continuing.`;
+                    timer = window.setInterval(tick, 1000);
+                })
+                .catch((error) => showError(pauseSection, error, () => window.location.reload()));
         }
     };
 })();
